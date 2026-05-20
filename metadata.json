@@ -1,0 +1,9 @@
+{
+  "name": "Chinna",
+  "description": "An intelligent, smart and advanced personal assistant application made by Project-M.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

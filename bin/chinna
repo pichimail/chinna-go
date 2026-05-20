@@ -1,0 +1,1047 @@
+#!/usr/bin/env bash
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  CHINNA v2 — Sarcastic Mac Sidekick                         ║
+# ║  Telugu · Hindi · English · Tinglish                        ║
+# ║  github.com/pichimail/chinna-go                             ║
+# ╚══════════════════════════════════════════════════════════════╝
+set -uo pipefail
+
+CHINNA_VERSION="2.0.0"
+CHINNA_REPO="pichimail/chinna-go"
+CHINNA_HOME="${CHINNA_HOME:-$HOME/.chinna}"
+CHINNA_CONFIG="$CHINNA_HOME/config"
+CHINNA_LIB="$CHINNA_HOME/lib"
+
+mkdir -p "$CHINNA_HOME" "$CHINNA_LIB"
+[ -f "$CHINNA_CONFIG" ] && source "$CHINNA_CONFIG"
+
+# ─── Source libs ───────────────────────────────────────────────
+for lib in notify lang stack voice daemon; do
+    [ -f "$CHINNA_LIB/${lib}.sh" ] && source "$CHINNA_LIB/${lib}.sh" 2>/dev/null || true
+done
+
+# ─── Colors ───────────────────────────────────────────────────
+if [ -t 1 ]; then
+    R='\033[0;31m' G='\033[0;32m' Y='\033[0;33m' B='\033[0;34m'
+    M='\033[0;35m' C='\033[0;36m' W='\033[1;37m' D='\033[2m'
+    BOLD='\033[1m' RESET='\033[0m'
+    ORANGE='\033[38;5;208m' PINK='\033[38;5;205m' TEAL='\033[38;5;51m'
+    GREEN='\033[38;5;46m'
+else
+    R='' G='' Y='' B='' M='' C='' W='' D='' BOLD='' RESET=''
+    ORANGE='' PINK='' TEAL='' GREEN=''
+fi
+
+# ─── UI helpers ───────────────────────────────────────────────
+ok()    { echo -e "  ${G}✓${RESET} $*"; }
+warn()  { echo -e "  ${Y}!${RESET} $*"; }
+fail()  { echo -e "  ${R}✗${RESET} $*"; }
+info()  { echo -e "  ${C}ℹ${RESET} $*"; }
+sep()   { echo -e "  ${D}──────────────────────────────────────${RESET}"; }
+
+section() {
+    echo ""
+    echo -e "  ${TEAL}▶ $*${RESET}"
+    sep
+}
+
+progress_bar() {
+    local msg="$1" pct="${2:-0}" width=28
+    local filled=$(( pct * width / 100 ))
+    local bar="" color="$G"
+    [ "$pct" -gt 70 ] && color="$Y"
+    [ "$pct" -gt 85 ] && color="$R"
+    for ((i=0;i<filled;i++)); do bar+="█"; done
+    for ((i=filled;i<width;i++)); do bar+="░"; done
+    printf "\r  ${color}%s${RESET} %3d%%  %-30s" "$bar" "$pct" "$msg"
+}
+
+disk_bar() {
+    local pct
+    pct=$(df /System/Volumes/Data 2>/dev/null | awk 'NR==2{gsub(/%/,"",$5); print $5}' || \
+          df / | awk 'NR==2{gsub(/%/,"",$5); print $5}')
+    local used free total
+    used=$(df -h /System/Volumes/Data 2>/dev/null | awk 'NR==2{print $3}' || df -h / | awk 'NR==2{print $3}')
+    free=$(df -h /System/Volumes/Data 2>/dev/null | awk 'NR==2{print $4}' || df -h / | awk 'NR==2{print $4}')
+    progress_bar "$used used · $free free" "${pct:-0}"
+    echo ""
+}
+
+spinner() {
+    local pid=$1 msg="${2:-Working}"
+    local s='⣾⣽⣻⢿⡿⣟⣯⣷' i=0
+    tput civis 2>/dev/null
+    while kill -0 "$pid" 2>/dev/null; do
+        i=$(( (i+1) % 8 ))
+        printf "\r  ${ORANGE}%s${RESET}  ${D}%s${RESET}   " "${s:$i:1}" "$msg"
+        sleep 0.1
+    done
+    tput cnorm 2>/dev/null
+    printf "\r%-70s\r" " "
+}
+
+disk_usage() {
+    df -h /System/Volumes/Data 2>/dev/null | awk 'NR==2{print $3" used · "$4" free · "$5" full"}' \
+    || df -h / | awk 'NR==2{print $3" used · "$4" free · "$5" full"}'
+}
+
+# ─── Sarcastic commentary ─────────────────────────────────────
+SARCASM=(
+    "Your disk was crying. I heard it from Hyderabad."
+    "47 node_modules folders. I'm not judging. I am judging."
+    "More cache than a government office has files."
+    "Your Mac has been running this slow and you said nothing?"
+    "Found build artifacts from projects you swore you'd finish."
+    "Ollama models: downloaded, forgotten, 8GB gone. Classic."
+    "Docker images older than your last committed relationship."
+    "RAM hogs found. Chrome, obviously. Always Chrome."
+    "Your Downloads folder is a cemetery. Time to cremate."
+    "3 venvs in folders you don't remember creating. Respect."
+    "dist/ folders everywhere. Build once, forget forever."
+    "Your Mac thermals were screaming. I intervened."
+    "Found 'final_final_v3_REAL.zip' in Downloads. Deleting."
+    "node_modules untouched since 2024. Gone. You're welcome."
+    "Even your trash had trash inside it. Deep."
+)
+
+taunt() { echo -e "  ${D}${SARCASM[$RANDOM % ${#SARCASM[@]}]}${RESET}"; }
+
+# ─── ASCII Art ────────────────────────────────────────────────
+banner() {
+    clear
+    echo ""
+    echo -e "   ${ORANGE}╔═══════════════════════════════════════╗${RESET}"
+    echo -e "   ${ORANGE}║${RESET}  ${BOLD}C H I N N A${RESET}  ${D}v${CHINNA_VERSION}${RESET}                    ${ORANGE}║${RESET}"
+    echo -e "   ${ORANGE}║${RESET}  ${D}your sarcastic mac sidekick${RESET}           ${ORANGE}║${RESET}"
+    echo -e "   ${ORANGE}║${RESET}  ${D}telugu · hindi · english · tinglish${RESET}   ${ORANGE}║${RESET}"
+    echo -e "   ${ORANGE}╚═══════════════════════════════════════╝${RESET}"
+    echo ""
+    echo -ne "   ${D}Disk: ${RESET}"
+    disk_bar
+    echo ""
+}
+
+# ─── Ensure dep ───────────────────────────────────────────────
+ensure_dep() {
+    local cmd="$1" pkg="${2:-$1}"
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        warn "$cmd not installed — installing $pkg..."
+        brew install "$pkg" >/dev/null 2>&1 && ok "$pkg installed" || { fail "brew install $pkg failed"; return 1; }
+    fi
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: clean
+# ═══════════════════════════════════════════════════════════════
+cmd_clean() {
+    banner
+    echo -e "   ${BOLD}${ORANGE}🧹 DEEP CLEAN${RESET}"
+    taunt; echo ""
+    echo -e "   ${D}Before:${RESET} $(disk_usage)"; echo ""
+
+    _clean_step() {
+        local n="$1" total="$2" msg="$3"
+        local pct=$(( n * 100 / total ))
+        progress_bar "[$n/$total] $msg" "$pct"
+    }
+
+    local T=12
+
+    _clean_step 1 $T "System temp folders"
+    sudo rm -rf /private/var/folders/*/T/* 2>/dev/null
+    sudo rm -rf /private/var/folders/*/C/* 2>/dev/null; ok " System temp cleared"
+
+    _clean_step 2 $T "User caches"
+    rm -rf ~/Library/Caches/* 2>/dev/null
+    sudo rm -rf /Library/Caches/* 2>/dev/null; ok " User caches cleared"
+
+    _clean_step 3 $T "Electron app caches"
+    for app in "Google/Chrome" "Claude" "Code" "Windsurf" "Cursor" "Perplexity" "Codex" "com.openai.chat" "cloud-code" "Nekta AI Marketing Studio"; do
+        for sub in "Cache" "Code Cache" "GPUCache" "logs" "Service Worker/CacheStorage" "CachedData" "ShaderCache" "GrShaderCache" "DawnGraphiteCache" "DawnWebGPUCache"; do
+            rm -rf "$HOME/Library/Application Support/$app/$sub" 2>/dev/null
+            rm -rf "$HOME/Library/Application Support/$app"/*/"$sub" 2>/dev/null
+        done
+    done; ok " Electron caches nuked"
+
+    _clean_step 4 $T "Xcode & Simulators"
+    rm -rf ~/Library/Developer/Xcode/DerivedData/* 2>/dev/null
+    rm -rf ~/Library/Developer/Xcode/Archives/* 2>/dev/null
+    rm -rf ~/Library/Developer/Xcode/iOS\ DeviceSupport/* 2>/dev/null
+    rm -rf ~/Library/Developer/CoreSimulator/Caches/* 2>/dev/null
+    xcrun simctl delete unavailable 2>/dev/null; ok " Xcode bloat removed"
+
+    _clean_step 5 $T "Package manager caches"
+    npm cache clean --force >/dev/null 2>&1 || true
+    pnpm store prune >/dev/null 2>&1 || true
+    yarn cache clean >/dev/null 2>&1 || true
+    rm -rf ~/.bun/install/cache 2>/dev/null
+    rm -rf ~/Library/Caches/CocoaPods 2>/dev/null
+    rm -rf ~/.gradle/caches ~/.gradle/daemon ~/.gradle/wrapper/dists 2>/dev/null
+    rm -rf ~/Library/Caches/pip ~/.cache/pip 2>/dev/null
+    brew cleanup -s --prune=all >/dev/null 2>&1 || true; ok " npm/pnpm/yarn/bun/pip/brew/gradle clean"
+
+    _clean_step 6 $T "Docker reset"
+    osascript -e 'quit app "Docker"' 2>/dev/null; sleep 2
+    rm -rf ~/Library/Containers/com.docker.docker/Data/vms/* 2>/dev/null
+    rm -rf ~/Library/Group\ Containers/group.com.docker/* 2>/dev/null
+    docker system prune -af --volumes >/dev/null 2>&1 || true; ok " Docker cleared"
+
+    _clean_step 7 $T "Build artifacts"
+    local bcount=0
+    for base in ~/Documents ~/Desktop ~/Developer ~/repos ~/code ~/projects ~/Sites ~/dev ~/Documents/GitHub; do
+        [ -d "$base" ] || continue
+        while IFS= read -r d; do
+            rm -rf "$d" 2>/dev/null && bcount=$((bcount+1))
+        done < <(find "$base" -maxdepth 6 -type d \
+            \( -name ".next" -o -name "dist" -o -name "out" -o -name ".expo" \
+               -o -name ".turbo" -o -name ".vercel" -o -name ".parcel-cache" \
+               -o -name ".nuxt" -o -name ".svelte-kit" \) \
+            -not -path "*/node_modules/*" -prune 2>/dev/null)
+    done; ok " $bcount build folders deleted"
+
+    _clean_step 8 $T "Old node_modules (>7 days untouched)"
+    local nm_del=0 nm_keep=0
+    local cutoff=$(($(date +%s) - 604800))
+    for base in ~/Documents ~/Desktop ~/Developer ~/repos ~/code ~/projects ~/Sites ~/dev; do
+        [ -d "$base" ] || continue
+        while IFS= read -r nm; do
+            local proj=$(dirname "$nm")
+            local lm=$(stat -f "%m" "$proj" 2>/dev/null || echo 0)
+            if [ "$lm" -lt "$cutoff" ]; then
+                rm -rf "$nm" 2>/dev/null && nm_del=$((nm_del+1))
+            else
+                nm_keep=$((nm_keep+1))
+            fi
+        done < <(find "$base" -maxdepth 6 -type d -name "node_modules" \
+            -not -path "*/node_modules/*/node_modules*" 2>/dev/null)
+    done; ok " $nm_del old node_modules removed, $nm_keep active kept"
+
+    _clean_step 9 $T "Python venvs & pycache"
+    find ~ -maxdepth 7 -type d \
+        \( -name "__pycache__" -o -name ".venv" -o -name "venv" \
+           -o -name ".pytest_cache" -o -name ".mypy_cache" \) \
+        -not -path "*/node_modules/*" -prune -exec rm -rf {} + 2>/dev/null; ok " Python clutter removed"
+
+    _clean_step 10 $T "Logs & crash reports"
+    sudo rm -rf /private/var/log/*.log* 2>/dev/null
+    rm -rf ~/Library/Logs/* 2>/dev/null
+    sudo rm -rf /Library/Logs/DiagnosticReports/* 2>/dev/null
+    rm -rf ~/Library/Logs/DiagnosticReports/* 2>/dev/null
+    sudo rm -f /private/var/vm/sleepimage 2>/dev/null; ok " Logs cleared"
+
+    _clean_step 11 $T "Ollama models"
+    if [ -d ~/.ollama/models/blobs ] && [ -n "$(ls -A ~/.ollama/models/blobs 2>/dev/null)" ]; then
+        local osiz=$(du -sh ~/.ollama/models 2>/dev/null | cut -f1)
+        rm -rf ~/.ollama/models/blobs/* ~/.ollama/models/manifests/* 2>/dev/null
+        ok " Ollama cleared ($osiz) — repull: ollama pull <model>"
+    else
+        ok " No Ollama models to clear"
+    fi
+
+    _clean_step 12 $T "Snapshots, trash & RAM"
+    for snap in $(tmutil listlocalsnapshotdates / 2>/dev/null | grep -E '^[0-9]{4}-'); do
+        sudo tmutil deletelocalsnapshots "$snap" >/dev/null 2>&1
+    done
+    sudo diskutil apfs deleteAllSnapshots / >/dev/null 2>&1 || true
+    osascript -e 'tell application "Finder" to empty trash' 2>/dev/null &
+    sudo purge 2>/dev/null; ok " Snapshots deleted, trash emptied, RAM purged"
+
+    echo ""; sep
+    echo -e "   ${G}✓ DONE.${RESET} $(disk_usage)"
+    echo -e "   ${Y}⚠ REBOOT${RESET} for System Data to recalculate"
+    chinna_ok_toast "Deep Clean Done" "$(disk_usage) — Reboot for full effect" 2>/dev/null || true
+    echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: purge
+# ═══════════════════════════════════════════════════════════════
+cmd_purge() {
+    banner
+    echo -e "   ${BOLD}${PINK}🧠 RAM PURGE${RESET}"; echo ""
+    local before
+    before=$(vm_stat 2>/dev/null | awk '/Pages free/{printf "%.0f MB", $3*16384/1048576}')
+    info "Before: $before free"
+    sudo purge; sleep 1
+    local after
+    after=$(vm_stat 2>/dev/null | awk '/Pages free/{printf "%.0f MB", $3*16384/1048576}')
+    ok "After:  $after free"
+    chinna_ok_toast "RAM Purged" "Free: $after" 2>/dev/null || true
+    echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: scan
+# ═══════════════════════════════════════════════════════════════
+cmd_scan() {
+    banner
+    echo -e "   ${BOLD}${TEAL}🔬 DISK SCAN${RESET}"; echo ""
+
+    section "Disk volumes"
+    df -h | grep -E "^/dev|Filesystem" | column -t
+
+    section "Top 10 — Application Support"
+    du -sh ~/Library/Application\ Support/* 2>/dev/null | sort -hr | head -10 | \
+        awk '{printf "  %-8s %s\n", $1, $2}'
+
+    section "Top 10 — Containers"
+    du -sh ~/Library/Containers/* 2>/dev/null | sort -hr | head -10 | \
+        awk '{printf "  %-8s %s\n", $1, $2}'
+
+    section "Top 10 — Caches"
+    du -sh ~/Library/Caches/* 2>/dev/null | sort -hr | head -10 | \
+        awk '{printf "  %-8s %s\n", $1, $2}'
+
+    section "Files >500MB in home"
+    find ~ -type f -size +500M -not -path "*/.Trash/*" 2>/dev/null | head -8 | \
+        while read -r f; do echo "  $(du -h "$f" 2>/dev/null | cut -f1)  $f"; done
+
+    section "Ollama models"
+    [ -d ~/.ollama/models ] && du -sh ~/.ollama/models 2>/dev/null || info "None installed"
+
+    section "APFS snapshots"
+    sudo tmutil listlocalsnapshots / 2>/dev/null | head -5 || info "None"
+
+    echo ""
+    chinna_info_toast "Scan Complete" "Check terminal for results" 2>/dev/null || true
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: status (live dashboard)
+# ═══════════════════════════════════════════════════════════════
+cmd_status() {
+    banner
+    echo -e "   ${BOLD}${TEAL}📊 LIVE STATUS${RESET}"; echo ""
+
+    section "Disk"
+    disk_bar
+
+    section "Memory"
+    vm_stat 2>/dev/null | awk '
+        /Pages free/     {free=$3*16384/1048576}
+        /Pages active/   {active=$3*16384/1048576}
+        /Pages inactive/ {inactive=$3*16384/1048576}
+        /Pages wired/    {wired=$4*16384/1048576}
+        END {
+            printf "  Free: %.0f MB  Active: %.0f MB  Inactive: %.0f MB  Wired: %.0f MB\n",
+            free, active, inactive, wired
+        }'
+
+    section "CPU (top processes)"
+    ps aux | sort -k3 -rn | head -6 | awk '{printf "  %-6s %-5s %-5s %s\n", $1, $3"%", $4"%", $11}'
+
+    section "Network"
+    local ip
+    ip=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "disconnected")
+    info "Local IP: $ip"
+
+    section "Chinna daemon"
+    if launchctl list 2>/dev/null | grep -q "com.chinna.daemon"; then
+        ok "Running in background"
+    else
+        warn "Not running. Start with: chinna start"
+    fi
+    echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: dupes
+# ═══════════════════════════════════════════════════════════════
+cmd_dupes() {
+    banner
+    echo -e "   ${BOLD}${TEAL}🔍 DUPLICATE HUNTER${RESET}"; echo ""
+    ensure_dep fdupes fdupes || return 1
+    local target="${1:-$HOME/Downloads}"
+    info "Scanning: $target"
+    local out="/tmp/chinna_dupes_$$.txt"
+    fdupes -r -S "$target" > "$out" 2>/dev/null
+    local count
+    count=$(grep -c "bytes" "$out" 2>/dev/null || echo 0)
+    if [ "$count" = "0" ]; then
+        ok "No duplicates found in $target"
+        rm -f "$out"; return 0
+    fi
+    cat "$out"; echo ""
+    echo -ne "  ${Y}Delete duplicates (keeps first copy)? [y/N]:${RESET} "
+    read -r yn
+    [[ "$yn" =~ ^[Yy]$ ]] && fdupes -rdN "$target" 2>/dev/null && ok "Duplicates removed"
+    rm -f "$out"
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: kill (RAM hog killer)
+# ═══════════════════════════════════════════════════════════════
+cmd_kill() {
+    banner
+    echo -e "   ${BOLD}${R}💀 RAM HOG KILLER${RESET}"; echo ""
+    echo -e "   ${D}Top memory consumers:${RESET}"; echo ""
+    ps aux | sort -k4 -rn | head -10 | \
+        awk '{printf "  %-5s %-5s %-30s\n", $2, $4"%", substr($11,1,30)}'
+    echo ""
+    echo -ne "  ${Y}Kill a process? Enter PID (or ENTER to skip):${RESET} "
+    read -r pid
+    if [ -n "$pid" ] && [[ "$pid" =~ ^[0-9]+$ ]]; then
+        kill -9 "$pid" 2>/dev/null && ok "Process $pid killed" || fail "Could not kill $pid"
+    fi
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: ports
+# ═══════════════════════════════════════════════════════════════
+cmd_ports() {
+    banner
+    echo -e "   ${BOLD}${TEAL}🔌 ACTIVE PORTS${RESET}"; echo ""
+    lsof -iTCP -sTCP:LISTEN -n -P 2>/dev/null | \
+        awk 'NR>1{printf "  %-8s %-20s %-30s\n", $2, $9, $1}' | \
+        sort -u | head -20
+    echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: wifi
+# ═══════════════════════════════════════════════════════════════
+cmd_wifi() {
+    banner
+    echo -e "   ${BOLD}${TEAL}📶 WIFI DIAGNOSTICS${RESET}"; echo ""
+
+    local ssid
+    ssid=$(/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I 2>/dev/null | awk '/ SSID/{print $2}' || echo "unknown")
+    info "SSID: $ssid"
+    info "Local IP: $(ipconfig getifaddr en0 2>/dev/null || echo 'N/A')"
+
+    section "Ping test (google.com)"
+    ping -c 4 google.com 2>/dev/null | tail -2
+
+    section "DNS resolution"
+    local t1=$(($(date +%s%N)/1000000))
+    host google.com >/dev/null 2>&1
+    local t2=$(($(date +%s%N)/1000000))
+    info "DNS lookup: $((t2-t1))ms"
+
+    section "Speed estimate (100KB download)"
+    local speed
+    speed=$(curl -o /dev/null -s -w "%{speed_download}" https://speed.cloudflare.com/__down?bytes=100000 2>/dev/null)
+    if [ -n "$speed" ]; then
+        local mbps=$(echo "scale=2; $speed/131072" | bc 2>/dev/null || echo "?")
+        info "Download: ~${mbps} Mbps"
+    fi
+    echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: remind
+# ═══════════════════════════════════════════════════════════════
+cmd_remind() {
+    local delay="${1:-5m}"
+    shift
+    local msg="${*:-Chinna reminder}"
+    local seconds=300
+
+    case "$delay" in
+        *s) seconds="${delay%s}" ;;
+        *m) seconds=$(( ${delay%m} * 60 )) ;;
+        *h) seconds=$(( ${delay%h} * 3600 )) ;;
+        [0-9]*) seconds="$delay" ;;
+    esac
+
+    ok "Reminder set for ${delay}: \"$msg\""
+    (
+        sleep "$seconds"
+        osascript -e "display notification \"$msg\" with title \"⏰ Chinna Reminder\" sound name \"Ping\"" 2>/dev/null
+        osascript -e "display alert \"⏰ Chinna Reminder\" message \"$msg\"" 2>/dev/null
+    ) &
+    disown
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: brew (dev setup)
+# ═══════════════════════════════════════════════════════════════
+cmd_brew() {
+    banner
+    echo -e "   ${BOLD}${ORANGE}🍺 DEV SETUP${RESET}"; echo ""
+
+    if ! command -v brew >/dev/null 2>&1; then
+        info "Installing Homebrew..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        eval "$(/opt/homebrew/bin/brew shellenv)" 2>/dev/null || true
+    else
+        ok "Homebrew ready"
+    fi
+
+    local pkgs=(node python@3.12 pnpm bun jq fdupes gh git wget tree htop ffmpeg imagemagick sox curl bc)
+    local casks=(visual-studio-code cursor warp rectangle)
+
+    section "CLI tools"
+    for pkg in "${pkgs[@]}"; do
+        if brew list "$pkg" >/dev/null 2>&1; then
+            ok "$pkg"
+        else
+            printf "  ${ORANGE}↻${RESET} Installing $pkg..."
+            brew install "$pkg" >/dev/null 2>&1 \
+                && printf "\r  ${G}✓${RESET} $pkg installed          \n" \
+                || printf "\r  ${Y}!${RESET} $pkg skipped             \n"
+        fi
+    done
+
+    section "GUI apps"
+    for cask in "${casks[@]}"; do
+        if brew list --cask "$cask" >/dev/null 2>&1; then
+            ok "$cask"
+        else
+            printf "  ${ORANGE}↻${RESET} Installing $cask..."
+            brew install --cask "$cask" >/dev/null 2>&1 \
+                && printf "\r  ${G}✓${RESET} $cask installed          \n" \
+                || printf "\r  ${Y}!${RESET} $cask skipped             \n"
+        fi
+    done
+
+    ok "Dev environment ready! Restart your terminal."
+    chinna_ok_toast "Dev Setup Done" "node, python, pnpm, bun, VS Code all ready" 2>/dev/null || true
+    echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: free / pro (AI chat with streaming)
+# ═══════════════════════════════════════════════════════════════
+_or_chat() {
+    local model="$1"; shift
+    local prompt="$*"
+    ensure_dep jq jq || return 1
+    local api_key="${OPENROUTER_API_KEY:-}"
+    [ -z "$api_key" ] && { fail "OPENROUTER_API_KEY not set. Run: chinna config"; return 1; }
+    [ -z "$prompt" ] && { echo -ne "  ${C}You:${RESET} "; read -r prompt; }
+    echo ""
+    echo -e "  ${D}$model${RESET}"
+    echo -ne "  ${ORANGE}Chinna:${RESET} "
+    curl -s -N "https://openrouter.ai/api/v1/chat/completions" \
+        -H "Authorization: Bearer $api_key" \
+        -H "Content-Type: application/json" \
+        -H "X-Title: Chinna CLI" \
+        -d "$(jq -n --arg m "$model" --arg p "$prompt" \
+            '{model:$m,stream:true,max_tokens:1000,messages:[{role:"user",content:$p}]}')" | \
+    while IFS= read -r line; do
+        line="${line#data: }"
+        [ "$line" = "[DONE]" ] && break
+        [ -z "$line" ] && continue
+        local c
+        c=$(echo "$line" | jq -r '.choices[0].delta.content // empty' 2>/dev/null)
+        [ -n "$c" ] && printf '%s' "$c"
+    done
+    echo ""; echo ""
+}
+
+cmd_free() { _or_chat "${CHINNA_FREE_MODEL:-meta-llama/llama-3.3-70b-instruct:free}" "$@"; }
+cmd_pro()  { _or_chat "${CHINNA_PRO_MODEL:-anthropic/claude-sonnet-4-5}" "$@"; }
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: listen (voice mode)
+# ═══════════════════════════════════════════════════════════════
+cmd_listen() {
+    banner
+    echo -e "   ${BOLD}${PINK}🎤 VOICE MODE${RESET}"; echo ""
+    echo -e "   ${D}SPACE SPACE = toggle | ENTER = record | q = quit${RESET}"; echo ""
+
+    if ! command -v sox >/dev/null 2>&1; then
+        warn "Installing sox (needed for mic)..."
+        brew install sox >/dev/null 2>&1
+    fi
+
+    while true; do
+        voice_interactive_loop 2>/dev/null || voice_push_to_talk
+        local transcript="${VOICE_TRANSCRIPT:-}"
+        [ -z "$transcript" ] && break
+
+        echo -e "   ${C}Detected:${RESET} $transcript"
+        local intent
+        intent=$(resolve_intent "$transcript" 2>/dev/null || echo "unknown")
+
+        if [ "$intent" = "unknown" ]; then
+            cmd_pro "$transcript"
+        else
+            dispatch_intent "$intent" "$transcript"
+        fi
+
+        echo ""
+        echo -ne "   ${D}Continue voice mode? [Y/n]:${RESET} "
+        read -r cont
+        [[ "$cont" =~ ^[Nn]$ ]] && break
+        VOICE_TRANSCRIPT=""
+    done
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: preview
+# ═══════════════════════════════════════════════════════════════
+cmd_preview() {
+    local target="${1:-$(pwd)}"
+    banner
+    echo -e "   ${BOLD}${PINK}🌐 PREVIEW${RESET}"; echo ""
+    info "Serving: $target on :8765"
+    info "Press Ctrl+C to stop"
+    if [ -f "$target" ]; then
+        cd "$(dirname "$target")"
+        (sleep 1; open "http://localhost:8765/$(basename "$target")") &
+    else
+        cd "$target"
+        (sleep 1; open "http://localhost:8765") &
+    fi
+    python3 -m http.server 8765
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: config
+# ═══════════════════════════════════════════════════════════════
+cmd_config() {
+    banner
+    echo -e "   ${BOLD}${ORANGE}⚙️  CONFIG${RESET}"; echo ""
+    local target="${1:-all}"
+
+    _save_key() {
+        local key="$1" val="$2"
+        # Remove existing line, append new
+        grep -v "^export $key=" "$CHINNA_CONFIG" > "$CHINNA_CONFIG.tmp" 2>/dev/null || true
+        echo "export $key='$val'" >> "$CHINNA_CONFIG.tmp"
+        mv "$CHINNA_CONFIG.tmp" "$CHINNA_CONFIG"
+        source "$CHINNA_CONFIG"
+    }
+
+    if [[ "$target" == "openrouter" || "$target" == "all" ]]; then
+        section "OpenRouter API Key"
+        info "Get yours free at: https://openrouter.ai/keys"
+        echo -ne "  Paste key (ENTER to skip): "
+        read -r key
+        [ -n "$key" ] && _save_key "OPENROUTER_API_KEY" "$key" && ok "OpenRouter key saved"
+    fi
+
+    if [[ "$target" == "openai" || "$target" == "all" ]]; then
+        section "OpenAI API Key (for voice transcription)"
+        echo -ne "  Paste key (ENTER to skip): "
+        read -r key
+        [ -n "$key" ] && _save_key "OPENAI_API_KEY" "$key" && ok "OpenAI key saved"
+    fi
+
+    if [[ "$target" == "telegram" || "$target" == "all" ]]; then
+        section "Telegram Bot"
+        info "1. Message @BotFather → /newbot → copy token"
+        info "2. Message @userinfobot → copy your user ID"
+        echo -ne "  Bot token (ENTER to skip): "
+        read -r token
+        if [ -n "$token" ]; then
+            _save_key "TELEGRAM_BOT_TOKEN" "$token"
+            echo -ne "  Your user ID: "
+            read -r uid
+            [ -n "$uid" ] && _save_key "TELEGRAM_CHAT_ID" "$uid"
+            ok "Telegram configured. Start bot: chinna bot"
+        fi
+    fi
+
+    if [[ "$target" == "github" || "$target" == "all" ]]; then
+        section "GitHub Token (for chinna publish)"
+        info "Create at: https://github.com/settings/tokens (repo scope)"
+        echo -ne "  Token (ENTER to skip): "
+        read -r token
+        [ -n "$token" ] && _save_key "GITHUB_TOKEN" "$token" && ok "GitHub token saved"
+    fi
+
+    info "Config: $CHINNA_CONFIG"; echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: bot (Telegram — foreground)
+# ═══════════════════════════════════════════════════════════════
+cmd_bot() {
+    banner
+    echo -e "   ${BOLD}${TEAL}🤖 TELEGRAM BOT${RESET}"; echo ""
+    [ -z "${TELEGRAM_BOT_TOKEN:-}" ] && { fail "Not configured. Run: chinna config telegram"; return 1; }
+    info "Polling Telegram... Ctrl+C to stop"
+    echo ""
+    daemon_loop
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: start / stop (daemon)
+# ═══════════════════════════════════════════════════════════════
+cmd_start() {
+    banner
+    echo -e "   ${BOLD}${ORANGE}🚀 STARTING DAEMON${RESET}"; echo ""
+    install_launchagent
+    ok "Chinna daemon running in background"
+    info "Telegram bot active, disk monitor active, auto-update active"
+    echo ""
+}
+
+cmd_stop() {
+    launchctl unload "$HOME/Library/LaunchAgents/com.chinna.daemon.plist" 2>/dev/null
+    ok "Chinna daemon stopped"
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: publish (push update to GitHub → auto-updates friends)
+# ═══════════════════════════════════════════════════════════════
+cmd_publish() {
+    banner
+    echo -e "   ${BOLD}${ORANGE}📤 PUBLISH UPDATE${RESET}"; echo ""
+    local token="${GITHUB_TOKEN:-}"
+    [ -z "$token" ] && { fail "GITHUB_TOKEN not set. Run: chinna config github"; return 1; }
+
+    # Bump version
+    local current="$CHINNA_VERSION"
+    local parts=(${current//./ })
+    local new_patch=$(( ${parts[2]:-0} + 1 ))
+    local new_ver="${parts[0]}.${parts[1]}.$new_patch"
+
+    info "Bumping $current → $new_ver"
+
+    # Update VERSION file
+    local chinna_src="$CHINNA_HOME/bin/chinna"
+    echo "$new_ver" > "$CHINNA_HOME/VERSION"
+    sed -i '' "s/CHINNA_VERSION=\"$current\"/CHINNA_VERSION=\"$new_ver\"/" "$chinna_src" 2>/dev/null
+
+    # Push to GitHub via API
+    local repo="$CHINNA_REPO"
+    local content
+    content=$(base64 < "$chinna_src" | tr -d '\n')
+
+    # Get current SHA for update
+    local sha
+    sha=$(curl -s -H "Authorization: token $token" \
+        "https://api.github.com/repos/$repo/contents/bin/chinna" 2>/dev/null | \
+        jq -r '.sha // empty')
+
+    local payload
+    payload=$(jq -n \
+        --arg msg "chore: release v$new_ver" \
+        --arg content "$content" \
+        --arg sha "$sha" \
+        '{message: $msg, content: $content, sha: $sha}')
+
+    local result
+    result=$(curl -s -X PUT \
+        -H "Authorization: token $token" \
+        -H "Content-Type: application/json" \
+        "https://api.github.com/repos/$repo/contents/bin/chinna" \
+        -d "$payload" 2>/dev/null)
+
+    if echo "$result" | jq -e '.content.name' >/dev/null 2>&1; then
+        ok "Published v$new_ver to github.com/$repo"
+        info "All friends auto-update within 24h"
+        chinna_ok_toast "Chinna Published" "v$new_ver live — friends auto-update in 24h" 2>/dev/null || true
+    else
+        fail "Publish failed"
+        echo "$result" | jq '.message' 2>/dev/null
+    fi
+    echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: git
+# ═══════════════════════════════════════════════════════════════
+cmd_git() {
+    banner
+    echo -e "   ${BOLD}${ORANGE}🌿 AI GIT COMMIT${RESET}"; echo ""
+    git_ai_commit
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: doctor
+# ═══════════════════════════════════════════════════════════════
+cmd_doctor() {
+    banner
+    echo -e "   ${BOLD}${TEAL}🩺 HEALTH CHECK${RESET}"; echo ""
+
+    _chk() { command -v "$1" >/dev/null 2>&1 && ok "$1" || warn "$1 missing"; }
+    section "Dependencies"
+    for t in brew jq node python3 fdupes sox curl git gh bc; do _chk "$t"; done
+
+    section "API keys"
+    [ -n "${OPENROUTER_API_KEY:-}" ] && ok "OPENROUTER_API_KEY" || warn "OPENROUTER_API_KEY missing → chinna config openrouter"
+    [ -n "${OPENAI_API_KEY:-}" ]     && ok "OPENAI_API_KEY"     || info "OPENAI_API_KEY optional (voice transcription)"
+    [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && ok "TELEGRAM_BOT_TOKEN" || warn "TELEGRAM_BOT_TOKEN missing → chinna config telegram"
+    [ -n "${GITHUB_TOKEN:-}" ]       && ok "GITHUB_TOKEN"       || info "GITHUB_TOKEN optional (for chinna publish)"
+
+    section "System"
+    info "macOS: $(sw_vers -productVersion 2>/dev/null)"
+    info "Arch:  $(uname -m)"
+    info "Shell: $SHELL"
+    info "Disk:  $(disk_usage)"
+    info "Chinna: v$CHINNA_VERSION @ $CHINNA_HOME"
+
+    section "Daemon"
+    daemon_status 2>/dev/null || info "Daemon module not loaded"
+    echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: update
+# ═══════════════════════════════════════════════════════════════
+cmd_update() {
+    banner
+    echo -e "   ${BOLD}${ORANGE}⬆️  UPDATE${RESET}"; echo ""
+    curl -fsSL "https://raw.githubusercontent.com/$CHINNA_REPO/main/install/install.sh" | bash
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: notify
+# ═══════════════════════════════════════════════════════════════
+cmd_notify() {
+    local title="${1:-Chinna}"
+    local msg="${2:-Hello from Chinna}"
+    chinna_info_toast "$title" "$msg" 2>/dev/null \
+        || osascript -e "display notification \"$msg\" with title \"$title\"" 2>/dev/null
+    ok "Notification sent"
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: dashboard (web UI)
+# ═══════════════════════════════════════════════════════════════
+cmd_dashboard() {
+    banner
+    echo -e "   ${BOLD}${ORANGE}🌐 DASHBOARD${RESET}"; echo ""
+    source "$CHINNA_LIB/server.sh" 2>/dev/null || { fail "server.sh not found"; return 1; }
+    if is_dashboard_running 2>/dev/null; then
+        info "Dashboard already running"
+        open "http://localhost:${CHINNA_DASHBOARD_PORT:-7777}"
+    else
+        info "Starting dashboard on :${CHINNA_DASHBOARD_PORT:-7777}..."
+        start_dashboard
+        ok "Dashboard running at http://localhost:${CHINNA_DASHBOARD_PORT:-7777}"
+        chinna_ok_toast "Dashboard" "Running at localhost:${CHINNA_DASHBOARD_PORT:-7777}" 2>/dev/null || true
+    fi
+    info "Press Ctrl+C to stop"
+    wait $(cat "$CHINNA_HOME/dashboard.pid" 2>/dev/null) 2>/dev/null
+}
+
+# ═══════════════════════════════════════════════════════════════
+# COMMAND: uninstall
+# ═══════════════════════════════════════════════════════════════
+cmd_uninstall() {
+    banner
+    echo -e "   ${BOLD}${R}🗑️  UNINSTALL${RESET}"; echo ""
+    echo -ne "   ${Y}Type 'yes' to confirm:${RESET} "
+    read -r yn
+    if [ "$yn" = "yes" ]; then
+        launchctl unload "$HOME/Library/LaunchAgents/com.chinna.daemon.plist" 2>/dev/null || true
+        rm -f "$HOME/Library/LaunchAgents/com.chinna.daemon.plist"
+        rm -rf "$CHINNA_HOME"
+        sudo rm -f /usr/local/bin/chinna /opt/homebrew/bin/chinna 2>/dev/null
+        ok "Chinna removed. Bye 👋"
+    else
+        info "Cancelled"
+    fi
+}
+
+# ═══════════════════════════════════════════════════════════════
+# INTENT DISPATCHER — maps resolved intent → command
+# ═══════════════════════════════════════════════════════════════
+dispatch_intent() {
+    local intent="$1"
+    local original="${2:-}"
+
+    case "$intent" in
+        clean)          cmd_clean ;;
+        purge|slow)     cmd_purge ;;
+        scan)           cmd_scan ;;
+        dupes)          cmd_dupes ;;
+        brew)           cmd_brew ;;
+        free_ai)        cmd_free "$original" ;;
+        pro_ai)         cmd_pro "$original" ;;
+        voice)          cmd_listen ;;
+        bot)            cmd_bot ;;
+        preview)        cmd_preview ;;
+        status)         cmd_status ;;
+        ports)          cmd_ports ;;
+        wifi)           cmd_wifi ;;
+        kill_apps)      cmd_kill ;;
+        git)            cmd_git ;;
+        deploy)         deploy_project ;;
+        run_project|stack_setup) run_project ;;
+        env_setup)      generate_env . ;;
+        publish)        cmd_publish ;;
+        update)         cmd_update ;;
+        doctor)         cmd_doctor ;;
+        config)         cmd_config ;;
+        help)           show_help ;;
+        unknown)
+            echo ""
+            warn "Couldn't understand: \"$original\""
+            info "Sending to AI for interpretation..."
+            cmd_pro "The user said: '$original'. Interpret what they want to do on their Mac and give a brief helpful response. If it's a Mac operation, tell them the chinna command to run (e.g. 'chinna clean', 'chinna purge')."
+            ;;
+    esac
+}
+
+# ═══════════════════════════════════════════════════════════════
+# INTERACTIVE MENU
+# ═══════════════════════════════════════════════════════════════
+show_menu() {
+    banner
+    echo -e "   ${BOLD}What do you need? (type anything, I understand)${RESET}"
+    echo ""
+    echo -e "   ${ORANGE}1${RESET})  🧹  ${BOLD}Deep Clean${RESET}        ${D}Aggressive disk cleanup${RESET}"
+    echo -e "   ${ORANGE}2${RESET})  🧠  ${BOLD}Purge RAM${RESET}         ${D}Free inactive memory${RESET}"
+    echo -e "   ${ORANGE}3${RESET})  🔬  ${BOLD}Scan${RESET}              ${D}What's eating your disk${RESET}"
+    echo -e "   ${ORANGE}4${RESET})  🔍  ${BOLD}Find Duplicates${RESET}   ${D}Hunt & kill duplicate files${RESET}"
+    echo -e "   ${ORANGE}5${RESET})  🍺  ${BOLD}Dev Setup${RESET}         ${D}Homebrew + node + python + tools${RESET}"
+    echo -e "   ${ORANGE}6${RESET})  🚀  ${BOLD}Run Project${RESET}       ${D}Auto-detect stack & run${RESET}"
+    echo -e "   ${ORANGE}7${RESET})  🌐  ${BOLD}Deploy${RESET}            ${D}Vercel / Netlify / Railway${RESET}"
+    echo -e "   ${ORANGE}8${RESET})  🤖  ${BOLD}Free AI Chat${RESET}      ${D}Llama 3.3 via OpenRouter${RESET}"
+    echo -e "   ${ORANGE}9${RESET})  💎  ${BOLD}Pro AI Chat${RESET}       ${D}Claude / GPT via OpenRouter${RESET}"
+    echo -e "   ${ORANGE}10${RESET}) 🎤  ${BOLD}Voice Mode${RESET}        ${D}Double-space=toggle, ENTER=record${RESET}"
+    echo -e "   ${ORANGE}11${RESET}) 📡  ${BOLD}Telegram Bot${RESET}      ${D}Control Mac from phone${RESET}"
+    echo -e "   ${ORANGE}12${RESET}) 📊  ${BOLD}Status${RESET}            ${D}Live disk/RAM/CPU dashboard${RESET}"
+    echo -e "   ${ORANGE}13${RESET}) 💀  ${BOLD}Kill RAM Hogs${RESET}     ${D}Find & kill memory eaters${RESET}"
+    echo -e "   ${ORANGE}14${RESET}) 🔌  ${BOLD}Ports${RESET}             ${D}What's running where${RESET}"
+    echo -e "   ${ORANGE}15${RESET}) 📶  ${BOLD}WiFi Check${RESET}        ${D}Diagnostics + speed test${RESET}"
+    echo -e "   ${ORANGE}16${RESET}) 🌿  ${BOLD}Git Commit${RESET}        ${D}AI-generated commit message${RESET}"
+    echo -e "   ${ORANGE}17${RESET}) 🌐  ${BOLD}Preview HTML${RESET}      ${D}Local preview server${RESET}"
+    echo -e "   ${ORANGE}18${RESET}) ⚙️   ${BOLD}Config${RESET}            ${D}API keys & settings${RESET}"
+    echo -e "   ${ORANGE}19${RESET}) 🩺  ${BOLD}Doctor${RESET}            ${D}Health check${RESET}"
+    echo -e "   ${ORANGE}20${RESET}) 🚀  ${BOLD}Start Daemon${RESET}      ${D}Run Chinna in background${RESET}"
+    echo -e "   ${ORANGE}21${RESET}) 🌐  ${BOLD}Dashboard${RESET}         ${D}Premium web UI in browser${RESET}"
+    echo -e "   ${ORANGE}q${RESET})  ${D}Quit${RESET}"
+    echo ""
+    echo -ne "   ${BOLD}>${RESET} "
+    read -r input
+
+    # Try numeric menu first
+    case "$input" in
+        1) cmd_clean ;;
+        2) cmd_purge ;;
+        3) cmd_scan ;;
+        4) cmd_dupes ;;
+        5) cmd_brew ;;
+        6) run_project ;;
+        7) deploy_project ;;
+        8) echo -ne "  ${C}Prompt:${RESET} "; read -r p; cmd_free "$p" ;;
+        9) echo -ne "  ${C}Prompt:${RESET} "; read -r p; cmd_pro "$p" ;;
+        10) cmd_listen ;;
+        11) cmd_bot ;;
+        12) cmd_status ;;
+        13) cmd_kill ;;
+        14) cmd_ports ;;
+        15) cmd_wifi ;;
+        16) cmd_git ;;
+        17) echo -ne "  File/dir (ENTER for pwd): "; read -r f; cmd_preview "$f" ;;
+        18) cmd_config ;;
+        19) cmd_doctor ;;
+        20) cmd_start ;;
+        21) cmd_dashboard ;;
+        q|Q) echo -e "  ${ORANGE}Later 👋${RESET}"; exit 0 ;;
+        "")  show_menu ;;
+        *)
+            # Not a number — try intent engine
+            local intent
+            intent=$(resolve_intent "$input" 2>/dev/null || echo "unknown")
+            dispatch_intent "$intent" "$input"
+            ;;
+    esac
+}
+
+# ═══════════════════════════════════════════════════════════════
+# HELP
+# ═══════════════════════════════════════════════════════════════
+show_help() {
+    banner
+    cat <<HELP
+   ${BOLD}USAGE${RESET}
+     chinna                   Interactive menu
+     chinna <command>         Direct command
+     chinna "anything"        Natural language — I understand Telugu/Hindi/Tinglish
+
+   ${BOLD}COMMANDS${RESET}
+     ${C}clean${RESET}                  Deep clean disk (node_modules, caches, builds, docker)
+     ${C}purge${RESET}                  Purge inactive RAM
+     ${C}scan${RESET}                   Show disk usage breakdown
+     ${C}dupes${RESET} [path]           Find & delete duplicate files
+     ${C}status${RESET}                 Live disk/RAM/CPU dashboard
+     ${C}kill${RESET}                   Kill RAM-hogging processes
+     ${C}ports${RESET}                  Show active ports
+     ${C}wifi${RESET}                   WiFi diagnostics + speed test
+     ${C}brew${RESET}                   Install Homebrew + dev tools
+     ${C}run${RESET} [dir]              Auto-detect stack & run project
+     ${C}deploy${RESET} [dir]           Deploy to Vercel/Netlify/Railway
+     ${C}git${RESET}                    AI-generated git commit + push
+     ${C}free${RESET} <prompt>          Free AI chat (Llama 3.3)
+     ${C}pro${RESET} <prompt>           Paid AI chat (Claude/GPT)
+     ${C}listen${RESET}                 Voice mode
+     ${C}bot${RESET}                    Telegram remote control
+     ${C}preview${RESET} [file/dir]     HTML preview server
+     ${C}remind${RESET} <time> <msg>    Set reminder (5m, 2h, 30s)
+     ${C}notify${RESET} <title> <msg>   Send Mac notification
+     ${C}start${RESET}                  Start background daemon
+     ${C}stop${RESET}                   Stop background daemon
+     ${C}config${RESET}                 Set API keys
+     ${C}publish${RESET}                Push update to GitHub
+     ${C}doctor${RESET}                 Health check
+     ${C}update${RESET}                 Self-update Chinna
+     ${C}uninstall${RESET}              Remove Chinna
+
+   ${BOLD}NATURAL LANGUAGE EXAMPLES${RESET}
+     chinna "na mac slow aindhi"         → purge RAM + diagnostics
+     chinna "stack build chei"           → detect stack + run project
+     chinna "git lo pettu"               → AI commit + push
+     chinna "deploy cheyyi"              → deploy to Vercel/Netlify
+     chinna "duplicate files unnaya"     → find & delete dupes
+     chinna "disk full aindhi"           → scan + clean options
+
+   ${D}github.com/pichimail/chinna-go${RESET}
+
+HELP
+}
+
+# ═══════════════════════════════════════════════════════════════
+# MAIN DISPATCHER
+# ═══════════════════════════════════════════════════════════════
+main() {
+    local cmd="${1:-}"
+
+    # Internal daemon loop (called by LaunchAgent)
+    [ "$cmd" = "_daemon_loop" ] && { daemon_loop; exit 0; }
+
+    case "$cmd" in
+        ""|menu)                    show_menu ;;
+        clean|cleanmymac)           cmd_clean ;;
+        purge|purgeram)             cmd_purge ;;
+        scan)                       cmd_scan ;;
+        status|stats)               cmd_status ;;
+        dashboard|web|ui|panel)     cmd_dashboard ;;
+        dupes|duplicates)           shift; cmd_dupes "$@" ;;
+        kill)                       cmd_kill ;;
+        ports)                      cmd_ports ;;
+        wifi|internet|network)      cmd_wifi ;;
+        brew|devsetup)              cmd_brew ;;
+        run|start_project)          shift; run_project "${1:-.}" ;;
+        deploy)                     shift; deploy_project "${1:-.}" ;;
+        git|commit)                 cmd_git ;;
+        free)                       shift; cmd_free "$@" ;;
+        pro)                        shift; cmd_pro "$@" ;;
+        listen|voice)               cmd_listen ;;
+        bot|telegram)               cmd_bot ;;
+        preview|serve)              shift; cmd_preview "$@" ;;
+        remind)                     shift; cmd_remind "$@" ;;
+        notify)                     shift; cmd_notify "$@" ;;
+        start)                      cmd_start ;;
+        stop)                       cmd_stop ;;
+        config|setup)               shift; cmd_config "$@" ;;
+        publish)                    cmd_publish ;;
+        doctor|health)              cmd_doctor ;;
+        update|upgrade)             cmd_update ;;
+        uninstall|remove)           cmd_uninstall ;;
+        help|-h|--help)             show_help ;;
+        version|-v|--version)       echo "Chinna v$CHINNA_VERSION" ;;
+        *)
+            # Natural language fallback — run intent engine
+            local intent
+            intent=$(resolve_intent "$*" 2>/dev/null || echo "unknown")
+            if [ "$intent" != "unknown" ]; then
+                dispatch_intent "$intent" "$*"
+            else
+                warn "Unknown: \"$*\""
+                info "Try: chinna help"
+                exit 1
+            fi
+            ;;
+    esac
+}
+
+main "$@"
