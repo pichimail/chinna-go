@@ -847,6 +847,47 @@ const rotateSarcasm = () => {
 setInterval(rotateSarcasm, 7000);
 
 // ═══ THEMES ═══
+const initParticles = () => {
+  const canvas = document.getElementById('particle-canvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const style = getComputedStyle(document.documentElement);
+  const colors = [
+    style.getPropertyValue('--holo-1').trim(),
+    style.getPropertyValue('--holo-2').trim(),
+    style.getPropertyValue('--holo-3').trim(),
+    style.getPropertyValue('--holo-4').trim(),
+  ].filter(c=>c);
+  if(!colors.length) return;
+  const pts = Array.from({length:60}, () => ({
+    x: Math.random()*canvas.width, y: Math.random()*canvas.height,
+    vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3,
+    r:Math.random()*1.5+.3,
+    c:colors[Math.floor(Math.random()*colors.length)],
+    a:Math.random()*.15+.03
+  }));
+  let raf;
+  const draw = () => {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pts.forEach(p => {
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0||p.x>canvas.width) p.vx*=-1;
+      if(p.y<0||p.y>canvas.height) p.vy*=-1;
+      ctx.globalAlpha=p.a; ctx.fillStyle=p.c;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+    });
+    ctx.globalAlpha=.03; ctx.strokeStyle=colors[0]; ctx.lineWidth=.5;
+    for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+      const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
+      if(d<120){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.stroke();}
+    }
+    ctx.globalAlpha=1;
+    raf=requestAnimationFrame(draw);
+  };
+  cancelAnimationFrame(raf); draw();
+};
+
 const setTheme = t => {
   document.documentElement.setAttribute('data-theme', t);
   localStorage.setItem('chinna-theme', t);
@@ -888,47 +929,7 @@ const toast = (msg, type='info') => {
   setTimeout(() => { t.classList.add('exit'); setTimeout(() => t.remove(), 300); }, 4000);
 };
 
-// ═══ PARTICLES ═══
-const initParticles = () => {
-  const canvas = document.getElementById('particle-canvas');
-  const ctx = canvas.getContext('2d');
-  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-  const style = getComputedStyle(document.documentElement);
-  const colors = [
-    style.getPropertyValue('--holo-1').trim(),
-    style.getPropertyValue('--holo-2').trim(),
-    style.getPropertyValue('--holo-3').trim(),
-    style.getPropertyValue('--holo-4').trim(),
-  ];
-  const pts = Array.from({length:60}, () => ({
-    x: Math.random()*canvas.width, y: Math.random()*canvas.height,
-    vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3,
-    r:Math.random()*1.5+.3,
-    c:colors[Math.floor(Math.random()*colors.length)],
-    a:Math.random()*.15+.03
-  }));
-  let raf;
-  const draw = () => {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    pts.forEach(p => {
-      p.x+=p.vx; p.y+=p.vy;
-      if(p.x<0||p.x>canvas.width) p.vx*=-1;
-      if(p.y<0||p.y>canvas.height) p.vy*=-1;
-      ctx.globalAlpha=p.a; ctx.fillStyle=p.c;
-      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
-    });
-    ctx.globalAlpha=.03; ctx.strokeStyle=colors[0]; ctx.lineWidth=.5;
-    for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
-      const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
-      if(d<120){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.stroke();}
-    }
-    ctx.globalAlpha=1;
-    raf=requestAnimationFrame(draw);
-  };
-  cancelAnimationFrame(raf); draw();
-};
 window.addEventListener('resize',()=>{ document.getElementById('particle-canvas').width=window.innerWidth; document.getElementById('particle-canvas').height=window.innerHeight; initParticles(); });
-initParticles();
 
 // ═══ CPU WAVEFORM CANVAS ═══
 const drawCPUWave = () => {
