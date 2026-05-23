@@ -1,1260 +1,951 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="oled">
+<html lang="en" data-theme="macos">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CHINNA — Control Center</title>
 <style>
-
-
-/* ═══════════════════════════════════
-   THEME SYSTEM
-═══════════════════════════════════ */
-:root {
-  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
-}
-[data-theme="oled"] {
-  --bg: #000000;
-  --glass: rgba(0,0,0,0.3);
-  --glass-border: rgba(255,255,255,0.06);
-  --glass-border-bright: rgba(255,255,255,0.15);
-  --text-primary: #ffffff;
-  --text-secondary: rgba(255,255,255,0.5);
-  --text-dim: rgba(255,255,255,0.2);
-  --neon: #ff6b35;
-  --neon2: #a855f7;
-  --neon3: #06b6d4;
-  --neon4: #10b981;
-  --danger: #ff3366;
-  --warning: #fbbf24;
-  --holo-1: #ff6b35; --holo-2: #a855f7; --holo-3: #06b6d4; --holo-4: #ff3366; --holo-5: #10b981;
-  --metal: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 25%, #a0a0a0 50%, #d4d4d4 75%, #888 100%);
-  --dock-bg: rgba(255,255,255,0.08);
-  --dock-border: rgba(255,255,255,0.12);
-  --scanline: rgba(255,255,255,0.02);
-}
-[data-theme="light"] {
-  --bg: #f0f0f0;
-  --glass: rgba(255,255,255,0.35);
-  --glass-border: rgba(0,0,0,0.06);
-  --glass-border-bright: rgba(0,0,0,0.15);
-  --text-primary: #0a0a0a;
-  --text-secondary: rgba(0,0,0,0.5);
-  --text-dim: rgba(0,0,0,0.25);
-  --neon: #e84521;
-  --neon2: #7c3aed;
-  --neon3: #0891b2;
-  --neon4: #059669;
-  --danger: #dc2626;
-  --warning: #d97706;
-  --holo-1: #e84521; --holo-2: #7c3aed; --holo-3: #0891b2; --holo-4: #dc2626; --holo-5: #059669;
-  --metal: linear-gradient(135deg, #888 0%, #bbb 25%, #666 50%, #aaa 75%, #555 100%);
-  --dock-bg: rgba(255,255,255,0.6);
-  --dock-border: rgba(0,0,0,0.1);
-  --scanline: rgba(0,0,0,0.01);
-}
-[data-theme="neon"] {
-  --bg: #020008;
-  --glass: rgba(2,0,8,0.25);
-  --glass-border: rgba(168,85,247,0.12);
-  --glass-border-bright: rgba(168,85,247,0.35);
-  --text-primary: #ffffff;
-  --text-secondary: rgba(168,85,247,0.7);
-  --text-dim: rgba(168,85,247,0.3);
-  --neon: #ff00ff;
-  --neon2: #00ffff;
-  --neon3: #ff6600;
-  --neon4: #00ff88;
-  --danger: #ff0066;
-  --warning: #ffff00;
-  --holo-1: #ff00ff; --holo-2: #00ffff; --holo-3: #ff6600; --holo-4: #ff0066; --holo-5: #00ff88;
-  --metal: linear-gradient(135deg, #ff00ff 0%, #00ffff 33%, #ff6600 66%, #ff00ff 100%);
-  --dock-bg: rgba(168,85,247,0.1);
-  --dock-border: rgba(168,85,247,0.2);
-  --scanline: rgba(168,85,247,0.03);
+/* ─── APPLE SF SYSTEM FONT — ALL THEMES ─── */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  font-family:-apple-system,'SF Pro Text','SF Pro Display',BlinkMacSystemFont,'Helvetica Neue',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
+  -webkit-text-stroke:0;
 }
 
-/* ═══════════════════════════════════
-   RESET & BASE
-═══════════════════════════════════ */
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-html, body { width:100%; height:100%; overflow:hidden; }
-body {
-  font-family: -apple-system, 'SF Pro Display', BlinkMacSystemFont, system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--text-primary);
-  transition: color 0.5s, background 0.5s;
+/* ── GLOBAL TEXT SHARPENING ── */
+h1,h2,h3,.brand,.vval,.vname,.ptitle,.chip,.ts,.tstat,.pname,.pmem,.pcpu,.pr-name,.pr-desc,.act-title,.ndot-val{
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  text-rendering:geometricPrecision;
 }
 
-/* ═══════════════════════════════════
-   YOUTUBE BACKGROUND
-═══════════════════════════════════ */
-#yt-container {
-  position: fixed; inset: 0; z-index: 0;
-  overflow: hidden; background: #000;
+/* ── OLED: ultra-crisp on pure black ── */
+[data-theme="oled"] .vval{text-shadow:0 0 20px currentColor}
+[data-theme="oled"] .brand{filter:brightness(1.2)}
+[data-theme="oled"] .pname,[data-theme="oled"] .vname,[data-theme="oled"] .chip span:first-child{
+  color:rgba(255,255,255,0.9)!important;
+  letter-spacing:.01em;
 }
-#yt-container iframe {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 177.78vh; /* 16:9 */
-  height: 100vh;
-  min-width: 100vw;
-  min-height: 56.25vw;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  border: none;
+[data-theme="oled"] .vsub,[data-theme="oled"] .ptitle,[data-theme="oled"] .ts,[data-theme="oled"] .ppid,[data-theme="oled"] .pcpu{
+  color:rgba(255,255,255,0.55)!important;
 }
-#yt-overlay {
-  position: fixed; inset: 0; z-index: 1;
-  background: var(--glass);
-  backdrop-filter: blur(2px) saturate(120%);
-  transition: background 0.6s;
+[data-theme="oled"] .chip span:last-child,[data-theme="oled"] .npill-v{
+  color:#ffffff!important;font-weight:500;
 }
 
-/* OLED tint particles */
-#particle-canvas {
-  position: fixed; inset: 0; z-index: 2;
-  pointer-events: none;
+/* ── LIGHT: rich dark ink on white ── */
+[data-theme="light"] .vval{color:var(--t1)!important;font-weight:800}
+[data-theme="light"] .pname,[data-theme="light"] .vname,[data-theme="light"] .chip span:first-child{
+  color:rgba(0,0,0,0.88)!important;
+}
+[data-theme="light"] .vsub,[data-theme="light"] .ptitle,[data-theme="light"] .ppid,[data-theme="light"] .pcpu{
+  color:rgba(0,0,0,0.58)!important;
+}
+[data-theme="light"] .chip span:last-child,[data-theme="light"] .npill-v{
+  color:#000000!important;font-weight:600;
+}
+[data-theme="light"] .ts{color:rgba(0,0,0,0.75)!important}
+[data-theme="light"] .ts b{color:#000000!important}
+[data-theme="light"] .sarcasm,[data-theme="light"] #sarcasm{color:rgba(0,0,0,0.5)!important}
+[data-theme="light"] .dtip{color:#000!important}
+
+/* ── NEON: electric vivid on near-black ── */
+[data-theme="neon"] .vval{text-shadow:0 0 16px currentColor;font-weight:800}
+[data-theme="neon"] .pname,[data-theme="neon"] .vname{color:#ffffff!important}
+[data-theme="neon"] .chip span:first-child{color:rgba(255,255,255,0.92)!important}
+[data-theme="neon"] .chip span:last-child,[data-theme="neon"] .npill-v{
+  color:#ffffff!important;font-weight:600;
+  text-shadow:0 0 8px rgba(200,150,255,0.6);
+}
+[data-theme="neon"] .vsub,[data-theme="neon"] .ptitle,[data-theme="neon"] .ppid,[data-theme="neon"] .pcpu{
+  color:rgba(210,170,255,0.65)!important;
+}
+[data-theme="neon"] .ts b{color:#ffffff!important;text-shadow:0 0 8px var(--a1)}
+[data-theme="neon"] .brand{filter:brightness(1.3) saturate(1.2)}
+[data-theme="neon"] #sarcasm{color:rgba(210,170,255,0.6)!important}
+
+/* ══════════════════════════════════════════
+   THEME 1: macOS Sequoia — DEFAULT
+   100% clone of macOS system UI
+══════════════════════════════════════════ */
+[data-theme="macos"]{
+  --bg:#1c1c1e;
+  --bg2:#2c2c2e;
+  --bg3:#3a3a3c;
+  --glass:rgba(44,44,46,0.85);
+  --glass2:rgba(58,58,60,0.6);
+  --border:rgba(255,255,255,0.1);
+  --border2:rgba(255,255,255,0.2);
+  --t1:#ffffff;
+  --t2:rgba(255,255,255,0.6);
+  --t3:rgba(255,255,255,0.3);
+  --accent:#0a84ff;
+  --a1:#ff453a;--a2:#ff9f0a;--a3:#30d158;--a4:#0a84ff;--a5:#bf5af2;
+  --red:#ff453a;--grn:#30d158;--ylw:#ff9f0a;
+  --scan:rgba(255,255,255,0.012);
+  --dock-bg:rgba(44,44,46,0.72);
+  --dock-border:rgba(255,255,255,0.14);
+  --shadow:0 20px 60px rgba(0,0,0,0.7),0 8px 20px rgba(0,0,0,0.4);
+  --radius-card:14px;--radius-dock:20px;
 }
 
-/* Liquid blob shapes */
-.liquid-blob {
-  position: fixed; z-index: 2;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.12;
-  animation: blobFloat 20s ease-in-out infinite;
-  pointer-events: none;
-}
-.blob-1 { width:600px; height:600px; background:var(--holo-1); top:-100px; left:-100px; animation-delay:0s; }
-.blob-2 { width:500px; height:500px; background:var(--holo-2); bottom:-100px; right:-100px; animation-delay:-7s; }
-.blob-3 { width:400px; height:400px; background:var(--holo-3); top:30%; left:40%; animation-delay:-14s; }
-@keyframes blobFloat {
-  0%,100% { transform: translate(0,0) scale(1); }
-  33% { transform: translate(40px,-60px) scale(1.05); }
-  66% { transform: translate(-30px,40px) scale(0.95); }
-}
-
-/* Scanlines */
-.scanlines {
-  position: fixed; inset: 0; z-index: 3; pointer-events: none;
-  background: repeating-linear-gradient(0deg, var(--scanline) 0px, var(--scanline) 1px, transparent 1px, transparent 3px);
+/* ══════════════════════════════════════════
+   THEME 2: OLED Pure Black Premium
+══════════════════════════════════════════ */
+[data-theme="oled"]{
+  --bg:#000000;--bg2:#0a0a0a;--bg3:#141414;
+  --glass:rgba(12,12,12,0.82);--glass2:rgba(22,22,22,0.6);
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.18);
+  --t1:#ffffff;--t2:rgba(255,255,255,0.88);--t3:rgba(255,255,255,0.52);
+  --accent:#ff6b35;
+  --a1:#ff6b35;--a2:#a855f7;--a3:#06b6d4;--a4:#10b981;--a5:#f59e0b;
+  --red:#ff3b30;--grn:#10b981;--ylw:#f59e0b;
+  --scan:rgba(255,255,255,0.014);
+  --dock-bg:rgba(255,255,255,0.08);--dock-border:rgba(255,255,255,0.12);
+  --shadow:0 24px 80px rgba(0,0,0,0.9);
+  --radius-card:16px;--radius-dock:22px;
 }
 
-/* ═══════════════════════════════════
-   MAIN LAYOUT
-═══════════════════════════════════ */
-#app {
-  position: fixed; inset: 0; z-index: 10;
-  display: flex; flex-direction: column;
-  padding: 16px 16px 0;
-  overflow: hidden;
+/* ══════════════════════════════════════════
+   THEME 3: Light Subtle
+══════════════════════════════════════════ */
+[data-theme="light"]{
+  --bg:#f2f2f7;--bg2:#ffffff;--bg3:#e5e5ea;
+  --glass:rgba(255,255,255,0.78);--glass2:rgba(242,242,247,0.7);
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.16);
+  --t1:#000000;--t2:rgba(0,0,0,0.82);--t3:rgba(0,0,0,0.55);
+  --accent:#007aff;
+  --a1:#ff3b30;--a2:#af52de;--a3:#007aff;--a4:#34c759;--a5:#ff9500;
+  --red:#ff3b30;--grn:#34c759;--ylw:#ff9500;
+  --scan:rgba(0,0,0,0.006);
+  --dock-bg:rgba(255,255,255,0.55);--dock-border:rgba(0,0,0,0.1);
+  --shadow:0 8px 40px rgba(0,0,0,0.12);
+  --radius-card:14px;--radius-dock:20px;
 }
 
-/* ═══════════════════════════════════
-   TOP BAR
-═══════════════════════════════════ */
-#topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 20px;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  margin-bottom: 12px;
-  flex-shrink: 0;
-}
-.tb-brand {
-  font-family: 'SF Mono', Menlo, 'Courier New', monospace;
-  font-size: 14px; font-weight: 700; letter-spacing: 4px;
-  background: var(--metal);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-  background-size: 200% 100%;
-  animation: metalShimmer 4s linear infinite;
-}
-@keyframes metalShimmer {
-  0% { background-position: 0% 0; }
-  100% { background-position: 200% 0; }
-}
-.tb-stats { display:flex; gap:20px; align-items:center; }
-.tb-stat { font-size:12px; color:var(--text-secondary); font-family:'SF Mono',monospace; }
-.tb-stat span { color:var(--text-primary); font-weight:600; }
-.tb-controls { display:flex; gap:8px; align-items:center; }
-
-/* Theme toggle */
-.tb-btn {
-  width:32px; height:32px; border-radius:10px;
-  border:1px solid var(--glass-border);
-  background:var(--glass); color:var(--text-secondary);
-  cursor:pointer; font-size:14px;
-  display:flex; align-items:center; justify-content:center;
-  transition:all 0.3s var(--ease-smooth);
-  backdrop-filter:blur(10px);
-}
-.tb-btn:hover { border-color:var(--glass-border-bright); color:var(--text-primary); transform:scale(1.05); }
-
-/* YouTube input bar */
-#yt-bar {
-  display:flex; align-items:center; gap:8px;
-  padding:6px 12px; border-radius:10px;
-  background:var(--glass); border:1px solid var(--glass-border);
-  backdrop-filter:blur(10px);
-}
-#yt-input {
-  background:none; border:none; outline:none;
-  font-family:'SF Mono',monospace; font-size:11px;
-  color:var(--text-primary); width:220px;
-}
-#yt-input::placeholder { color:var(--text-dim); }
-#yt-load-btn {
-  background: linear-gradient(135deg, var(--holo-1), var(--holo-2));
-  border:none; border-radius:6px; padding:4px 10px;
-  color:#fff; font-size:11px; font-weight:600; cursor:pointer;
-  transition:all 0.2s;
-}
-#yt-load-btn:hover { opacity:0.85; transform:scale(1.02); }
-
-/* Sound toggle */
-#sound-btn {
-  display:flex; align-items:center; gap:5px;
-  padding:5px 12px; border-radius:8px;
-  background:var(--glass); border:1px solid var(--glass-border);
-  color:var(--text-secondary); font-size:11px; cursor:pointer;
-  transition:all 0.3s; font-family:'SF Mono',monospace;
-}
-#sound-btn:hover, #sound-btn.active {
-  border-color:var(--neon); color:var(--neon);
-  box-shadow: 0 0 12px rgba(255,107,53,0.3);
+/* ══════════════════════════════════════════
+   THEME 4: Neon Cyberpunk
+══════════════════════════════════════════ */
+[data-theme="neon"]{
+  --bg:#05000f;--bg2:#0f0020;--bg3:#1a0035;
+  --glass:rgba(15,0,32,0.82);--glass2:rgba(25,0,50,0.6);
+  --border:rgba(168,85,247,0.15);--border2:rgba(168,85,247,0.4);
+  --t1:#ffffff;--t2:rgba(255,255,255,0.9);--t3:rgba(220,180,255,0.65);
+  --accent:#bf5af2;
+  --a1:#ff00ff;--a2:#00ffff;--a3:#ff6600;--a4:#00ff88;--a5:#ffff00;
+  --red:#ff0066;--grn:#00ff88;--ylw:#ffff00;
+  --scan:rgba(168,85,247,0.025);
+  --dock-bg:rgba(168,85,247,0.1);--dock-border:rgba(168,85,247,0.25);
+  --shadow:0 20px 60px rgba(168,85,247,0.3);
+  --radius-card:16px;--radius-dock:22px;
 }
 
-/* ═══════════════════════════════════
-   CONTENT AREA
-═══════════════════════════════════ */
-#content {
-  flex:1; display:grid;
-  grid-template-columns: 280px 1fr 280px;
-  gap:12px; min-height:0; overflow:hidden;
-  margin-bottom:12px;
+/* ─── BASE ─── */
+body{background:var(--bg);color:var(--t1);transition:background .4s,color .4s}
+
+/* ─── YT BACKGROUND ─── */
+#yt-wrap{position:fixed;inset:0;z-index:0;background:#000;overflow:hidden}
+#yt-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:177.8vh;height:100vh;min-width:100vw;min-height:56.25vw;border:none;pointer-events:none}
+#overlay{position:fixed;inset:0;z-index:1;background:var(--glass);backdrop-filter:blur(4px) saturate(120%);-webkit-backdrop-filter:blur(4px) saturate(120%);transition:background .5s}
+.scanlines{position:fixed;inset:0;z-index:2;pointer-events:none;background:repeating-linear-gradient(0deg,var(--scan) 0,var(--scan) 1px,transparent 1px,transparent 3px)}
+
+/* Liquid blobs */
+.blob{position:fixed;border-radius:50%;filter:blur(120px);opacity:.08;pointer-events:none;z-index:2;animation:bm 28s ease-in-out infinite}
+.b1{width:800px;height:800px;background:var(--a1);top:-300px;left:-200px;animation-delay:0s}
+.b2{width:600px;height:600px;background:var(--a2);bottom:-200px;right:-200px;animation-delay:-12s}
+.b3{width:450px;height:450px;background:var(--a4);top:35%;left:40%;animation-delay:-22s}
+@keyframes bm{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(80px,-100px) scale(1.1)}66%{transform:translate(-60px,70px) scale(.9)}}
+[data-theme="macos"] .blob{opacity:.04}
+[data-theme="light"] .blob{opacity:.05}
+#pcvs{position:fixed;inset:0;z-index:3;pointer-events:none}
+
+/* ─── APP ─── */
+#app{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;padding:12px 12px 0}
+
+/* ─── TOPBAR ─── */
+#top{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 16px;
+  background:var(--glass);
+  border:1px solid var(--border);
+  border-radius:var(--radius-card);
+  backdrop-filter:blur(40px) saturate(180%);
+  -webkit-backdrop-filter:blur(40px) saturate(180%);
+  flex-shrink:0;margin-bottom:10px;
+  box-shadow:var(--shadow);
 }
 
-/* ═══════════════════════════════════
-   GLASS PANEL
-═══════════════════════════════════ */
-.panel {
-  background: var(--glass);
-  border:1px solid var(--glass-border);
-  border-radius:20px;
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  padding:20px;
-  overflow:hidden; overflow-y:auto;
-  transition:border-color 0.3s;
-  scrollbar-width:thin; scrollbar-color:var(--glass-border) transparent;
-}
-.panel:hover { border-color:var(--glass-border-bright); }
-.panel-title {
-  font-size:10px; letter-spacing:3px; text-transform:uppercase;
-  color:var(--text-dim); margin-bottom:16px; font-weight:600;
-  display:flex; align-items:center; gap:8px;
-}
-.panel-title::after {
-  content:''; flex:1; height:1px;
-  background:linear-gradient(90deg, var(--glass-border-bright), transparent);
-}
+/* macOS traffic lights */
+.tl{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.tl-dot{width:12px;height:12px;border-radius:50%;cursor:pointer;position:relative;transition:filter .15s}
+.tl-dot:hover{filter:brightness(1.2)}
+.tl-r{background:#ff5f57;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.tl-y{background:#febc2e;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.tl-g{background:#28c840;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
 
-/* ═══════════════════════════════════
-   LEFT PANEL — VITALS
-═══════════════════════════════════ */
-.vital-row {
-  margin-bottom:20px;
+.brand{
+  font-size:13px;font-weight:700;letter-spacing:4px;
+  background:linear-gradient(90deg,var(--a1),var(--a2),var(--a3),var(--a4),var(--a1));
+  background-size:400% 100%;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:brandshine 5s linear infinite;
+  margin-left:8px;
 }
-.vital-label {
-  display:flex; justify-content:space-between; align-items:baseline;
-  margin-bottom:6px;
-}
-.vital-name { font-size:11px; color:var(--text-secondary); letter-spacing:1px; }
-.vital-val {
-  font-family:'SF Mono',monospace; font-size:20px; font-weight:700;
-}
-.vital-sub { font-size:10px; color:var(--text-dim); margin-top:2px; }
+@keyframes brandshine{0%{background-position:0% 0}100%{background-position:400% 0}}
 
-/* Liquid fill bar */
-.liquid-bar {
-  height:6px; background:rgba(255,255,255,0.06);
-  border-radius:3px; overflow:visible; position:relative;
-  margin-top:4px;
-}
-.liquid-fill {
-  height:100%; border-radius:3px;
-  position:relative; transition:width 1s var(--ease-smooth);
-  overflow:hidden;
-}
-.liquid-fill::after {
-  content:''; position:absolute; inset:0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
-  background-size:200% 100%;
-  animation:liquidShine 2s linear infinite;
-}
-@keyframes liquidShine {
-  0% { background-position:200% 0; }
-  100% { background-position:-200% 0; }
-}
-.liquid-glow {
-  position:absolute; right:-4px; top:50%;
-  transform:translateY(-50%);
-  width:10px; height:10px; border-radius:50%;
-  box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
-  transition:right 1s var(--ease-smooth);
-}
+.yt-bar{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--glass2);border:1px solid var(--border);border-radius:9px}
+#yt-in{background:none;border:none;outline:none;font-size:11px;color:var(--t1);width:195px;font-family:-apple-system,'SF Mono',Menlo,monospace}
+#yt-in::placeholder{color:var(--t3)}
+.playbtn{background:var(--accent);border:none;border-radius:6px;padding:3px 10px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.3px;transition:opacity .15s}
+.playbtn:hover{opacity:.82}
 
-/* Holo gradient fills */
-.fill-cpu { background: linear-gradient(90deg, var(--holo-1), var(--holo-2)); }
-.fill-mem { background: linear-gradient(90deg, var(--holo-2), var(--holo-3)); }
-.fill-disk { background: linear-gradient(90deg, var(--holo-3), var(--holo-4)); }
-.fill-batt { background: linear-gradient(90deg, var(--holo-4), var(--holo-5)); }
+.topstats{display:flex;gap:14px;margin-left:auto}
+.ts{font-size:11px;color:var(--t2)}
+.ts b{color:var(--t1);font-weight:600;font-family:-apple-system,'SF Mono',Menlo,monospace}
 
-/* System info */
-.sys-chip {
-  padding:8px 12px; border-radius:10px;
-  background:rgba(255,255,255,0.03); border:1px solid var(--glass-border);
-  font-size:11px; color:var(--text-secondary); margin-bottom:8px;
-  display:flex; justify-content:space-between; align-items:center;
+/* macOS-style segmented control for themes */
+.seg-ctrl{
+  display:flex;background:var(--bg3);border-radius:8px;padding:2px;gap:1px;
+  border:1px solid var(--border);
 }
-.sys-chip span:last-child { color:var(--text-primary); font-family:'SF Mono',monospace; font-size:11px; }
+.seg-btn{
+  padding:3px 8px;border-radius:6px;border:none;
+  background:transparent;color:var(--t2);font-size:10px;font-weight:600;
+  cursor:pointer;transition:all .2s;letter-spacing:.3px;
+  font-family:-apple-system,system-ui,sans-serif;
+}
+.seg-btn:hover{color:var(--t1)}
+.seg-btn.active{background:var(--glass2);color:var(--t1);box-shadow:0 1px 3px rgba(0,0,0,.2)}
 
-/* ═══════════════════════════════════
-   CENTER PANEL — MAIN VIZ
-═══════════════════════════════════ */
-#center-panel {
-  display:flex; flex-direction:column; gap:12px; overflow:hidden;
+.sndbtn{
+  display:flex;align-items:center;gap:4px;padding:4px 10px;
+  background:var(--glass2);border:1px solid var(--border);
+  border-radius:8px;color:var(--t2);font-size:11px;cursor:pointer;
+  transition:all .2s;white-space:nowrap;font-family:-apple-system,system-ui,sans-serif;font-weight:500;
 }
-#center-panel .panel { flex:1; min-height:0; }
+.sndbtn:hover,.sndbtn.on{border-color:var(--accent);color:var(--accent)}
 
-/* Orbital CPU viz */
-#orbital-canvas {
-  width:100%; height:180px; display:block;
+.tbtn{
+  width:28px;height:28px;border-radius:8px;border:1px solid var(--border);
+  background:var(--glass2);color:var(--t2);cursor:pointer;font-size:13px;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
 }
+.tbtn:hover{border-color:var(--border2);color:var(--t1)}
 
-/* Sarcasm ticker */
-#sarcasm-ticker {
-  text-align:center; padding:12px;
-  font-size:12px; font-style:italic; color:var(--text-dim);
-  border-top:1px solid var(--glass-border);
-  transition:opacity 0.5s;
-}
+/* ─── CONTENT ─── */
+#content{flex:1;display:grid;grid-template-columns:252px 1fr 252px;gap:10px;min-height:0;overflow:hidden;margin-bottom:10px}
 
-/* Process rows */
-.proc-row {
-  display:flex; align-items:center; gap:10px;
-  padding:8px 10px; border-radius:10px;
-  transition:all 0.25s;
-  cursor:default;
+/* ─── PANEL — macOS Window Style ─── */
+.pane{
+  background:var(--glass);
+  border:1px solid var(--border);
+  border-radius:var(--radius-card);
+  backdrop-filter:blur(40px) saturate(160%);
+  -webkit-backdrop-filter:blur(40px) saturate(160%);
+  padding:16px;overflow:hidden;overflow-y:auto;
+  transition:border-color .25s,background .4s;
+  scrollbar-width:none;
+  box-shadow:var(--shadow);
 }
-.proc-row:hover { background:rgba(255,255,255,0.04); }
-.proc-pid { width:48px; font-family:'SF Mono',monospace; font-size:10px; color:var(--text-dim); }
-.proc-name { flex:1; font-size:12px; color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.proc-mem { width:40px; text-align:right; font-family:'SF Mono',monospace; font-size:12px; font-weight:600; }
-.proc-cpu-val { width:40px; text-align:right; font-family:'SF Mono',monospace; font-size:11px; color:var(--text-dim); }
-.proc-bar { width:60px; height:3px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; }
-.proc-bar-fill { height:100%; border-radius:2px; transition:width 0.5s; }
-.kill-x {
-  width:22px; height:22px; border-radius:6px; border:1px solid rgba(255,51,102,0.2);
-  background:rgba(255,51,102,0.06); color:var(--danger); cursor:pointer; font-size:10px;
-  display:flex; align-items:center; justify-content:center;
-  transition:all 0.2s; flex-shrink:0;
-}
-.kill-x:hover { background:rgba(255,51,102,0.2); border-color:var(--danger); transform:scale(1.1); box-shadow:0 0 8px rgba(255,51,102,0.4); }
+.pane::-webkit-scrollbar{display:none}
+.pane:hover{border-color:var(--border2)}
 
-/* ═══════════════════════════════════
-   RIGHT PANEL — STORAGE + NET
-═══════════════════════════════════ */
-.storage-seg {
-  margin-bottom:12px;
+/* macOS section title style */
+.ptitle{
+  font-size:11px;font-weight:600;letter-spacing:.6px;
+  text-transform:uppercase;color:var(--t3);
+  margin-bottom:12px;display:flex;align-items:center;gap:8px;
 }
-.storage-name { font-size:11px; color:var(--text-secondary); margin-bottom:4px; display:flex; justify-content:space-between; }
-.storage-name span { color:var(--text-dim); font-family:'SF Mono',monospace; font-size:10px; }
-.storage-track { height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; }
-.storage-fill { height:100%; border-radius:2px; transition:width 1s var(--ease-smooth); }
+.ptitle::after{content:'';flex:1;height:.5px;background:var(--border2)}
 
-.net-pill {
-  display:inline-flex; align-items:center; gap:6px;
-  padding:6px 14px; border-radius:20px;
-  background:rgba(255,255,255,0.04); border:1px solid var(--glass-border);
-  font-size:11px; color:var(--text-secondary); margin-bottom:8px; width:100%;
-}
-.net-pill-val { margin-left:auto; font-family:'SF Mono',monospace; font-size:11px; color:var(--text-primary); }
-.net-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+/* ─── VITALS ─── */
+.vital{margin-bottom:16px}
+.vrow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.vname{font-size:12px;color:var(--t2);font-weight:500}
+.vval{font-size:20px;font-weight:700;font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;letter-spacing:-.5px}
+.vsub{font-size:10px;color:var(--t3);margin-bottom:5px;font-family:-apple-system,'SF Mono',Menlo,monospace}
+.vtrack{height:4px;background:rgba(128,128,128,0.15);border-radius:2px;overflow:hidden}
+.vfill{height:100%;border-radius:2px;transition:width 1s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
+.vfill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);background-size:200% 100%;animation:shine 3s linear infinite}
+@keyframes shine{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* macOS system colors for bars */
+.f1{background:var(--a1)}.f2{background:var(--a5)}.f3{background:var(--a4)}.f4{background:var(--a3)}
 
-/* ═══════════════════════════════════
-   macOS DOCK — PIXEL PERFECT
-═══════════════════════════════════ */
-#dock-wrapper {
-  position:fixed; bottom:0; left:0; right:0; z-index:100;
-  display:flex; justify-content:center; align-items:flex-end;
-  padding-bottom:8px;
-  pointer-events:none;
+/* macOS list rows */
+.chip{
+  padding:8px 10px;border-radius:9px;
+  background:var(--glass2);border:1px solid var(--border);
+  font-size:11px;color:var(--t2);margin-bottom:6px;
+  display:flex;justify-content:space-between;align-items:center;
+  font-weight:500;
 }
-#dock {
-  display:flex; align-items:flex-end; gap:6px;
-  padding:8px 14px 8px;
+.chip span:last-child{color:var(--t1);font-family:-apple-system,'SF Mono',Menlo,monospace;font-size:11px;font-weight:400}
+.div{height:.5px;background:var(--border);margin:12px 0}
+
+/* ─── CENTER ─── */
+#ctr{display:flex;flex-direction:column;gap:10px;overflow:hidden}
+#ctr .pane{flex:1;min-height:0}
+.cpane-top{flex:0 0 auto!important}
+#wcvs{width:100%;height:140px;display:block}
+#sarcasm{text-align:center;padding:8px 0 0;font-size:11px;font-style:italic;color:var(--t3);transition:opacity .4s;min-height:30px;font-weight:400}
+
+/* macOS-style table rows */
+.prow{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;transition:background .15s;cursor:default}
+.prow:hover{background:rgba(128,128,128,0.1)}
+.ppid{width:42px;font-family:-apple-system,'SF Mono',Menlo,monospace;font-size:9px;color:var(--t3)}
+.pname{flex:1;font-size:12px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400}
+.pbw{width:48px;height:3px;background:rgba(128,128,128,0.12);border-radius:2px;overflow:hidden}
+.pbf{height:100%;border-radius:2px;transition:width .5s}
+.pcpu{width:34px;text-align:right;font-family:-apple-system,'SF Mono',Menlo,monospace;font-size:9px;color:var(--t3)}
+.pmem{width:34px;text-align:right;font-family:-apple-system,'SF Mono',Menlo,monospace;font-size:11px;font-weight:600}
+.pkill{
+  width:18px;height:18px;border-radius:5px;
+  border:1px solid rgba(255,59,48,.2);background:rgba(255,59,48,.08);
+  color:var(--red);cursor:pointer;font-size:9px;
+  display:flex;align-items:center;justify-content:center;transition:all .15s;
+}
+.pkill:hover{background:rgba(255,59,48,.25);border-color:var(--red)}
+
+/* ─── RIGHT ─── */
+.sseg{margin-bottom:10px}
+.sname{display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:3px;font-weight:500}
+.sname span:last-child{color:var(--t3);font-family:-apple-system,'SF Mono',Menlo,monospace;font-size:10px;font-weight:400}
+.strk{height:3px;background:rgba(128,128,128,0.12);border-radius:2px;overflow:hidden}
+.sfill{height:100%;border-radius:2px;transition:width 1s cubic-bezier(.16,1,.3,1)}
+.npill{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 10px;border-radius:9px;
+  background:var(--glass2);border:1px solid var(--border);
+  font-size:11px;color:var(--t2);margin-bottom:7px;font-weight:500;
+}
+.npill-v{margin-left:auto;font-family:-apple-system,'SF Mono',Menlo,monospace;font-size:11px;color:var(--t1);font-weight:400}
+.ndot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ══════════════════════════════════════════
+   macOS DOCK — 100% CLONED
+══════════════════════════════════════════ */
+#dock-wrap{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  display:flex;justify-content:center;align-items:flex-end;
+  padding-bottom:4px;pointer-events:none;
+}
+#dock{
+  display:flex;align-items:flex-end;gap:4px;
+  padding:7px 10px 7px;
   background:var(--dock-bg);
   border:1px solid var(--dock-border);
   border-bottom:none;
-  border-radius:20px 20px 0 0;
-  backdrop-filter:blur(32px) saturate(180%);
-  -webkit-backdrop-filter:blur(32px) saturate(180%);
+  border-radius:var(--radius-dock) var(--radius-dock) 0 0;
+  backdrop-filter:blur(50px) saturate(200%);
+  -webkit-backdrop-filter:blur(50px) saturate(200%);
   pointer-events:all;
-  box-shadow: 0 -4px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+  box-shadow:0 -1px 0 rgba(255,255,255,0.06) inset,
+             0 -2px 20px rgba(0,0,0,.2),
+             0 0 0 .5px rgba(255,255,255,.06) inset;
 }
+[data-theme="light"] #dock{
+  box-shadow:0 -1px 0 rgba(255,255,255,0.9) inset,
+             0 -4px 20px rgba(0,0,0,.08);
+}
+.dsep{width:.5px;height:36px;background:var(--border2);margin:0 3px;align-self:center;flex-shrink:0}
 
-/* Dock separator */
-.dock-sep {
-  width:1px; height:40px; background:var(--dock-border);
-  margin:0 4px; align-self:center; flex-shrink:0;
-}
+/* ── DOCK ITEM ── */
+.di{display:flex;flex-direction:column;align-items:center;cursor:pointer;position:relative;user-select:none}
 
-/* Dock item */
-.dock-item {
-  display:flex; flex-direction:column; align-items:center;
-  cursor:pointer; position:relative;
-  transition:none; /* JS handles magnification */
-}
-.dock-icon {
-  width:48px; height:48px;
-  border-radius:12px;
-  display:flex; align-items:center; justify-content:center;
-  position:relative; overflow:hidden;
+/* macOS icon — liquid drop with squircle shape */
+.dicon{
+  width:52px;height:52px;
+  border-radius:25%;/* exact macOS squircle ratio */
+  display:flex;align-items:center;justify-content:center;
+  font-size:30px;line-height:1;
+  position:relative;
   transform-origin:bottom center;
-  transition:transform 0.15s var(--ease-spring), box-shadow 0.2s;
+  transition:transform .12s cubic-bezier(.175,.885,.32,1.275);
   will-change:transform;
+  /* macOS icon shadow — exact 3-layer */
+  filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))
+         drop-shadow(0 8px 16px rgba(0,0,0,.2))
+         drop-shadow(0 1px 2px rgba(0,0,0,.5));
 }
-.dock-icon::before {
-  content:''; position:absolute; inset:0; border-radius:12px;
-  border:1px solid rgba(255,255,255,0.15);
-}
-.dock-icon svg { width:28px; height:28px; position:relative; z-index:1; }
-.dock-dot {
-  width:4px; height:4px; border-radius:50%;
-  background:var(--text-primary); opacity:0.5;
-  margin-top:3px; transition:opacity 0.2s;
-}
-.dock-item.active .dock-dot { opacity:1; background:var(--neon); }
 
-/* Tooltip */
-.dock-tooltip {
-  position:absolute; bottom:calc(100% + 14px);
-  left:50%; transform:translateX(-50%);
-  background:var(--dock-bg); border:1px solid var(--dock-border);
-  backdrop-filter:blur(20px); border-radius:8px;
-  padding:5px 10px; font-size:11px; color:var(--text-primary);
-  white-space:nowrap; pointer-events:none;
-  opacity:0; transition:opacity 0.15s, transform 0.15s;
-  font-family:'SF Pro Display',sans-serif; font-weight:500;
+/* macOS squircle background — exact gradient style */
+.dicon::before{
+  content:'';position:absolute;inset:0;border-radius:25%;
+  background:var(--ic-bg,rgba(120,120,128,0.18));
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,.5),
+    inset 0 -1px 1px rgba(0,0,0,.15),
+    inset 1px 0 1px rgba(255,255,255,.12),
+    inset -1px 0 1px rgba(0,0,0,.08);
+  z-index:0;
+}
+
+/* macOS specular highlight — top glossy sheen */
+.dicon::after{
+  content:'';position:absolute;
+  top:4%;left:8%;right:8%;height:42%;
+  border-radius:60% 60% 50% 50%;
+  background:linear-gradient(180deg,rgba(255,255,255,.55) 0%,rgba(255,255,255,.08) 100%);
+  z-index:2;pointer-events:none;
+}
+.dicon span{position:relative;z-index:1}
+
+/* macOS running indicator */
+.ddot{
+  width:4px;height:4px;border-radius:50%;
+  background:var(--t1);opacity:0;margin-top:3px;
+  transition:opacity .2s;
+}
+.di.run .ddot{opacity:.8}
+
+/* macOS tooltip style — exact match */
+.dtip{
+  position:absolute;bottom:calc(100% + 8px);left:50%;
   transform:translateX(-50%) translateY(4px);
+  background:rgba(20,20,20,.92);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:6px;padding:4px 9px;
+  font-size:11px;font-weight:600;color:#fff;
+  white-space:nowrap;pointer-events:none;
+  opacity:0;transition:opacity .12s,transform .12s;
+  box-shadow:0 2px 10px rgba(0,0,0,.4);
+  backdrop-filter:blur(10px);
 }
-.dock-item:hover .dock-tooltip {
-  opacity:1; transform:translateX(-50%) translateY(0);
-}
+[data-theme="light"] .dtip{background:rgba(240,240,240,.95);color:#000;border-color:rgba(0,0,0,.1)}
+.di:hover .dtip{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* Genie effect on click */
-@keyframes genie {
-  0% { transform:scaleY(1) scaleX(1); }
-  20% { transform:scaleY(1.2) scaleX(0.85) translateY(-8px); }
-  40% { transform:scaleY(0.9) scaleX(1.05); }
-  60% { transform:scaleY(1.05) scaleX(0.98); }
-  80% { transform:scaleY(0.98) scaleX(1.01); }
-  100% { transform:scaleY(1) scaleX(1); }
+/* macOS bounce animation */
+@keyframes macos-bounce{
+  0%{transform:translateY(0) scale(1)}
+  15%{transform:translateY(-28px) scale(1.15)}
+  35%{transform:translateY(0) scale(.97)}
+  50%{transform:translateY(-14px) scale(1.07)}
+  65%{transform:translateY(0) scale(.99)}
+  80%{transform:translateY(-6px) scale(1.02)}
+  100%{transform:translateY(0) scale(1)}
 }
-.dock-icon.genie { animation:genie 0.5s var(--ease-spring); }
+.dicon.bounce{animation:macos-bounce .7s cubic-bezier(.175,.885,.32,1.275)}
 
-/* Bounce on run */
-@keyframes dockBounce {
-  0%,100% { transform:translateY(0); }
-  30% { transform:translateY(-18px); }
-  60% { transform:translateY(-8px); }
-  80% { transform:translateY(-3px); }
-}
-.dock-icon.bouncing { animation:dockBounce 0.6s var(--ease-spring); }
+/* ── macOS ICON COLORS per command ── */
+/* Each icon has a distinct macOS app-style gradient */
+.ic-clean {--ic-bg:linear-gradient(145deg,#ff6b6b,#ee0979)}
+.ic-purge {--ic-bg:linear-gradient(145deg,#a855f7,#7c3aed)}
+.ic-scan  {--ic-bg:linear-gradient(145deg,#06b6d4,#0284c7)}
+.ic-kill  {--ic-bg:linear-gradient(145deg,#ff3b30,#c0392b)}
+.ic-run   {--ic-bg:linear-gradient(145deg,#30d158,#1a9e40)}
+.ic-deploy{--ic-bg:linear-gradient(145deg,#636af2,#4f46e5)}
+.ic-git   {--ic-bg:linear-gradient(145deg,#f97316,#ea580c)}
+.ic-prev  {--ic-bg:linear-gradient(145deg,#0ea5e9,#0369a1)}
+.ic-free  {--ic-bg:linear-gradient(145deg,#34d399,#059669)}
+.ic-pro   {--ic-bg:linear-gradient(145deg,#fb923c,#ea580c)}
+.ic-voice {--ic-bg:linear-gradient(145deg,#f43f5e,#be123c)}
+.ic-bot   {--ic-bg:linear-gradient(145deg,#22d3ee,#0891b2)}
+.ic-brew  {--ic-bg:linear-gradient(145deg,#fbbf24,#d97706)}
+.ic-dupes {--ic-bg:linear-gradient(145deg,#c084fc,#9333ea)}
+.ic-ports {--ic-bg:linear-gradient(145deg,#38bdf8,#0284c7)}
+.ic-wifi  {--ic-bg:linear-gradient(145deg,#4ade80,#16a34a)}
+.ic-doctor{--ic-bg:linear-gradient(145deg,#fb7185,#e11d48)}
+.ic-pub   {--ic-bg:linear-gradient(145deg,#818cf8,#4f46e5)}
 
-/* ═══════════════════════════════════
-   COMMAND PALETTE
-═══════════════════════════════════ */
-#cmd-palette {
-  position:fixed; top:50%; left:50%;
-  transform:translate(-50%,-50%) scale(0.95);
-  width:580px; z-index:999;
-  background:var(--glass); border:1px solid var(--glass-border-bright);
-  border-radius:20px; backdrop-filter:blur(40px) saturate(200%);
-  overflow:hidden; opacity:0; pointer-events:none;
-  transition:all 0.25s var(--ease-smooth);
-  box-shadow:0 40px 80px rgba(0,0,0,0.5);
+/* ─── CMD PALETTE ─── */
+#palette{
+  position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%) scale(.96);
+  width:540px;z-index:999;
+  background:var(--glass);border:1px solid var(--border2);
+  border-radius:16px;backdrop-filter:blur(60px) saturate(220%);
+  overflow:hidden;opacity:0;pointer-events:none;
+  transition:all .2s cubic-bezier(.16,1,.3,1);
+  box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);
 }
-#cmd-palette.open {
-  opacity:1; pointer-events:all;
-  transform:translate(-50%,-50%) scale(1);
-}
-#cmd-input-wrap {
-  display:flex; align-items:center; gap:12px;
-  padding:16px 20px; border-bottom:1px solid var(--glass-border);
-}
-#cmd-input-wrap svg { flex-shrink:0; color:var(--text-dim); }
-#cmd-input {
-  flex:1; background:none; border:none; outline:none;
-  font-size:16px; color:var(--text-primary);
-  font-family:'SF Pro Display',sans-serif;
-}
-#cmd-input::placeholder { color:var(--text-dim); }
-#cmd-results { max-height:360px; overflow-y:auto; padding:8px; }
-.cmd-result {
-  display:flex; align-items:center; gap:12px;
-  padding:10px 12px; border-radius:10px; cursor:pointer;
-  transition:background 0.15s;
-}
-.cmd-result:hover, .cmd-result.selected {
-  background:rgba(255,255,255,0.06);
-}
-.cmd-result-icon {
-  width:36px; height:36px; border-radius:10px;
-  display:flex; align-items:center; justify-content:center;
-  flex-shrink:0;
-}
-.cmd-result-name { font-size:14px; font-weight:500; }
-.cmd-result-desc { font-size:11px; color:var(--text-dim); margin-top:1px; }
-.cmd-result-key {
-  margin-left:auto; font-family:'SF Mono',monospace;
-  font-size:10px; color:var(--text-dim); padding:2px 6px;
-  border:1px solid var(--glass-border); border-radius:4px;
-}
+#palette.open{opacity:1;pointer-events:all;transform:translate(-50%,-50%) scale(1)}
+#pal-wrap{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
+#pal-in{flex:1;background:none;border:none;outline:none;font-size:15px;color:var(--t1);font-family:-apple-system,system-ui,sans-serif;font-weight:400}
+#pal-in::placeholder{color:var(--t3)}
+#pal-res{max-height:320px;overflow-y:auto;padding:6px;scrollbar-width:none}
+#pal-res::-webkit-scrollbar{display:none}
+.pr{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background .1s}
+.pr:hover{background:rgba(128,128,128,0.1)}
+.pr-ico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.pr-name{font-size:13px;font-weight:600;color:var(--t1)}
+.pr-desc{font-size:11px;color:var(--t3);margin-top:1px;font-weight:400}
+.pr-key{margin-left:auto;font-family:-apple-system,'SF Mono',Menlo,monospace;font-size:9px;color:var(--t3);padding:2px 6px;border:1px solid var(--border);border-radius:4px}
 
-/* ═══════════════════════════════════
-   ACTION OVERLAY (running command)
-═══════════════════════════════════ */
-#action-overlay {
-  position:fixed; inset:0; z-index:998;
-  background:rgba(0,0,0,0.7); backdrop-filter:blur(8px);
-  display:flex; align-items:center; justify-content:center;
-  opacity:0; pointer-events:none; transition:opacity 0.3s;
-}
-#action-overlay.show { opacity:1; pointer-events:all; }
-#action-box {
-  background:var(--glass); border:1px solid var(--glass-border-bright);
-  border-radius:24px; padding:32px 40px; text-align:center;
-  backdrop-filter:blur(40px); min-width:320px;
-}
-.action-spinner {
-  width:48px; height:48px; border-radius:50%;
-  border:3px solid var(--glass-border);
-  border-top-color:var(--neon);
-  animation:spin 0.8s linear infinite;
-  margin:0 auto 16px;
-}
-@keyframes spin { to { transform:rotate(360deg); } }
-#action-title { font-size:18px; font-weight:600; margin-bottom:8px; }
-#action-status { font-size:12px; color:var(--text-secondary); font-family:'SF Mono',monospace; min-height:40px; line-height:1.6; }
-#action-result { margin-top:16px; font-size:12px; color:var(--neon4); }
+/* ─── ACTION OVERLAY ─── */
+#act{position:fixed;inset:0;z-index:998;background:rgba(0,0,0,.6);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+#act.on{opacity:1;pointer-events:all}
+#actbox{background:var(--glass);border:1px solid var(--border2);border-radius:20px;padding:28px 36px;text-align:center;backdrop-filter:blur(60px);min-width:280px;max-width:480px;box-shadow:var(--shadow)}
+.spin{width:40px;height:40px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#act-title{font-size:17px;font-weight:700;margin-bottom:6px;letter-spacing:-.3px}
+#act-status{font-size:11px;color:var(--t2);font-family:-apple-system,'SF Mono',Menlo,monospace;min-height:32px;line-height:1.7}
+#act-result{margin-top:10px;font-size:11px;color:var(--grn);word-break:break-word}
+.closebtn{margin-top:14px;padding:7px 20px;border-radius:9px;border:1px solid var(--border);background:var(--glass2);color:var(--t1);cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;font-family:-apple-system,system-ui,sans-serif}
+.closebtn:hover{border-color:var(--border2)}
 
-/* ═══════════════════════════════════
-   NOTIFICATION TOASTS
-═══════════════════════════════════ */
-#toast-container {
-  position:fixed; top:80px; left:20px; z-index:9999;
-  display:flex; flex-direction:column; gap:8px;
-  pointer-events:none;
-}
-.toast {
-  padding:12px 18px; border-radius:14px;
-  background:var(--glass); border:1px solid var(--glass-border-bright);
-  backdrop-filter:blur(30px);
-  font-size:13px; color:var(--text-primary);
-  pointer-events:all; max-width:320px;
-  animation:toastIn 0.4s var(--ease-spring);
-  box-shadow:0 8px 32px rgba(0,0,0,0.3);
-}
-.toast.exit { animation:toastOut 0.3s forwards; }
-@keyframes toastIn { from { opacity:0; transform:translateX(-30px) scale(0.95); } to { opacity:1; transform:translateX(0) scale(1); } }
-@keyframes toastOut { to { opacity:0; transform:translateX(-30px) scale(0.95); } }
+/* ─── TOASTS ─── */
+#toasts{position:fixed;top:72px;left:14px;z-index:9999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.toast{padding:10px 14px;border-radius:12px;background:var(--glass);border:1px solid var(--border2);backdrop-filter:blur(40px);font-size:12px;font-weight:500;color:var(--t1);pointer-events:all;max-width:300px;animation:tin .3s cubic-bezier(.175,.885,.32,1.275);box-shadow:var(--shadow)}
+.toast.out{animation:tout .22s forwards}
+@keyframes tin{from{opacity:0;transform:translateX(-24px) scale(.93)}to{opacity:1;transform:translateX(0) scale(1)}}
+@keyframes tout{to{opacity:0;transform:translateX(-24px) scale(.93)}}
 
-/* ═══════════════════════════════════
-   DOCK SETTINGS PANEL
-═══════════════════════════════════ */
-#dock-settings {
-  position:fixed; bottom:80px; right:20px; z-index:200;
-  background:var(--glass); border:1px solid var(--glass-border-bright);
-  border-radius:16px; padding:20px; width:260px;
-  backdrop-filter:blur(30px);
-  opacity:0; pointer-events:none; transition:all 0.3s;
-  transform:translateY(10px);
-}
-#dock-settings.show { opacity:1; pointer-events:all; transform:translateY(0); }
-.ds-title { font-size:12px; font-weight:600; margin-bottom:12px; letter-spacing:1px; }
-.ds-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-.ds-label { font-size:12px; color:var(--text-secondary); }
-.ds-slider { -webkit-appearance:none; width:100px; height:3px; border-radius:2px; background:var(--glass-border); outline:none; cursor:pointer; }
-.ds-slider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--neon); cursor:pointer; }
-.ds-toggle { width:36px; height:20px; border-radius:10px; background:var(--glass-border); cursor:pointer; position:relative; transition:background 0.2s; }
-.ds-toggle.on { background:var(--neon); }
-.ds-toggle::after { content:''; position:absolute; top:3px; left:3px; width:14px; height:14px; border-radius:50%; background:white; transition:transform 0.2s; }
-.ds-toggle.on::after { transform:translateX(16px); }
+/* ─── DOCK SETTINGS ─── */
+#dsettings{position:fixed;bottom:72px;right:14px;z-index:200;background:var(--glass);border:1px solid var(--border2);border-radius:14px;padding:16px;width:230px;backdrop-filter:blur(40px);opacity:0;pointer-events:none;transition:all .22s;transform:translateY(6px);box-shadow:var(--shadow)}
+#dsettings.on{opacity:1;pointer-events:all;transform:translateY(0)}
+.dsrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;font-size:12px;color:var(--t2);font-weight:500}
+.dssl{-webkit-appearance:none;width:88px;height:3px;border-radius:2px;background:var(--border2);outline:none;cursor:pointer}
+.dssl::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.dst{width:34px;height:19px;border-radius:10px;background:var(--bg3);cursor:pointer;position:relative;transition:background .2s;border:1px solid var(--border);flex-shrink:0}
+.dst.on{background:var(--grn);border-color:var(--grn)}
+.dst::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.dst.on::after{transform:translateX(15px)}
 
-/* ═══════════════════════════════════
-   RESPONSIVE
-═══════════════════════════════════ */
-@media (max-width:1100px) {
-  #content { grid-template-columns:1fr 1fr; }
-  #right-panel { display:none; }
-}
-@media (max-width:720px) {
-  #content { grid-template-columns:1fr; }
-  #left-panel { display:none; }
-  #yt-input { width:120px; }
-}
+/* ─── RESPONSIVE ─── */
+@media(max-width:1100px){#content{grid-template-columns:240px 1fr}#rpane{display:none}}
+@media(max-width:700px){#content{grid-template-columns:1fr}#lpane{display:none}}
 </style>
 </head>
 <body>
 
-<!-- YouTube background -->
-<div id="yt-container">
-  <iframe id="yt-frame" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-</div>
-<div id="yt-overlay"></div>
-
-<!-- Liquid blobs -->
-<div class="liquid-blob blob-1"></div>
-<div class="liquid-blob blob-2"></div>
-<div class="liquid-blob blob-3"></div>
-
-<!-- Particle canvas -->
-<canvas id="particle-canvas"></canvas>
-<!-- Scanlines -->
+<div id="yt-wrap"><iframe id="yt-frame" src="" allow="autoplay;encrypted-media" allowfullscreen></iframe></div>
+<div id="overlay"></div>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+<canvas id="pcvs"></canvas>
 <div class="scanlines"></div>
+<div id="toasts"></div>
 
-<!-- Toast container -->
-<div id="toast-container"></div>
-
-<!-- Main App -->
 <div id="app">
-  <!-- TOP BAR -->
-  <div id="topbar">
-    <div class="tb-brand">◉ CHINNA</div>
-
-    <div id="yt-bar">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--danger)"><path d="M21.8 8s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16.8 5 12 5 12 5s-4.8 0-7 .1c-.4.1-1.2.1-2 .9-.6.6-.8 2-.8 2S2 9.6 2 11.2v1.6c0 1.6.2 3.2.2 3.2s.2 1.4.8 2c.8.8 1.8.8 2.2.8C6.4 19 12 19 12 19s4.8 0 7-.1c.4-.1 1.2-.1 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.2v-1.6C22 9.6 21.8 8 21.8 8zM10 15V9l5.2 3-5.2 3z"/></svg>
-      <input id="yt-input" placeholder="Paste YouTube URL..." type="text">
-      <button id="yt-load-btn" onclick="loadYT()">Play</button>
+  <!-- TOPBAR -->
+  <div id="top">
+    <!-- macOS traffic lights -->
+    <div class="tl">
+      <div class="tl-dot tl-r" title="Close" onclick="window.close()"></div>
+      <div class="tl-dot tl-y" title="Minimize"></div>
+      <div class="tl-dot tl-g" title="Full Screen" onclick="document.documentElement.requestFullscreen?.()"></div>
     </div>
 
-    <div class="tb-controls">
-      <button id="sound-btn" class="tb-btn" onclick="toggleSound()" style="width:auto;padding:0 10px;gap:5px;font-size:11px;">
-        <span id="sound-icon">🔇</span> <span id="sound-label">Sound</span>
-      </button>
-      <div class="tb-stats">
-        <div class="tb-stat">CPU <span id="tb-cpu">—</span></div>
-        <div class="tb-stat">MEM <span id="tb-mem">—</span></div>
-        <div class="tb-stat">DISK <span id="tb-disk">—</span></div>
-      </div>
-      <button class="tb-btn" onclick="openCmdPalette()" title="Command Palette (⌘K)">⌘</button>
-      <button class="tb-btn" onclick="setTheme('oled')" title="OLED">●</button>
-      <button class="tb-btn" onclick="setTheme('light')" title="Light">○</button>
-      <button class="tb-btn" onclick="setTheme('neon')" title="Neon">◈</button>
-      <button class="tb-btn" onclick="toggleDockSettings()" title="Dock Settings">⚙</button>
+    <div class="brand">◉ CHINNA</div>
+
+    <div class="yt-bar">
+      <span style="font-size:12px;opacity:.6">▶</span>
+      <input id="yt-in" placeholder="Paste YouTube URL — plays behind dashboard" type="text">
+      <button class="playbtn" onclick="loadYT()">Play</button>
     </div>
+
+    <button class="sndbtn" id="sndbtn" onclick="toggleSound()">🔇 Sound</button>
+
+    <div class="topstats">
+      <div class="ts">CPU <b id="tb-cpu">—</b></div>
+      <div class="ts">RAM <b id="tb-ram">—</b></div>
+      <div class="ts">DISK <b id="tb-dsk">—</b></div>
+    </div>
+
+    <!-- macOS-style segmented theme control -->
+    <div class="seg-ctrl">
+      <button class="seg-btn active" id="st-macos" onclick="setTheme('macos')">macOS</button>
+      <button class="seg-btn" id="st-oled" onclick="setTheme('oled')">OLED</button>
+      <button class="seg-btn" id="st-light" onclick="setTheme('light')">Light</button>
+      <button class="seg-btn" id="st-neon" onclick="setTheme('neon')">Neon</button>
+    </div>
+
+    <button class="tbtn" onclick="openPalette()" title="Command Palette ⌘K">⌘</button>
+    <button class="tbtn" onclick="document.getElementById('dsettings').classList.toggle('on')" title="Dock Settings">⚙</button>
   </div>
 
-  <!-- CONTENT GRID -->
+  <!-- CONTENT -->
   <div id="content">
     <!-- LEFT: VITALS -->
-    <div class="panel" id="left-panel">
-      <div class="panel-title">System Vitals</div>
-
-      <div class="vital-row">
-        <div class="vital-label">
-          <span class="vital-name">CPU</span>
-          <span class="vital-val" id="cpu-val" style="background:linear-gradient(135deg,var(--holo-1),var(--holo-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">—%</span>
-        </div>
-        <div class="vital-sub" id="cpu-sub">— user · — sys</div>
-        <div class="liquid-bar">
-          <div class="liquid-fill fill-cpu" id="cpu-bar" style="width:0%">
-            <div class="liquid-glow" style="color:var(--holo-1)"></div>
-          </div>
-        </div>
+    <div class="pane" id="lpane">
+      <div class="ptitle">System Vitals</div>
+      <div class="vital">
+        <div class="vrow"><span class="vname">CPU</span><span class="vval" id="v-cpu" style="color:var(--a1)">—%</span></div>
+        <div class="vsub" id="vs-cpu">— user · — sys</div>
+        <div class="vtrack"><div class="vfill f1" id="b-cpu" style="width:0%"></div></div>
       </div>
-
-      <div class="vital-row">
-        <div class="vital-label">
-          <span class="vital-name">Memory</span>
-          <span class="vital-val" id="mem-val" style="background:linear-gradient(135deg,var(--holo-2),var(--holo-3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">—%</span>
-        </div>
-        <div class="vital-sub" id="mem-sub">— / — MB</div>
-        <div class="liquid-bar">
-          <div class="liquid-fill fill-mem" id="mem-bar" style="width:0%"></div>
-        </div>
+      <div class="vital">
+        <div class="vrow"><span class="vname">Memory</span><span class="vval" id="v-mem" style="color:var(--a5)">—%</span></div>
+        <div class="vsub" id="vs-mem">— / — MB</div>
+        <div class="vtrack"><div class="vfill f2" id="b-mem" style="width:0%"></div></div>
       </div>
-
-      <div class="vital-row">
-        <div class="vital-label">
-          <span class="vital-name">Disk</span>
-          <span class="vital-val" id="disk-val" style="background:linear-gradient(135deg,var(--holo-3),var(--holo-4));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">—%</span>
-        </div>
-        <div class="vital-sub" id="disk-sub">— used · — free</div>
-        <div class="liquid-bar">
-          <div class="liquid-fill fill-disk" id="disk-bar" style="width:0%"></div>
-        </div>
+      <div class="vital">
+        <div class="vrow"><span class="vname">Disk</span><span class="vval" id="v-dsk" style="color:var(--a4)">—%</span></div>
+        <div class="vsub" id="vs-dsk">— used · — free</div>
+        <div class="vtrack"><div class="vfill f3" id="b-dsk" style="width:0%"></div></div>
       </div>
-
-      <div class="vital-row">
-        <div class="vital-label">
-          <span class="vital-name">Battery</span>
-          <span class="vital-val" id="batt-val" style="background:linear-gradient(135deg,var(--holo-4),var(--holo-5));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">—%</span>
-        </div>
-        <div class="vital-sub" id="batt-sub">—</div>
-        <div class="liquid-bar">
-          <div class="liquid-fill fill-batt" id="batt-bar" style="width:0%"></div>
-        </div>
+      <div class="vital">
+        <div class="vrow"><span class="vname">Battery</span><span class="vval" id="v-batt" style="color:var(--a3)">—%</span></div>
+        <div class="vsub" id="vs-batt">—</div>
+        <div class="vtrack"><div class="vfill f4" id="b-batt" style="width:0%"></div></div>
       </div>
-
-      <div style="height:1px;background:var(--glass-border);margin:16px 0;"></div>
-      <div class="panel-title" style="margin-top:0;">System Info</div>
-
-      <div class="sys-chip"><span>Host</span><span id="si-host">—</span></div>
-      <div class="sys-chip"><span>OS</span><span id="si-os">—</span></div>
-      <div class="sys-chip"><span>Arch</span><span id="si-arch">—</span></div>
-      <div class="sys-chip"><span>Uptime</span><span id="si-uptime">—</span></div>
-      <div class="sys-chip"><span>IP</span><span id="si-ip">—</span></div>
-      <div class="sys-chip"><span>WiFi</span><span id="si-wifi">—</span></div>
+      <div class="div"></div>
+      <div class="ptitle">Machine</div>
+      <div class="chip"><span>Hostname</span><span id="si-host">—</span></div>
+      <div class="chip"><span>macOS</span><span id="si-os">—</span></div>
+      <div class="chip"><span>Chip</span><span id="si-arch">—</span></div>
+      <div class="chip"><span>Uptime</span><span id="si-up">—</span></div>
+      <div class="chip"><span>Local IP</span><span id="si-ip">—</span></div>
+      <div class="chip"><span>WiFi</span><span id="si-wifi">—</span></div>
     </div>
 
     <!-- CENTER -->
-    <div id="center-panel">
-      <div class="panel" style="flex:0 0 auto;">
-        <div class="panel-title">CPU Activity</div>
-        <canvas id="orbital-canvas"></canvas>
-        <div id="sarcasm-ticker">Loading your Mac's secrets...</div>
+    <div id="ctr">
+      <div class="pane cpane-top">
+        <div class="ptitle">CPU History — 60s</div>
+        <canvas id="wcvs"></canvas>
+        <div id="sarcasm">Watching your Mac suffer in real time...</div>
       </div>
-      <div class="panel" style="flex:1;min-height:0;">
-        <div class="panel-title">Top Processes</div>
-        <div id="proc-list"></div>
+      <div class="pane">
+        <div class="ptitle">Top Processes — Memory</div>
+        <div id="procs"></div>
       </div>
     </div>
 
-    <!-- RIGHT: STORAGE + NET -->
-    <div class="panel" id="right-panel">
-      <div class="panel-title">Storage Breakdown</div>
-      <div id="storage-breakdown"></div>
-
-      <div style="height:1px;background:var(--glass-border);margin:16px 0;"></div>
-      <div class="panel-title" style="margin-top:0;">Network</div>
-
-      <div class="net-pill">
-        <div class="net-dot" id="net-dot" style="background:var(--neon4)"></div>
-        <span>Status</span>
-        <span class="net-pill-val" id="net-status">—</span>
-      </div>
-      <div class="net-pill">
-        <div class="net-dot" style="background:var(--holo-3)"></div>
-        <span>SSID</span>
-        <span class="net-pill-val" id="net-ssid">—</span>
-      </div>
-      <div class="net-pill">
-        <div class="net-dot" style="background:var(--holo-2)"></div>
-        <span>Local IP</span>
-        <span class="net-pill-val" id="net-ip">—</span>
-      </div>
+    <!-- RIGHT -->
+    <div class="pane" id="rpane">
+      <div class="ptitle">Storage Breakdown</div>
+      <div id="storage"></div>
+      <div class="div"></div>
+      <div class="ptitle">Network</div>
+      <div class="npill"><div class="ndot" id="ndot" style="background:var(--grn)"></div><span>Status</span><span class="npill-v" id="n-status">—</span></div>
+      <div class="npill"><div class="ndot" style="background:var(--a3)"></div><span>SSID</span><span class="npill-v" id="n-ssid">—</span></div>
+      <div class="npill"><div class="ndot" style="background:var(--a5)"></div><span>IP</span><span class="npill-v" id="n-ip">—</span></div>
     </div>
   </div>
 </div>
 
-<!-- macOS DOCK -->
-<div id="dock-wrapper">
-  <div id="dock" id="macos-dock"></div>
-</div>
+<!-- DOCK -->
+<div id="dock-wrap"><div id="dock"></div></div>
 
-<!-- COMMAND PALETTE -->
-<div id="cmd-palette">
-  <div id="cmd-input-wrap">
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input id="cmd-input" placeholder="Search commands... (type anything in any language)" autocomplete="off">
+<!-- CMD PALETTE -->
+<div id="palette">
+  <div id="pal-wrap">
+    <span style="font-size:16px;color:var(--t3)">⌘</span>
+    <input id="pal-in" placeholder="Search Chinna commands..." autocomplete="off">
+    <span style="font-size:10px;color:var(--t3);border:1px solid var(--border);padding:2px 6px;border-radius:4px;font-family:monospace">ESC</span>
   </div>
-  <div id="cmd-results"></div>
+  <div id="pal-res"></div>
 </div>
 
 <!-- ACTION OVERLAY -->
-<div id="action-overlay">
-  <div id="action-box">
-    <div class="action-spinner" id="action-spinner"></div>
-    <div id="action-title">Running...</div>
-    <div id="action-status"></div>
-    <div id="action-result"></div>
-    <button onclick="closeAction()" style="margin-top:16px;padding:8px 20px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text-primary);cursor:pointer;font-size:13px;">Close</button>
+<div id="act">
+  <div id="actbox">
+    <div class="spin" id="spin"></div>
+    <div id="act-title">Running...</div>
+    <div id="act-status"></div>
+    <div id="act-result"></div>
+    <button class="closebtn" onclick="closeAct()">Done</button>
   </div>
 </div>
 
 <!-- DOCK SETTINGS -->
-<div id="dock-settings">
-  <div class="ds-title">DOCK SETTINGS</div>
-  <div class="ds-row">
-    <div class="ds-label">Icon Size</div>
-    <input class="ds-slider" type="range" min="36" max="72" value="48" id="dock-size-slider" oninput="updateDockSize(this.value)">
-  </div>
-  <div class="ds-row">
-    <div class="ds-label">Magnification</div>
-    <div class="ds-toggle on" id="mag-toggle" onclick="toggleMagnification()"></div>
-  </div>
-  <div class="ds-row">
-    <div class="ds-label">Auto-hide</div>
-    <div class="ds-toggle" id="autohide-toggle" onclick="toggleAutohide()"></div>
-  </div>
-  <div class="ds-row">
-    <div class="ds-label">Labels</div>
-    <div class="ds-toggle on" id="label-toggle" onclick="toggleLabels()"></div>
-  </div>
+<div id="dsettings">
+  <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--t3);margin-bottom:12px;text-transform:uppercase">Dock & Menu Bar</div>
+  <div class="dsrow"><span>Icon Size</span><input class="dssl" type="range" min="38" max="70" value="52" oninput="setDockSize(this.value)"></div>
+  <div class="dsrow"><span>Magnification</span><div class="dst on" id="dt-mag" onclick="toggleMag()"></div></div>
+  <div class="dsrow"><span>Auto-hide</span><div class="dst" id="dt-hide" onclick="toggleHide()"></div></div>
+  <div class="dsrow"><span>Show Labels</span><div class="dst on" id="dt-lbl" onclick="toggleLbl()"></div></div>
 </div>
 
 <script>
+'use strict';
+
+// ═══ COMMANDS — macOS app style ═══
+const CMDS=[
+  {id:'clean', cls:'ic-clean', emoji:'🧹', label:'Deep Clean',   desc:'Nuke cache, builds, docker, node_modules', ep:'clean'},
+  {id:'purge', cls:'ic-purge', emoji:'🧠', label:'Purge RAM',    desc:'Free inactive memory instantly',           ep:'purge'},
+  {id:'scan',  cls:'ic-scan',  emoji:'🔬', label:'Scan Disk',    desc:'Full disk usage breakdown',                ep:'scan'},
+  {id:'kill',  cls:'ic-kill',  emoji:'☠️', label:'Kill Hogs',    desc:'Terminate RAM-eating processes',           ep:'killhogs'},
+  null,
+  {id:'run',   cls:'ic-run',   emoji:'🚀', label:'Run Project',  desc:'Auto-detect stack, launch localhost',      ep:'run'},
+  {id:'deploy',cls:'ic-deploy',emoji:'☁️', label:'Deploy',       desc:'Vercel / Netlify / Railway',               ep:'deploy'},
+  {id:'git',   cls:'ic-git',   emoji:'🌿', label:'Git',          desc:'AI commit message + push',                 ep:'git'},
+  {id:'prev',  cls:'ic-prev',  emoji:'🌐', label:'Preview',      desc:'Local HTML server + browser open',         ep:'preview'},
+  null,
+  {id:'free',  cls:'ic-free',  emoji:'🤖', label:'Free AI',      desc:'Llama 3.3 — free via OpenRouter',          ep:'chat-free'},
+  {id:'pro',   cls:'ic-pro',   emoji:'⭐', label:'Pro AI',       desc:'Claude Sonnet via OpenRouter',             ep:'chat-pro'},
+  {id:'voice', cls:'ic-voice', emoji:'🎤', label:'Voice',        desc:'Push-to-talk commands',                    ep:'listen'},
+  {id:'bot',   cls:'ic-bot',   emoji:'📡', label:'Telegram',     desc:'Remote control from phone',                ep:'bot'},
+  null,
+  {id:'brew',  cls:'ic-brew',  emoji:'🍺', label:'Dev Setup',    desc:'Homebrew + node + python + tools',         ep:'brew'},
+  {id:'dupes', cls:'ic-dupes', emoji:'🔍', label:'Duplicates',   desc:'Find and delete duplicate files',          ep:'dupes'},
+  {id:'ports', cls:'ic-ports', emoji:'🔌', label:'Ports',        desc:'Active port scanner',                      ep:'ports'},
+  {id:'wifi',  cls:'ic-wifi',  emoji:'📶', label:'WiFi',         desc:'Network diagnostics',                      ep:'wifi'},
+  {id:'doctor',cls:'ic-doctor',emoji:'🩺', label:'Doctor',       desc:'Full system health check',                 ep:'doctor'},
+  {id:'pub',   cls:'ic-pub',   emoji:'📤', label:'Publish',      desc:'Push update → friends auto-update',        ep:'publish'},
+];
+
 // ═══ STATE ═══
-let stats = {}, cpuHistory = new Array(60).fill(0);
-let soundOn = false, ytPlayer = null, dockMagnify = true, dockAutohide = false, dockLabels = true, dockSize = 48;
-let cmdOpen = false, cmdSelected = 0;
+let stats={},cpuH=new Array(60).fill(0),soundOn=false,palOpen=false;
+let dockMag=true,dockHide=false,dockLbl=true,dockSz=52;
 
 // ═══ SARCASM ═══
-const SARCASM = [
-  "Chrome is eating 88.5% RAM. As always. Absolutely predictable.",
-  "57% CPU. Your Mac is literally sweating.",
-  "84% memory used. Free: 67MB. That's a crime scene.",
-  "Disk at 81%. Chinna is judging your Downloads folder.",
-  "VSCode + Chrome + Slack = heat death of your MacBook.",
-  "Your Mac called. It wants its RAM back. Immediately.",
-  "openclaw-gateway? What is that even? Deleting it. Kidding. Maybe.",
-  "More node_modules than actual project files. You know who you are.",
-  "338GB used. Your Mac has commitment issues with deleting things.",
-  "Battery: Charging. Mac: Crying. You: Not noticing.",
-  "SkyLig using 73.1% CPU. No one knows what SkyLig is.",
-  "This dashboard uses less RAM than your Slack notifications.",
-  "Your Mac's thermal paste is questioning its life choices.",
-  "47 Chrome processes. FORTY SEVEN. Have some respect.",
-  "Free memory: 67MB. That's less than a WhatsApp sticker pack.",
+const SARCS=[
+  'Chrome at 88% RAM. No shame whatsoever.',
+  'Your Mac is running slower than government infrastructure.',
+  'Memory at 84%? Free: 67MB. Crime scene.',
+  '78% disk used. Your Downloads folder is archaeology.',
+  '57% CPU. Your Mac is visibly stressed.',
+  'node_modules in 47 folders. Projects shipped: 0.',
+  'VSCode + Chrome + Claude = thermal throttling.',
+  'openclaw-gateway. Nobody knows. Including you.',
+  'Ollama models: downloaded, never queried, 8GB gone.',
+  'This dashboard uses less RAM than your Slack.',
+  'Docker running. Nothing deployed. 19GB just vibing.',
+  'Your Mac called. Wants its RAM back.',
+  'Plugged in at 100%. Commitment issues.',
+  '14 Chrome processes. F O U R T E E N.',
+  'Build artifacts from 2024 in dist/. Let go.',
 ];
-let sIdx = 0;
-const rotateSarcasm = () => {
-  sIdx = (sIdx+1) % SARCASM.length;
-  const el = document.getElementById('sarcasm-ticker');
-  if (!el) return;
-  el.style.opacity = '0';
-  setTimeout(() => { el.textContent = SARCASM[sIdx]; el.style.opacity = '1'; el.style.transition = 'opacity 0.5s'; }, 400);
-};
-setInterval(rotateSarcasm, 7000);
+let sIdx=0;
+const nextSarc=()=>{sIdx=(sIdx+1)%SARCS.length;const e=document.getElementById('sarcasm');e.style.opacity='0';setTimeout(()=>{e.textContent=SARCS[sIdx];e.style.opacity='1';},350);};
+setInterval(nextSarc,9000);
 
-// ═══ THEMES ═══
-const initParticles = () => {
-  const canvas = document.getElementById('particle-canvas');
-  if(!canvas) return;
-  const ctx = canvas.getContext('2d');
-  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-  const style = getComputedStyle(document.documentElement);
-  const colors = [
-    style.getPropertyValue('--holo-1').trim(),
-    style.getPropertyValue('--holo-2').trim(),
-    style.getPropertyValue('--holo-3').trim(),
-    style.getPropertyValue('--holo-4').trim(),
-  ].filter(c=>c);
-  if(!colors.length) return;
-  const pts = Array.from({length:60}, () => ({
-    x: Math.random()*canvas.width, y: Math.random()*canvas.height,
-    vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3,
-    r:Math.random()*1.5+.3,
-    c:colors[Math.floor(Math.random()*colors.length)],
-    a:Math.random()*.15+.03
+// ═══ PARTICLES — defined first ═══
+function initParticles(){
+  const c=document.getElementById('pcvs');
+  if(!c)return;
+  const ctx=c.getContext('2d');
+  c.width=innerWidth;c.height=innerHeight;
+  const st=getComputedStyle(document.documentElement);
+  const cols=['--a1','--a2','--a3','--a4','--a5'].map(v=>st.getPropertyValue(v).trim()).filter(Boolean);
+  if(!cols.length)return;
+  const pts=Array.from({length:50},()=>({
+    x:Math.random()*c.width,y:Math.random()*c.height,
+    vx:(Math.random()-.5)*.22,vy:(Math.random()-.5)*.22,
+    r:Math.random()*1.2+.3,
+    col:cols[Math.floor(Math.random()*cols.length)],
+    a:Math.random()*.1+.025
   }));
-  let raf;
-  const draw = () => {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    pts.forEach(p => {
-      p.x+=p.vx; p.y+=p.vy;
-      if(p.x<0||p.x>canvas.width) p.vx*=-1;
-      if(p.y<0||p.y>canvas.height) p.vy*=-1;
-      ctx.globalAlpha=p.a; ctx.fillStyle=p.c;
-      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+  let rid;
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    pts.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>c.width)p.vx*=-1;
+      if(p.y<0||p.y>c.height)p.vy*=-1;
+      ctx.globalAlpha=p.a;ctx.fillStyle=p.col;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
     });
-    ctx.globalAlpha=.03; ctx.strokeStyle=colors[0]; ctx.lineWidth=.5;
-    for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
-      const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
-      if(d<120){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.stroke();}
+    ctx.globalAlpha=.02;ctx.strokeStyle=cols[0];ctx.lineWidth=.5;
+    for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+      const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y;
+      if(dx*dx+dy*dy<12100){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.stroke();}
     }
     ctx.globalAlpha=1;
-    raf=requestAnimationFrame(draw);
-  };
-  cancelAnimationFrame(raf); draw();
-};
+    rid=requestAnimationFrame(draw);
+  }
+  cancelAnimationFrame(rid);draw();
+}
+window.addEventListener('resize',()=>{const c=document.getElementById('pcvs');if(c){c.width=innerWidth;c.height=innerHeight;}initParticles();});
 
-const setTheme = t => {
-  document.documentElement.setAttribute('data-theme', t);
-  localStorage.setItem('chinna-theme', t);
-  initParticles();
-};
-setTheme(localStorage.getItem('chinna-theme') || 'oled');
+// ═══ THEMES ═══
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  localStorage.setItem('ct',t);
+  document.querySelectorAll('.seg-btn').forEach(b=>{b.classList.toggle('active',b.id==='st-'+t);});
+  setTimeout(initParticles,80);
+}
+// Init with saved theme (default: macos)
+setTheme(localStorage.getItem('ct')||'macos');
 
 // ═══ YOUTUBE ═══
-const loadYT = () => {
-  const raw = document.getElementById('yt-input').value.trim();
-  let vid = '';
-  const m = raw.match(/(?:v=|youtu\.be\/|embed\/)([^&?\s]+)/);
-  if (m) vid = m[1];
-  else if (raw.length === 11) vid = raw;
-  if (!vid) { toast('Paste a valid YouTube URL', 'warn'); return; }
-  const muted = soundOn ? 0 : 1;
-  document.getElementById('yt-frame').src =
-    `https://www.youtube.com/embed/${vid}?autoplay=1&mute=${muted}&loop=1&playlist=${vid}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1`;
-  toast('Video loaded — playing in background 🎬', 'ok');
-};
-const toggleSound = () => {
-  soundOn = !soundOn;
-  document.getElementById('sound-icon').textContent = soundOn ? '🔊' : '🔇';
-  document.getElementById('sound-btn').classList.toggle('active', soundOn);
-  const fr = document.getElementById('yt-frame');
-  const src = fr.src;
-  if (src) fr.src = src.replace(/mute=[01]/, `mute=${soundOn?0:1}`);
-};
-document.getElementById('yt-input').addEventListener('keydown', e => e.key === 'Enter' && loadYT());
+function loadYT(){
+  const raw=document.getElementById('yt-in').value.trim();
+  const m=raw.match(/(?:v=|youtu\.be\/|embed\/)([^&?\s]{11})/);
+  const vid=m?m[1]:(raw.length===11?raw:null);
+  if(!vid){toast('❌ Paste a valid YouTube URL');return;}
+  const mu=soundOn?0:1;
+  document.getElementById('yt-frame').src=`https://www.youtube.com/embed/${vid}?autoplay=1&mute=${mu}&loop=1&playlist=${vid}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1`;
+  toast('🎬 Playing in background');
+}
+function toggleSound(){
+  soundOn=!soundOn;
+  const b=document.getElementById('sndbtn');
+  b.textContent=(soundOn?'🔊':'🔇')+' Sound';
+  b.classList.toggle('on',soundOn);
+  const fr=document.getElementById('yt-frame');
+  if(fr.src)fr.src=fr.src.replace(/mute=[01]/,'mute='+(soundOn?0:1));
+}
+document.getElementById('yt-in').addEventListener('keydown',e=>e.key==='Enter'&&loadYT());
 
 // ═══ TOAST ═══
-const toast = (msg, type='info') => {
-  const c = document.getElementById('toast-container');
-  const t = document.createElement('div');
-  const icons = { info:'ℹ️', ok:'✅', warn:'⚠️', error:'❌', action:'🔥', kill:'💀' };
-  t.className = 'toast';
-  t.innerHTML = `${icons[type]||'🟠'} ${msg}`;
-  c.appendChild(t);
-  setTimeout(() => { t.classList.add('exit'); setTimeout(() => t.remove(), 300); }, 4000);
-};
+function toast(msg){
+  const c=document.getElementById('toasts');
+  const t=document.createElement('div');
+  t.className='toast';t.textContent=msg;c.appendChild(t);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),220);},4500);
+}
 
-window.addEventListener('resize',()=>{ document.getElementById('particle-canvas').width=window.innerWidth; document.getElementById('particle-canvas').height=window.innerHeight; initParticles(); });
-
-// ═══ CPU WAVEFORM CANVAS ═══
-const drawCPUWave = () => {
-  const canvas = document.getElementById('orbital-canvas');
-  if(!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const w = canvas.offsetWidth, h = 180;
-  canvas.width = w*2; canvas.height = h*2;
-  canvas.style.width = w+'px'; canvas.style.height = h+'px';
-  ctx.scale(2,2);
-  ctx.clearRect(0,0,w,h);
-  const style = getComputedStyle(document.documentElement);
-  const c1 = style.getPropertyValue('--holo-1').trim();
-  const c2 = style.getPropertyValue('--holo-2').trim();
-
+// ═══ CPU WAVEFORM ═══
+function drawWave(){
+  const cv=document.getElementById('wcvs');
+  if(!cv)return;
+  const ctx=cv.getContext('2d');
+  const w=cv.parentElement.clientWidth-32,h=140;
+  cv.width=w*2;cv.height=h*2;cv.style.width=w+'px';cv.style.height=h+'px';
+  ctx.scale(2,2);ctx.clearRect(0,0,w,h);
+  const st=getComputedStyle(document.documentElement);
+  const c1=st.getPropertyValue('--a1').trim()||'#ff453a';
+  const c2=st.getPropertyValue('--a4').trim()||'#0a84ff';
   // Grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth=.5;
-  for(let i=0;i<=4;i++){ const y=(h/4)*i; ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
-  for(let i=0;i<=6;i++){ const x=(w/6)*i; ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
-
-  // Gradient fill
-  const grad = ctx.createLinearGradient(0,0,w,0);
-  grad.addColorStop(0,c1+'60'); grad.addColorStop(.5,c2+'60'); grad.addColorStop(1,c1+'60');
-  ctx.beginPath(); ctx.moveTo(0,h);
-  cpuHistory.forEach((v,i)=>{ const x=(i/(cpuHistory.length-1))*w; const y=h-(v/100)*h*0.85-8; ctx.lineTo(x,y); });
-  ctx.lineTo(w,h); ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
-
+  ctx.strokeStyle='rgba(128,128,128,0.08)';ctx.lineWidth=.5;
+  [0,1,2,3,4].forEach(i=>{const y=(h/4)*i;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();});
+  if(cpuH.every(v=>v===0))return;
+  // Fill
+  const gf=ctx.createLinearGradient(0,0,0,h);
+  gf.addColorStop(0,c1+'50');gf.addColorStop(1,c1+'00');
+  ctx.beginPath();ctx.moveTo(0,h);
+  cpuH.forEach((v,i)=>{const x=(i/59)*w,y=h-(v/100)*h*.86-5;ctx.lineTo(x,y);});
+  ctx.lineTo(w,h);ctx.closePath();ctx.fillStyle=gf;ctx.fill();
   // Line
-  const lineGrad = ctx.createLinearGradient(0,0,w,0);
-  lineGrad.addColorStop(0,c1); lineGrad.addColorStop(.5,c2); lineGrad.addColorStop(1,c1);
+  const gl=ctx.createLinearGradient(0,0,w,0);
+  gl.addColorStop(0,c1);gl.addColorStop(1,c2);
   ctx.beginPath();
-  cpuHistory.forEach((v,i)=>{ const x=(i/(cpuHistory.length-1))*w; const y=h-(v/100)*h*0.85-8; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
-  ctx.strokeStyle=lineGrad; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.stroke();
+  cpuH.forEach((v,i)=>{const x=(i/59)*w,y=h-(v/100)*h*.86-5;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.strokeStyle=gl;ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.stroke();
+  // Dot
+  const lx=w,ly=h-(cpuH[59]/100)*h*.86-5;
+  ctx.beginPath();ctx.arc(lx,ly,3.5,0,Math.PI*2);ctx.fillStyle=c2;ctx.fill();
+  ctx.beginPath();ctx.arc(lx,ly,8,0,Math.PI*2);ctx.fillStyle=c2+'25';ctx.fill();
+}
 
-  // Endpoint glow
-  const lx=w, ly=h-(cpuHistory[cpuHistory.length-1]/100)*h*0.85-8;
-  ctx.beginPath(); ctx.arc(lx,ly,5,0,Math.PI*2); ctx.fillStyle=c2; ctx.fill();
-  ctx.beginPath(); ctx.arc(lx,ly,10,0,Math.PI*2); ctx.fillStyle=c2+'30'; ctx.fill();
-};
+// ═══ UI UPDATE ═══
+const T=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+const B=(id,p)=>{const e=document.getElementById(id);if(e)e.style.width=Math.min(100,Math.max(0,p))+'%';};
 
-// ═══ UPDATE UI ═══
-const setBar = (id,pct) => {
-  const el = document.getElementById(id);
-  if(el) el.style.width = Math.min(100,pct)+'%';
-};
-const setText = (id,val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
-
-const updateUI = () => {
-  if(!stats.cpu) return;
-  const cpu = Math.round(stats.cpu.pct||0);
-  const mem = stats.memory||{};
-  const disk = stats.disk||{};
-  const batt = stats.battery||{};
-
-  // Topbar
-  setText('tb-cpu', cpu+'%');
-  setText('tb-mem', (mem.pct||0)+'%');
-  setText('tb-disk', (disk.pct||0)+'%');
-
-  // Vitals
-  setText('cpu-val', cpu+'%');
-  setText('cpu-sub', `${stats.cpu.user||0}% user · ${stats.cpu.sys||0}% sys`);
-  setBar('cpu-bar', cpu);
-
-  setText('mem-val', (mem.pct||0)+'%');
-  setText('mem-sub', `${mem.used||0} / ${mem.total||0} MB`);
-  setBar('mem-bar', mem.pct||0);
-
-  setText('disk-val', (disk.pct||0)+'%');
-  setText('disk-sub', `${disk.used||'—'} used · ${disk.free||'—'} free`);
-  setBar('disk-bar', disk.pct||0);
-
-  setText('batt-val', (batt.pct||0)+'%');
-  setText('batt-sub', batt.charging ? '⚡ Charging' : '🔋 Battery');
-  setBar('batt-bar', batt.pct||0);
-
-  // System info
-  if(stats.os){
-    setText('si-host', stats.os.hostname||'—');
-    setText('si-os', `${stats.os.name||''} ${stats.os.version||''}`);
-    setText('si-arch', stats.os.arch||'—');
-  }
-  setText('si-uptime', stats.uptime||'—');
-  if(stats.network){
-    setText('si-ip', stats.network.ip||'—');
-    setText('si-wifi', stats.network.ssid||'—');
-    setText('net-ssid', stats.network.ssid||'—');
-    setText('net-ip', stats.network.ip||'—');
-    const conn = stats.network.ip && stats.network.ip!=='disconnected';
-    setText('net-status', conn?'Connected':'Offline');
-    const dot = document.getElementById('net-dot');
-    if(dot) dot.style.background = conn ? 'var(--neon4)' : 'var(--danger)';
-  }
-
-  // CPU history
-  cpuHistory.push(cpu); cpuHistory.shift();
-  drawCPUWave();
-
-  // Processes
+function updateUI(){
+  if(!stats||!stats.cpu)return;
+  const cpu=Math.round(stats.cpu.pct||0),mem=stats.memory||{},dsk=stats.disk||{},bat=stats.battery||{},net=stats.network||{},os=stats.os||{};
+  T('tb-cpu',cpu+'%');T('tb-ram',(mem.pct||0)+'%');T('tb-dsk',(dsk.pct||0)+'%');
+  T('v-cpu',cpu+'%');T('vs-cpu',(stats.cpu.user||0)+'% user · '+(stats.cpu.sys||0)+'% sys');B('b-cpu',cpu);
+  T('v-mem',(mem.pct||0)+'%');T('vs-mem',(mem.used||0)+' / '+(mem.total||0)+' MB');B('b-mem',mem.pct||0);
+  T('v-dsk',(dsk.pct||0)+'%');T('vs-dsk',(dsk.used||'—')+' used · '+(dsk.free||'—')+' free');B('b-dsk',dsk.pct||0);
+  T('v-batt',(bat.pct||0)+'%');T('vs-batt',bat.charging?'⚡ Charging':'🔋 On Battery');B('b-batt',bat.pct||0);
+  T('si-host',os.hostname||'—');T('si-os',(os.name||'macOS')+' '+(os.version||''));T('si-arch',os.arch||'—');
+  T('si-up',stats.uptime||'—');T('si-ip',net.ip||'—');T('si-wifi',net.ssid||'—');
+  T('n-ssid',net.ssid||'—');T('n-ip',net.ip||'—');
+  const conn=net.ip&&net.ip!=='disconnected';
+  T('n-status',conn?'Connected':'Offline');
+  const nd=document.getElementById('ndot');if(nd)nd.style.background=conn?'var(--grn)':'var(--red)';
+  cpuH.push(cpu);cpuH.shift();drawWave();
   if(stats.processes){
-    const procs = [...stats.processes].sort((a,b)=>b.mem-a.mem).slice(0,12);
-    const colors = ['var(--holo-1)','var(--holo-2)','var(--holo-3)','var(--holo-4)','var(--holo-5)'];
-    document.getElementById('proc-list').innerHTML = procs.map((p,i)=>`
-      <div class="proc-row">
-        <div class="proc-pid">${p.pid}</div>
-        <div class="proc-name" title="${p.name}">${p.name.split('/').pop()}</div>
-        <div class="proc-bar"><div class="proc-bar-fill" style="width:${Math.min(100,p.mem*8)}%;background:${colors[i%colors.length]}"></div></div>
-        <div class="proc-cpu-val">${p.cpu.toFixed(1)}%</div>
-        <div class="proc-mem" style="color:${p.mem>5?'var(--danger)':p.mem>2?'var(--warning)':'var(--text-secondary)'}">${p.mem.toFixed(1)}%</div>
-        <button class="kill-x" onclick="killProc(${p.pid},'${p.name.split('/').pop().replace(/'/g,'')}')" title="Kill">✕</button>
+    const cols=['var(--a1)','var(--a5)','var(--a4)','var(--a3)','var(--a2)'];
+    document.getElementById('procs').innerHTML=[...stats.processes].sort((a,b)=>b.mem-a.mem).slice(0,12).map((p,i)=>`
+      <div class="prow">
+        <div class="ppid">${p.pid}</div>
+        <div class="pname" title="${p.name}">${p.name.split('/').pop()}</div>
+        <div class="pbw"><div class="pbf" style="width:${Math.min(100,p.mem*10)}%;background:${cols[i%cols.length]}"></div></div>
+        <div class="pcpu">${p.cpu.toFixed(1)}%</div>
+        <div class="pmem" style="color:${p.mem>5?'var(--red)':p.mem>2?'var(--ylw)':'var(--t2)'}">${p.mem.toFixed(1)}%</div>
+        <button class="pkill" onclick="killProc(${p.pid},'${p.name.split('/').pop().replace(/'/g,'')}')" title="Force Quit">✕</button>
+      </div>`).join('');
+  }
+  if(stats.disk_breakdown&&stats.disk_breakdown.length){
+    const cols2=['var(--a1)','var(--a5)','var(--a4)','var(--a3)','var(--a2)'];
+    const mx=parseFloat(stats.disk_breakdown[0].size)||1;
+    document.getElementById('storage').innerHTML=stats.disk_breakdown.map((s,i)=>`
+      <div class="sseg">
+        <div class="sname"><span>${s.path}</span><span>${s.size}</span></div>
+        <div class="strk"><div class="sfill" style="width:${Math.max(4,(parseFloat(s.size)||0)/mx*100)}%;background:${cols2[i%cols2.length]}"></div></div>
+      </div>`).join('');
+  }
+}
+
+// ═══ KILL ═══
+async function killProc(pid,name){
+  if(!confirm(`Force Quit "${name}"?\nPID ${pid}`))return;
+  try{await fetch('/api/kill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pid})});toast(`☠️ Force Quit: ${name}`);}
+  catch(e){toast('❌ Kill failed');}
+}
+
+// ═══ DOCK BUILD ═══
+function buildDock(){
+  document.getElementById('dock').innerHTML=CMDS.map(cmd=>{
+    if(!cmd)return`<div class="dsep"></div>`;
+    return`<div class="di" id="di-${cmd.id}"
+      onclick="runCmd('${cmd.id}','${cmd.ep}','${cmd.label}')"
+      onmousemove="mag(event,this)" onmouseleave="resetMag()">
+      <div class="dicon ${cmd.cls}" id="dico-${cmd.id}">
+        <span>${cmd.emoji}</span>
       </div>
-    `).join('');
-  }
-
-  // Storage breakdown
-  if(stats.disk_breakdown){
-    const colors2=['var(--holo-1)','var(--holo-2)','var(--holo-3)','var(--holo-4)','var(--holo-5)'];
-    document.getElementById('storage-breakdown').innerHTML = stats.disk_breakdown.map((item,i)=>{
-      const pct = Math.max(4,(parseFloat(item.size)||0)/(parseFloat(stats.disk_breakdown[0].size)||1)*100);
-      return `<div class="storage-seg">
-        <div class="storage-name"><span>${item.path}</span><span>${item.size}</span></div>
-        <div class="storage-track"><div class="storage-fill" style="width:${pct}%;background:${colors2[i%colors2.length]}"></div></div>
-      </div>`;
-    }).join('');
-  }
-};
-
-// ═══ KILL PROCESS ═══
-const killProc = async (pid,name) => {
-  if(!confirm(`Kill ${name} (PID ${pid})?`)) return;
-  try {
-    await fetch('/api/kill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pid})});
-    toast(`💀 Killed ${name}`, 'kill');
-    bounceDockItem('kill');
-  } catch(e) { toast('Kill failed','error'); }
-};
-
-// ═══ macOS DOCK ═══
-const DOCK_COMMANDS = [
-  { id:'clean',   label:'Clean',    desc:'Deep clean disk',          color:'#ff6b35,#ff3366', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`, endpoint:'clean' },
-  { id:'purge',   label:'Purge RAM',desc:'Free inactive memory',     color:'#a855f7,#06b6d4', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/></svg>`, endpoint:'purge' },
-  { id:'scan',    label:'Scan',     desc:'Disk diagnostic',          color:'#06b6d4,#10b981', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>`, endpoint:'scan' },
-  { id:'kill',    label:'Kill Hogs',desc:'Kill RAM hogs',            color:'#ff3366,#ff6b35', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`, endpoint:'killhogs' },
-  { id:'sep1',    label:'', sep:true },
-  { id:'stack',   label:'Run App',  desc:'Auto-detect & run project',color:'#10b981,#06b6d4', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>`, endpoint:'run' },
-  { id:'deploy',  label:'Deploy',   desc:'Vercel/Netlify/Railway',   color:'#6366f1,#a855f7', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>`, endpoint:'deploy' },
-  { id:'git',     label:'Git',      desc:'AI commit + push',         color:'#f59e0b,#ef4444', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>`, endpoint:'git' },
-  { id:'preview', label:'Preview',  desc:'HTML local server',        color:'#06b6d4,#6366f1', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`, endpoint:'preview' },
-  { id:'sep2',    label:'', sep:true },
-  { id:'free',    label:'Free AI',  desc:'Llama 3.3 via OpenRouter', color:'#10b981,#a855f7', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`, endpoint:'chat-free' },
-  { id:'pro',     label:'Pro AI',   desc:'Claude via OpenRouter',    color:'#ff6b35,#a855f7', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`, endpoint:'chat-pro' },
-  { id:'voice',   label:'Voice',    desc:'Push-to-talk mode',        color:'#ef4444,#f59e0b', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`, endpoint:'listen' },
-  { id:'bot',     label:'Bot',      desc:'Telegram remote control',  color:'#06b6d4,#6366f1', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>`, endpoint:'bot' },
-  { id:'sep3',    label:'', sep:true },
-  { id:'brew',    label:'Dev Setup',desc:'Install dev tools',        color:'#f59e0b,#10b981', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3"/></svg>`, endpoint:'brew' },
-  { id:'dupes',   label:'Dupes',    desc:'Find duplicate files',     color:'#a855f7,#ff3366', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`, endpoint:'dupes' },
-  { id:'ports',   label:'Ports',    desc:'Active port scanner',      color:'#06b6d4,#ff6b35', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`, endpoint:'ports' },
-  { id:'wifi',    label:'WiFi',     desc:'Network diagnostics',      color:'#10b981,#06b6d4', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>`, endpoint:'wifi' },
-  { id:'doctor',  label:'Doctor',   desc:'Health check',            color:'#10b981,#ff6b35', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`, endpoint:'doctor' },
-  { id:'publish', label:'Publish',  desc:'Push update to GitHub',   color:'#6366f1,#10b981', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>`, endpoint:'publish' },
-];
-
-const buildDock = () => {
-  const dock = document.getElementById('dock');
-  dock.innerHTML = DOCK_COMMANDS.map(cmd => {
-    if(cmd.sep) return `<div class="dock-sep"></div>`;
-    const [c1,c2] = cmd.color.split(',');
-    return `
-      <div class="dock-item" id="di-${cmd.id}" onclick="runCmd('${cmd.id}','${cmd.endpoint}','${cmd.label}')" onmousemove="magnify(event,this)" onmouseleave="resetMagnify()">
-        <div class="dock-icon" id="dicon-${cmd.id}" style="background:linear-gradient(135deg,${c1},${c2})">
-          ${cmd.icon}
-        </div>
-        ${dockLabels ? `<div class="dock-dot" id="ddot-${cmd.id}"></div>` : ''}
-        <div class="dock-tooltip">${cmd.label}<br><span style="color:var(--text-dim);font-size:10px">${cmd.desc}</span></div>
-      </div>`;
+      ${dockLbl?`<div class="ddot" id="ddot-${cmd.id}"></div>`:''}
+      <div class="dtip">${cmd.label}</div>
+    </div>`;
   }).join('');
-};
+}
 buildDock();
 
-// Magnification
-const magnify = (e, item) => {
-  if(!dockMagnify) return;
-  const dock = document.getElementById('dock');
-  const items = [...dock.querySelectorAll('.dock-item:not(:has(.dock-sep))')];
-  const icons = [...dock.querySelectorAll('.dock-icon')];
-  const rect = dock.getBoundingClientRect();
-  const mouseX = e.clientX - rect.left;
-  icons.forEach((icon, i) => {
-    const iconRect = icon.getBoundingClientRect();
-    const iconCenter = iconRect.left + iconRect.width/2 - rect.left;
-    const dist = Math.abs(mouseX - iconCenter);
-    const scale = Math.max(1, 1.7 - dist/80);
-    icon.style.transform = `scale(${scale}) translateY(${-(scale-1)*14}px)`;
+// macOS magnification — exact replica
+function mag(e,item){
+  if(!dockMag)return;
+  const dock=document.getElementById('dock');
+  const r=dock.getBoundingClientRect();
+  const mx=e.clientX-r.left;
+  dock.querySelectorAll('.dicon').forEach(ic=>{
+    const ir=ic.getBoundingClientRect();
+    const cx=ir.left+ir.width/2-r.left;
+    const d=Math.abs(mx-cx);
+    const scale=Math.max(1,1.7-d/72);
+    ic.style.transform=`scale(${scale}) translateY(${-(scale-1)*18}px)`;
   });
-};
-const resetMagnify = () => {
-  document.querySelectorAll('.dock-icon').forEach(i => i.style.transform = '');
-};
+}
+function resetMag(){document.querySelectorAll('.dicon').forEach(ic=>ic.style.transform='');}
+function setDockSize(sz){document.querySelectorAll('.dicon').forEach(ic=>{ic.style.width=sz+'px';ic.style.height=sz+'px';ic.style.fontSize=(sz*.58)+'px';});}
+function toggleMag(){dockMag=!dockMag;document.getElementById('dt-mag').classList.toggle('on',dockMag);}
+function toggleHide(){
+  dockHide=!dockHide;document.getElementById('dt-hide').classList.toggle('on',dockHide);
+  const w=document.getElementById('dock-wrap');
+  if(dockHide){w.style.transform='translateY(80px)';document.addEventListener('mousemove',e=>{w.style.transform=e.clientY>innerHeight-24?'':'translateY(80px)';});}
+  else w.style.transform='';
+}
+function toggleLbl(){dockLbl=!dockLbl;document.getElementById('dt-lbl').classList.toggle('on',dockLbl);buildDock();}
 
-// Run command
-const runCmd = async (id, endpoint, label) => {
-  const icon = document.getElementById(`dicon-${id}`);
-  if(icon){ icon.classList.add('genie'); setTimeout(()=>icon.classList.remove('genie'),500); }
-  if(icon){ icon.classList.add('bouncing'); setTimeout(()=>icon.classList.remove('bouncing'),600); }
-
-  // Chat commands open prompt
-  if(endpoint === 'chat-free' || endpoint === 'chat-pro') {
-    const prompt = window.prompt(`${label} — Enter your prompt:`);
-    if(!prompt) return;
-    showAction(label, `Sending to ${endpoint==='chat-free'?'Llama 3.3':'Claude'}...`);
-    try {
-      const res = await fetch(`/api/${endpoint}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
-      const data = await res.json();
-      finishAction(data.result || 'No response');
-    } catch(e) { finishAction('Failed: '+e.message); }
+// ═══ RUN CMD ═══
+async function runCmd(id,ep,label){
+  const ico=document.getElementById('dico-'+id);
+  if(ico){ico.classList.remove('bounce');void ico.offsetWidth;ico.classList.add('bounce');setTimeout(()=>ico.classList.remove('bounce'),700);}
+  document.getElementById('di-'+id)?.classList.add('run');
+  if(ep==='chat-free'||ep==='chat-pro'){
+    const p=prompt(label+' — Enter prompt:');if(!p)return;
+    showAct(label,'Sending...');
+    try{const r=await fetch('/api/'+ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p})});const d=await r.json();finishAct(d.result||'Done');}
+    catch(e){finishAct('Error: '+e.message);}
     return;
   }
+  showAct(label,'Running chinna '+ep+'...');
+  try{const r=await fetch('/api/'+ep);const d=await r.json();finishAct(d.result||'✓ Complete');toast('✅ '+label+' done');}
+  catch(e){finishAct('Error: '+e.message);toast('❌ '+label+' failed');}
+}
 
-  showAction(label, `Running chinna ${endpoint}...`);
-  try {
-    const res = await fetch(`/api/${endpoint}`);
-    const data = await res.json();
-    finishAction(data.result || '✓ Done');
-    toast(`${label} complete`, 'ok');
-  } catch(e) {
-    finishAction('Error: '+e.message);
-    toast(`${label} failed`, 'error');
-  }
-};
+// ═══ ACTION ═══
+function showAct(t,s){document.getElementById('act-title').textContent=t;document.getElementById('act-status').textContent=s;document.getElementById('act-result').textContent='';document.getElementById('spin').style.display='block';document.getElementById('act').classList.add('on');}
+function finishAct(r){document.getElementById('spin').style.display='none';document.getElementById('act-status').textContent='Complete';document.getElementById('act-result').textContent=r.slice(0,400);}
+function closeAct(){document.getElementById('act').classList.remove('on');}
 
-// Dock settings
-const updateDockSize = (sz) => {
-  dockSize = parseInt(sz);
-  document.querySelectorAll('.dock-icon').forEach(i => { i.style.width=sz+'px'; i.style.height=sz+'px'; });
-};
-const toggleMagnification = () => {
-  dockMagnify = !dockMagnify;
-  document.getElementById('mag-toggle').classList.toggle('on', dockMagnify);
-};
-const toggleAutohide = () => {
-  dockAutohide = !dockAutohide;
-  document.getElementById('autohide-toggle').classList.toggle('on', dockAutohide);
-  const wrapper = document.getElementById('dock-wrapper');
-  if(dockAutohide){
-    wrapper.style.transform = 'translateY(80px)';
-    document.addEventListener('mousemove', e => {
-      if(e.clientY > window.innerHeight - 20) wrapper.style.transform = '';
-      else wrapper.style.transform = 'translateY(80px)';
-    });
-  } else {
-    wrapper.style.transform = '';
-  }
-};
-const toggleLabels = () => {
-  dockLabels = !dockLabels;
-  document.getElementById('label-toggle').classList.toggle('on', dockLabels);
-  buildDock();
-};
-const toggleDockSettings = () => {
-  document.getElementById('dock-settings').classList.toggle('show');
-};
+// ═══ PALETTE ═══
+function openPalette(){palOpen=true;document.getElementById('palette').classList.add('open');document.getElementById('pal-in').focus();renderPal('');}
+function closePalette(){palOpen=false;document.getElementById('palette').classList.remove('open');}
+function renderPal(q){
+  const res=CMDS.filter(c=>c&&(!q||c.label.toLowerCase().includes(q.toLowerCase())||c.desc.toLowerCase().includes(q.toLowerCase())));
+  document.getElementById('pal-res').innerHTML=res.map(c=>`
+    <div class="pr" onclick="runCmd('${c.id}','${c.ep}','${c.label}');closePalette()">
+      <div class="pr-ico ${c.cls}">${c.emoji}</div>
+      <div><div class="pr-name">${c.label}</div><div class="pr-desc">${c.desc}</div></div>
+      <div class="pr-key">${c.ep}</div>
+    </div>`).join('')||`<div style="text-align:center;padding:18px;color:var(--t3);font-size:12px">No results</div>`;
+}
+document.getElementById('pal-in').addEventListener('input',e=>renderPal(e.target.value));
+document.getElementById('pal-in').addEventListener('keydown',e=>{if(e.key==='Escape')closePalette();if(e.key==='Enter'){const f=document.querySelector('.pr');if(f)f.click();}});
+document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();palOpen?closePalette():openPalette();}if(e.key==='Escape'&&palOpen)closePalette();});
 
-// ═══ ACTION OVERLAY ═══
-const showAction = (title, status) => {
-  document.getElementById('action-title').textContent = title;
-  document.getElementById('action-status').textContent = status;
-  document.getElementById('action-result').textContent = '';
-  document.getElementById('action-spinner').style.display = 'block';
-  document.getElementById('action-overlay').classList.add('show');
-};
-const finishAction = (result) => {
-  document.getElementById('action-spinner').style.display = 'none';
-  document.getElementById('action-status').textContent = '✓ Complete';
-  document.getElementById('action-result').textContent = result.slice(0,300);
-};
-const closeAction = () => document.getElementById('action-overlay').classList.remove('show');
-
-// ═══ COMMAND PALETTE ═══
-const openCmdPalette = () => {
-  cmdOpen = true;
-  document.getElementById('cmd-palette').classList.add('open');
-  document.getElementById('cmd-input').focus();
-  renderCmdResults('');
-};
-const closeCmdPalette = () => {
-  cmdOpen = false;
-  document.getElementById('cmd-palette').classList.remove('open');
-};
-const renderCmdResults = (q) => {
-  const cmds = DOCK_COMMANDS.filter(c=>!c.sep && (!q || c.label.toLowerCase().includes(q.toLowerCase()) || c.desc.toLowerCase().includes(q.toLowerCase())));
-  const [c1s] = cmds.length ? DOCK_COMMANDS : [];
-  document.getElementById('cmd-results').innerHTML = cmds.map((cmd,i)=>{
-    const [c1,c2] = cmd.color.split(',');
-    return `<div class="cmd-result ${i===cmdSelected?'selected':''}" onclick="runCmd('${cmd.id}','${cmd.endpoint}','${cmd.label}');closeCmdPalette()">
-      <div class="cmd-result-icon" style="background:linear-gradient(135deg,${c1},${c2})">${cmd.icon}</div>
-      <div><div class="cmd-result-name">${cmd.label}</div><div class="cmd-result-desc">${cmd.desc}</div></div>
-      <div class="cmd-result-key">${cmd.endpoint}</div>
-    </div>`;
-  }).join('') || `<div style="text-align:center;padding:20px;color:var(--text-dim)">No commands found</div>`;
-};
-
-document.getElementById('cmd-input').addEventListener('input', e => renderCmdResults(e.target.value));
-document.getElementById('cmd-input').addEventListener('keydown', e => {
-  if(e.key==='Escape') closeCmdPalette();
-  if(e.key==='Enter') { const first=document.querySelector('.cmd-result'); if(first) first.click(); }
-});
-document.addEventListener('keydown', e => {
-  if((e.metaKey||e.ctrlKey) && e.key==='k') { e.preventDefault(); cmdOpen?closeCmdPalette():openCmdPalette(); }
-  if(e.key==='Escape' && cmdOpen) closeCmdPalette();
-});
-document.getElementById('cmd-palette').addEventListener('click', e => { if(e.target===document.getElementById('cmd-palette')) closeCmdPalette(); });
-
-// ═══ FETCH STATS ═══
-const fetchStats = async () => {
-  try {
-    const r = await fetch('/api/stats');
-    stats = await r.json();
-    updateUI();
-  } catch(e) {}
-};
-fetchStats();
-setInterval(fetchStats, 1000);
-
-// ═══ BOOT TOAST ═══
-setTimeout(()=>toast('Chinna Control Center — Your Mac is now under surveillance 👁', 'info'), 800);
+// ═══ STATS ═══
+async function poll(){try{const r=await fetch('/api/stats');stats=await r.json();updateUI();}catch(e){}}
+poll();setInterval(poll,1000);
+setTimeout(()=>toast('🟠 Chinna Control Center — surveillance active'),800);
 </script>
 </body>
 </html>
