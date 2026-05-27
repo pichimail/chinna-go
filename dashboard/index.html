@@ -1,1054 +1,563 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="macos" data-video="false">
+<html lang="en" data-theme="dark">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Chinna V4-Pro</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chinna V5</title>
 <style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,'SF Pro Text',BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-
-/* ═══ THEMES ═══ */
-[data-theme="macos"]{--bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#3a3a3c;--gl:rgba(28,28,30,0.94);--gl2:rgba(44,44,46,0.82);--sep:rgba(255,255,255,0.09);--sep2:rgba(255,255,255,0.2);--t1:#fff;--t2:rgba(255,255,255,0.72);--t3:rgba(255,255,255,0.4);--acc:#baff29;--acc2:#00ff88;--acc3:#00d4ff;--accr:186,255,41;--c1:#ff453a;--c2:#ff9f0a;--c3:#baff29;--c4:#0a84ff;--c5:#bf5af2;--red:#ff453a;--grn:#baff29;--ylw:#ff9f0a;--dk:rgba(20,20,22,0.88);--dksep:rgba(255,255,255,0.16);--sh:0 20px 60px rgba(0,0,0,0.6);--r:13px;--rdock:18px}
-[data-theme="macos"][data-video="true"]{--gl:rgba(8,8,10,0.36);--gl2:rgba(16,16,18,0.3)}
-[data-theme="oled"]{--bg:#000;--bg2:#080808;--bg3:#111;--gl:rgba(0,0,0,0.4);--gl2:rgba(6,6,6,0.34);--sep:rgba(186,255,41,0.1);--sep2:rgba(186,255,41,0.26);--t1:#fff;--t2:rgba(255,255,255,0.9);--t3:rgba(255,255,255,0.5);--acc:#baff29;--acc2:#00ff88;--acc3:#00d4ff;--accr:186,255,41;--c1:#baff29;--c2:#00ff88;--c3:#00d4ff;--c4:#ff6b35;--c5:#a855f7;--red:#ff3b30;--grn:#baff29;--ylw:#ff9f0a;--dk:rgba(0,0,0,0.72);--dksep:rgba(186,255,41,0.2);--sh:0 24px 80px rgba(0,0,0,0.88);--r:16px;--rdock:20px}
-[data-theme="light"]{--bg:#f2f2f7;--bg2:#fff;--bg3:#e5e5ea;--gl:rgba(255,255,255,0.5);--gl2:rgba(255,255,255,0.4);--sep:rgba(0,0,0,0.07);--sep2:rgba(0,0,0,0.15);--t1:#000;--t2:rgba(0,0,0,0.82);--t3:rgba(0,0,0,0.5);--acc:#4d8f00;--acc2:#006e40;--acc3:#007aff;--accr:77,143,0;--c1:#ff3b30;--c2:#ff9500;--c3:#4d8f00;--c4:#007aff;--c5:#af52de;--red:#ff3b30;--grn:#4d8f00;--ylw:#ff9500;--dk:rgba(240,240,245,0.88);--dksep:rgba(0,0,0,0.14);--sh:0 8px 40px rgba(0,0,0,0.1);--r:13px;--rdock:18px}
-[data-theme="neon"]{--bg:#040010;--bg2:#0a0020;--bg3:#140030;--gl:rgba(8,0,24,0.46);--gl2:rgba(16,0,40,0.38);--sep:rgba(186,255,41,0.12);--sep2:rgba(186,255,41,0.3);--t1:#fff;--t2:rgba(255,255,255,0.92);--t3:rgba(186,255,41,0.6);--acc:#baff29;--acc2:#00ffcc;--acc3:#ff00ff;--accr:186,255,41;--c1:#baff29;--c2:#00ffcc;--c3:#ff00ff;--c4:#ff6600;--c5:#00aaff;--red:#ff0066;--grn:#baff29;--ylw:#ffff00;--dk:rgba(4,0,16,0.82);--dksep:rgba(186,255,41,0.24);--sh:0 20px 60px rgba(186,255,41,0.12);--r:16px;--rdock:20px}
-[data-theme="blue"]{--bg:#0a0f1e;--bg2:#111827;--bg3:#1e2a3a;--gl:rgba(10,15,30,0.88);--gl2:rgba(17,24,39,0.74);--sep:rgba(99,102,241,0.15);--sep2:rgba(99,102,241,0.36);--t1:#f1f5f9;--t2:rgba(241,245,249,0.72);--t3:rgba(241,245,249,0.42);--acc:#6366f1;--acc2:#8b5cf6;--acc3:#06b6d4;--accr:99,102,241;--c1:#6366f1;--c2:#8b5cf6;--c3:#06b6d4;--c4:#10b981;--c5:#f59e0b;--red:#f87171;--grn:#34d399;--ylw:#fbbf24;--dk:rgba(10,15,30,0.88);--dksep:rgba(99,102,241,0.24);--sh:0 20px 60px rgba(0,0,0,0.7);--r:14px;--rdock:18px}
-
-body{background:var(--bg);color:var(--t1);transition:background .4s,color .4s}
-
-/* YT BG */
-#ytw{position:fixed;inset:0;z-index:0;background:#000;overflow:hidden;pointer-events:none}
-#ytf{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:177.8vh;height:100vh;min-width:100vw;min-height:56.25vw;border:none}
-#ov{position:fixed;inset:0;z-index:1;background:rgba(0,0,0,0);transition:background .5s;pointer-events:none}
-[data-video="true"] #ov{background:rgba(0,0,0,0.24)}
-.blob{position:fixed;border-radius:50%;filter:blur(120px);opacity:.04;pointer-events:none;z-index:2;animation:bm 30s ease-in-out infinite}
-.b1{width:700px;height:700px;background:var(--acc);top:-200px;left:-100px}
-.b2{width:500px;height:500px;background:var(--c5);bottom:-150px;right:-100px;animation-delay:-12s}
-.b3{width:400px;height:400px;background:var(--acc3);top:40%;left:38%;animation-delay:-22s}
-@keyframes bm{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(60px,-80px) scale(1.07)}66%{transform:translate(-40px,55px) scale(.94)}}
-#pcvs{position:fixed;inset:0;z-index:3;pointer-events:none}
-.scanlines{position:fixed;inset:0;z-index:2;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(186,255,41,0.005) 0,rgba(186,255,41,0.005) 1px,transparent 1px,transparent 3px)}
-[data-theme="light"] .scanlines{opacity:0}
-
-/* GLASS */
-.gl{background:var(--gl);box-shadow:inset 0 0 0 .5px var(--sep),var(--sh);backdrop-filter:blur(34px) saturate(180%);-webkit-backdrop-filter:blur(34px) saturate(180%);border-radius:var(--r);position:relative;transition:background .4s,box-shadow .25s}
-.gl::before{content:'';position:absolute;top:0;left:12%;right:12%;height:.5px;z-index:1;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.16),transparent);border-radius:50%}
-
-/* ═══ MASTER LAYOUT ═══
-   DOCK: position:fixed; bottom:0; height:76px; z-index:1000
-   #app: position:fixed; top:0; left:0; right:0; bottom:76px  ← never overlaps dock
-   Center comp: z-index:10 — BELOW dock z-index:1000
-   Dock tooltips: z-index:1001 — ABOVE everything including dock bg
-*/
-#app{position:fixed;top:0;left:0;right:0;bottom:76px;z-index:10;display:flex;flex-direction:column;padding:7px 7px 0;overflow:hidden}
-
-/* TOPBAR */
-.topbar{display:flex;align-items:center;gap:6px;padding:6px 11px;margin-bottom:7px;flex-shrink:0;border-radius:var(--r)}
-.tl{display:flex;gap:5px;align-items:center;flex-shrink:0}
-.tld{width:12px;height:12px;border-radius:50%;cursor:pointer}
-.tld:hover{filter:brightness(1.2)}
-.tlr{background:#ff5f57}.tly{background:#febc2e}.tlg{background:#28c840}
-.brand{font-size:11px;font-weight:800;letter-spacing:4px;margin-left:4px;background:linear-gradient(90deg,var(--acc),var(--acc2),var(--acc3),var(--acc));background-size:300% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:bs 5s linear infinite;white-space:nowrap}
-@keyframes bs{0%{background-position:0 0}100%{background-position:300% 0}}
-.ytrow{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:8px}
-#ytin{background:none;border:none;outline:none;font-size:11px;color:var(--t1);width:170px}
-#ytin::placeholder{color:var(--t3)}
-.pbtn{background:var(--acc);border:none;border-radius:6px;padding:3px 10px;color:#000;font-size:11px;font-weight:700;cursor:pointer}
-.tsrow{display:flex;gap:8px;margin-left:auto}
-.ts{font-size:11px;color:var(--t2)}.ts b{color:var(--acc);font-weight:700;font-family:'SF Mono',Menlo,monospace}
-.seg{display:flex;background:rgba(255,255,255,0.06);border-radius:8px;padding:2px;gap:1px}
-[data-theme="light"] .seg{background:rgba(0,0,0,0.06)}
-.sb{padding:3px 8px;border-radius:6px;border:none;background:transparent;color:var(--t2);font-size:10px;font-weight:600;cursor:pointer;transition:all .18s}
-.sb.on{background:var(--acc);color:#000;font-weight:700}
-.sbtn{padding:4px 9px;border-radius:7px;border:none;background:rgba(255,255,255,0.07);color:var(--t2);font-size:11px;cursor:pointer;transition:all .18s;white-space:nowrap;display:flex;align-items:center;gap:3px}
-[data-theme="light"] .sbtn{background:rgba(0,0,0,0.06)}
-.sbtn:hover{color:var(--acc)}
-#vbtn.on{color:var(--acc);background:rgba(var(--accr),0.12)}
-#vbtn .vdot{display:none;width:6px;height:6px;border-radius:50%;background:var(--acc);animation:vpulse 1s infinite}
-#vbtn.on .vdot{display:block}
-@keyframes vpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.5)}}
-
-/* 3-COL MAIN */
-#main{flex:1;display:flex;gap:7px;min-height:0;overflow:hidden}
-#lcol{width:206px;flex-shrink:0;display:flex;flex-direction:column;gap:7px;overflow-y:auto;scrollbar-width:none}
-#lcol::-webkit-scrollbar{display:none}
-#ccol{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0;overflow:hidden}
-#rcol{width:200px;flex-shrink:0;display:flex;flex-direction:column;gap:7px;overflow-y:auto;scrollbar-width:none}
-#rcol::-webkit-scrollbar{display:none}
-
-.pane{padding:11px;overflow:hidden}
-.pane.scrl{overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--sep) transparent}
-.ptitle{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--t3);margin-bottom:8px;display:flex;align-items:center;gap:7px;flex-shrink:0}
-.ptitle::after{content:'';flex:1;height:.5px;background:linear-gradient(90deg,var(--sep2),transparent)}
-.hdiv{height:.5px;background:var(--sep);margin:8px 0;flex-shrink:0}
-
-/* MACROS */
-.mrow{display:flex;gap:5px;margin-bottom:6px}
-.mbtn{flex:1;padding:7px 4px;border-radius:8px;border:none;font-size:11px;font-weight:700;cursor:pointer;transition:all .18s;text-align:center}
-.mbtn.g{background:rgba(186,255,41,0.1);color:var(--acc)}.mbtn.g:hover{background:rgba(186,255,41,0.2)}
-.mbtn.r{background:rgba(255,59,48,.1);color:var(--red)}.mbtn.r:hover{background:rgba(255,59,48,.22)}
-.mbtn.y{background:rgba(255,159,10,.1);color:var(--ylw)}.mbtn.y:hover{background:rgba(255,159,10,.22)}
-
-/* GAUGES */
-.gauge-row{display:flex;gap:6px;margin-bottom:8px}
-.gauge{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 3px 6px;border-radius:8px;background:rgba(255,255,255,0.03)}
-[data-theme="light"] .gauge{background:rgba(0,0,0,0.04)}
-.gval{font-size:12px;font-weight:800;letter-spacing:-.5px;margin-top:2px}
-.glbl{font-size:9px;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin-top:1px}
-
-/* CHIPS */
-.chip{padding:5px 7px;border-radius:6px;background:rgba(255,255,255,0.04);font-size:11px;color:var(--t2);margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;font-weight:500}
-[data-theme="light"] .chip{background:rgba(0,0,0,0.04)}
-.chip span:last-child{color:var(--t1);font-family:'SF Mono',Menlo,monospace;font-size:10px;font-weight:400}
-.npill{display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:6px;background:rgba(255,255,255,0.04);font-size:11px;color:var(--t2);margin-bottom:4px}
-[data-theme="light"] .npill{background:rgba(0,0,0,0.04)}
-.nv{margin-left:auto;font-family:'SF Mono',Menlo,monospace;font-size:10px;color:var(--t1)}
-.ndot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-
-/* ═══ CENTER COMP AREA ═══
-   #ca fills ccol. Each .comp is position:absolute inset:0.
-   CRITICAL: overflow:visible on #ca so dock tooltips never clip.
-   z-index:10 on #app, z-index:1000 on dock → dock always on top.
-*/
-#ca{flex:1;position:relative;min-height:0;border-radius:var(--r);overflow:visible}
-.comp{position:absolute;inset:0;display:none;flex-direction:column;border-radius:var(--r);overflow:hidden;animation:cin .25s cubic-bezier(.16,1,.3,1)}
-.comp.on{display:flex}
-@keyframes cin{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:none}}
-
-.chdr{display:flex;align-items:center;gap:7px;padding:9px 13px;border-bottom:.5px solid var(--sep);flex-shrink:0;background:var(--gl);backdrop-filter:blur(34px);-webkit-backdrop-filter:blur(34px);border-radius:var(--r) var(--r) 0 0}
-.ctitle{font-size:13px;font-weight:700;flex:1}
-.wact{padding:3px 9px;border-radius:6px;border:none;background:rgba(186,255,41,0.1);color:var(--acc);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
-.wact:hover{background:rgba(186,255,41,0.22)}
-.wact.r{background:rgba(255,59,48,.1);color:var(--red)}.wact.r:hover{background:rgba(255,59,48,.22)}
-.cclose{width:22px;height:22px;border-radius:6px;border:none;background:rgba(255,59,48,.12);color:var(--red);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
-.cclose:hover{background:rgba(255,59,48,.3)}
-
-/* SCROLLABLE BODY — flex:1 min-height:0 = fills remaining, scrolls internally */
-.cbody{flex:1;min-height:0;overflow-y:auto;padding:12px;scrollbar-width:thin;scrollbar-color:var(--sep) transparent}
-.cbody::-webkit-scrollbar{width:3px}.cbody::-webkit-scrollbar-thumb{background:var(--sep2);border-radius:2px}
-
-/* DEFAULT COMP */
-#comp-def{background:transparent;box-shadow:none}
-.definner{display:flex;flex-direction:column;gap:7px;height:100%;overflow:hidden}
-.defwave{flex-shrink:0}
-.defprocs{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--sep) transparent}
-
-/* PROCESSES */
-.prow{display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:6px;transition:background .12s}
-.prow:hover{background:rgba(255,255,255,0.04)}
-[data-theme="light"] .prow:hover{background:rgba(0,0,0,0.04)}
-.ppid{width:36px;font-family:'SF Mono',Menlo,monospace;font-size:9px;color:var(--t3)}
-.pname{flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pbw{width:40px;height:3px;background:rgba(186,255,41,0.07);border-radius:2px;overflow:hidden;flex-shrink:0}
-.pbf{height:100%;border-radius:2px;transition:width .6s}
-.pcpu{width:28px;text-align:right;font-family:'SF Mono',Menlo,monospace;font-size:9px;color:var(--t3);flex-shrink:0}
-.pmem{width:30px;text-align:right;font-family:'SF Mono',Menlo,monospace;font-size:11px;font-weight:700;flex-shrink:0}
-.pkill{width:18px;height:18px;border-radius:5px;border:none;background:rgba(255,59,48,.1);color:var(--red);cursor:pointer;font-size:9px;display:flex;align-items:center;justify-content:center;transition:all .12s;flex-shrink:0}
-.pkill:hover{background:rgba(255,59,48,.3)}
-.dropdown{position:relative;flex-shrink:0}
-.ddm{position:absolute;bottom:calc(100% + 4px);right:0;z-index:80;border-radius:10px;padding:4px;min-width:140px;backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);box-shadow:0 12px 40px rgba(0,0,0,.5);display:none;flex-direction:column;background:var(--gl2);border:.5px solid var(--sep2)}
-.ddm.open{display:flex}
-.ddi{padding:7px 10px;border-radius:7px;border:none;background:transparent;color:var(--t1);font-size:12px;text-align:left;cursor:pointer;transition:background .1s;font-weight:500}
-.ddi:hover{background:rgba(186,255,41,0.08)}
-.ddi.r{color:var(--red)}.ddi.r:hover{background:rgba(255,59,48,.1)}
-
-/* ═══ TERMINAL ═══
-   term-cbody = flex col: output grows, input pinned bottom
-*/
-.term-cbody{flex:1;min-height:0;display:flex;flex-direction:column;padding:10px;gap:8px;background:var(--gl);backdrop-filter:blur(34px);-webkit-backdrop-filter:blur(34px)}
-#tout{flex:1;min-height:0;overflow-y:auto;font-family:'SF Mono',Menlo,'Courier New',monospace;font-size:12px;line-height:1.7;color:var(--acc);background:rgba(0,0,0,0.6);border-radius:9px;padding:10px;word-break:break-all;scrollbar-width:thin;scrollbar-color:var(--sep) transparent}
-[data-theme="light"] #tout{background:rgba(0,0,0,0.88);color:#baff29}
-.tline{white-space:pre-wrap}.tline.e{color:var(--red)}.tline.ok{color:var(--grn)}.tline.dim{color:var(--t3)}
-#tinrow{display:flex;align-items:center;gap:7px;padding:8px 11px;background:rgba(0,0,0,0.5);border-radius:9px;flex-shrink:0}
-[data-theme="light"] #tinrow{background:rgba(0,0,0,0.85)}
-.tprompt{color:var(--acc);font-family:'SF Mono',Menlo,monospace;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0}
-#tin{flex:1;background:none;border:none;outline:none;font-family:'SF Mono',Menlo,monospace;font-size:12px;color:var(--t1);caret-color:var(--acc)}
-[data-theme="light"] #tin{color:#baff29}
-
-/* ═══ AI CHAT ═══
-   ai-cbody = flex col: messages top→grow, input pinned bottom
-   Messages start from TOP (flex-direction:column, not column-reverse)
-   Input row is flex-shrink:0 — never moves behind dock
-*/
-.ai-cbody{flex:1;min-height:0;display:flex;flex-direction:column;padding:10px;gap:8px;background:var(--gl);backdrop-filter:blur(34px);-webkit-backdrop-filter:blur(34px)}
-#aimsgs{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px 0;scrollbar-width:thin;scrollbar-color:var(--sep) transparent}
-#aimsgs::-webkit-scrollbar{width:3px}
-/* Empty state: centered placeholder, disappears when messages exist */
-#aimsgs:empty::before{content:'✨  Ask Chinna anything';display:flex;align-items:center;justify-content:center;height:100%;color:var(--t3);font-size:13px;font-style:italic}
-.abub{padding:9px 12px;border-radius:13px;font-size:12px;line-height:1.6;max-width:86%;word-break:break-word;animation:cin .2s ease}
-.abub.u{align-self:flex-end;background:rgba(var(--accr),0.13);color:var(--t1);border-radius:13px 13px 3px 13px}
-.abub.b{align-self:flex-start;background:rgba(255,255,255,0.07);color:var(--t2);border-radius:13px 13px 13px 3px}
-[data-theme="light"] .abub.b{background:rgba(0,0,0,0.06)}
-.abub.err{border:1px solid rgba(255,59,48,.3);color:var(--red)}
-/* AI input — flex-shrink:0 always visible, always above dock */
-#aiinrow{flex-shrink:0;display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.07);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:12px;padding:9px 11px;border:.5px solid var(--sep)}
-[data-theme="light"] #aiinrow{background:rgba(0,0,0,0.06)}
-#aiin{flex:1;background:none;border:none;outline:none;font-size:13px;color:var(--t1)}
-#aiin::placeholder{color:var(--t3)}
-#aifprev{flex-shrink:0;display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:8px;background:rgba(186,255,41,0.08);font-size:11px;color:var(--acc)}
-.aifname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fclr{border:none;background:none;color:var(--red);cursor:pointer;font-size:12px}
-#aifinput{display:none}
-.micbtn{width:28px;height:28px;border-radius:8px;border:none;background:rgba(255,255,255,0.07);color:var(--t2);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
-.micbtn:hover{background:rgba(186,255,41,0.12);color:var(--acc)}
-.micbtn.rec{background:rgba(255,59,48,.15);color:var(--red);animation:mpp 1s infinite}
-@keyframes mpp{0%,100%{box-shadow:0 0 0 0 rgba(255,59,48,.4)}50%{box-shadow:0 0 0 5px rgba(255,59,48,0)}}
-.filebtn{width:28px;height:28px;border-radius:8px;border:none;background:rgba(186,255,41,0.1);color:var(--acc);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.filebtn:hover{background:rgba(186,255,41,0.22)}
-.atab{padding:3px 10px;border-radius:7px;border:none;background:transparent;color:var(--t3);font-size:10px;font-weight:600;cursor:pointer;transition:all .18s}
-.atab.on{background:rgba(var(--accr),0.12);color:var(--acc)}
-#aimodelbadge{font-size:9px;color:var(--t3);font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
-
-/* TABS */
-.tabs{display:flex;gap:3px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
-.tab{padding:3px 10px;border-radius:7px;border:none;background:transparent;color:var(--t3);font-size:10px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap}
-.tab.on{background:rgba(var(--accr),0.12);color:var(--acc)}
-.tab:hover:not(.on){color:var(--t2)}
-
-/* FILES */
-.sbar{display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:8px;background:rgba(255,255,255,0.05);margin-bottom:9px;flex-shrink:0}
-[data-theme="light"] .sbar{background:rgba(0,0,0,0.05)}
-.sbar input{flex:1;background:none;border:none;outline:none;font-size:12px;color:var(--t1)}
-.sbar input::placeholder{color:var(--t3)}
-.frow{display:flex;align-items:center;gap:8px;padding:7px 7px;border-radius:8px;transition:background .12s}
-.frow:hover{background:rgba(255,255,255,0.04)}
-[data-theme="light"] .frow:hover{background:rgba(0,0,0,0.04)}
-.fico{font-size:18px;flex-shrink:0}
-.finfo{flex:1;min-width:0}
-.ftitle{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fpath{font-size:10px;color:var(--t3);font-family:'SF Mono',Menlo,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
-.fsz{font-size:10px;color:var(--t3);font-family:'SF Mono',Menlo,monospace;flex-shrink:0;white-space:nowrap;margin-right:4px}
-.fabtn{padding:3px 7px;border-radius:6px;border:none;font-size:10px;font-weight:600;cursor:pointer;transition:all .12s;flex-shrink:0}
-.fabtn.g{background:rgba(186,255,41,0.1);color:var(--acc)}.fabtn.g:hover{background:rgba(186,255,41,0.22)}
-.fabtn.r{background:rgba(255,59,48,.1);color:var(--red)}.fabtn.r:hover{background:rgba(255,59,48,.22)}
-
-/* SETTINGS */
-.srow{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:.5px solid var(--sep)}
-.srow:last-child{border:none}
-.slbl{flex:1}.slbl-t{font-size:12px;font-weight:500}.slbl-s{font-size:10px;color:var(--t3);margin-top:2px}
-.stinp{background:rgba(255,255,255,0.07);border:.5px solid var(--sep);border-radius:7px;padding:5px 9px;color:var(--t1);font-size:12px;font-family:'SF Mono',Menlo,monospace;outline:none;width:170px}
-[data-theme="light"] .stinp{background:rgba(0,0,0,0.06);color:#000}
-.stinp:focus{border-color:var(--acc)}
-.stbtn{padding:5px 13px;border-radius:7px;border:none;background:var(--acc);color:#000;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0}
-.stbtn:hover{opacity:.85}
-.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
-
-/* STORAGE */
-.sseg{margin-bottom:7px}
-.sname{display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:3px;font-weight:500}
-.sval{color:var(--t3)!important;font-family:'SF Mono',Menlo,monospace;font-size:10px;font-weight:400!important}
-.strk{height:3px;background:rgba(186,255,41,0.06);border-radius:2px;overflow:hidden}
-.sfill{height:100%;border-radius:2px;transition:width 1s cubic-bezier(.16,1,.3,1)}
-
-/* WAVE */
-#wcvs,#mwcvs{width:100%;display:block}
-#wcvs{height:100px}#mwcvs{height:68px}
-
-/* VOICE OVERLAY */
-#vov{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);opacity:0;pointer-events:none;transition:opacity .3s}
-#vov.show{opacity:1;pointer-events:all}
-#vbox{border-radius:22px;padding:28px 36px;text-align:center;min-width:300px;max-width:460px}
-.vring{width:72px;height:72px;border-radius:50%;margin:0 auto 16px;border:3px solid rgba(186,255,41,0.3);display:flex;align-items:center;justify-content:center;font-size:30px;transition:all .3s;position:relative}
-.vring.lst{border-color:var(--acc);box-shadow:0 0 28px rgba(186,255,41,0.4);animation:vring 1s ease-in-out infinite}
-.vring.prc{animation:spinr .8s linear infinite}
-@keyframes vring{0%,100%{box-shadow:0 0 20px rgba(186,255,41,0.3)}50%{box-shadow:0 0 45px rgba(186,255,41,0.6)}}
-@keyframes spinr{to{transform:rotate(360deg)}}
-#vstatus{font-size:13px;color:var(--t2);margin-bottom:7px}
-#vtrans{font-size:12px;color:var(--acc);min-height:30px;font-style:italic}
-#vresult{font-size:12px;color:var(--t1);margin-top:10px;line-height:1.6;max-height:110px;overflow-y:auto;text-align:left}
-#vmode{margin-top:10px;background:rgba(255,255,255,0.1);border:.5px solid var(--sep);border-radius:7px;color:var(--t1);padding:4px 9px;font-size:11px;outline:none}
-#vclosebtn{margin-top:14px;padding:7px 18px;border-radius:9px;border:none;background:rgba(255,255,255,0.1);color:var(--t1);cursor:pointer;font-size:12px}
-#vclosebtn:hover{background:rgba(255,255,255,0.18)}
-
-/* ACTION OVERLAY */
-#act{position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.55);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
-#act.on{opacity:1;pointer-events:all}
-#actbox{border-radius:18px;padding:26px 34px;text-align:center;min-width:270px;max-width:460px}
-.spin{width:38px;height:38px;border-radius:50%;border:3px solid rgba(186,255,41,.18);border-top-color:var(--acc);animation:spinr .7s linear infinite;margin:0 auto 12px}
-#atitle{font-size:16px;font-weight:700;margin-bottom:6px}
-#astatus{font-size:11px;color:var(--t2);font-family:'SF Mono',Menlo,monospace;min-height:30px;line-height:1.7}
-#ares{margin-top:8px;font-size:11px;color:var(--grn);word-break:break-word;text-align:left;max-height:130px;overflow-y:auto;white-space:pre-wrap}
-.cbtn{margin-top:12px;padding:7px 20px;border-radius:8px;border:none;background:var(--acc);color:#000;cursor:pointer;font-size:12px;font-weight:700}
-.cbtn:hover{opacity:.85}
-
-/* TOASTS */
-#toasts{position:fixed;top:66px;left:10px;z-index:3000;display:flex;flex-direction:column;gap:5px;pointer-events:none;max-width:300px}
-.toast{padding:9px 13px;border-radius:11px;backdrop-filter:blur(38px);-webkit-backdrop-filter:blur(38px);font-size:12px;font-weight:500;color:var(--t1);background:var(--gl);border:.5px solid var(--sep);animation:tin .28s cubic-bezier(.175,.885,.32,1.275)}
-.toast.out{animation:tout .2s forwards}
-@keyframes tin{from{opacity:0;transform:translateX(-20px) scale(.94)}to{opacity:1;transform:none}}
-@keyframes tout{to{opacity:0;transform:translateX(-20px) scale(.94)}}
-
-/* ═══ DOCK ═══
-   CRITICAL Z-INDEX HIERARCHY:
-   - #app = z-index:10 (all panels live here)
-   - #dockwrap = z-index:1000 (dock bg + icons, ABOVE panels)
-   - .dtip = z-index:1001 (tooltips, ABOVE dock bg, never clipped)
-   
-   MAGNIFICATION: icons scale UP (translateY negative = upward)
-   overflow:visible on dock so magnified icons + tooltips are never cut.
-   
-   HEIGHT: dockwrap=76px fixed bottom:0. #app bottom=76px. Zero overlap.
-*/
-#dockwrap{
-  position:fixed;bottom:0;left:0;right:0;
-  height:76px;
-  z-index:1000;
-  display:flex;justify-content:center;align-items:flex-end;
-  padding-bottom:5px;
-  /* allow overflow so magnified icons protrude upward freely */
-  overflow:visible;
-  pointer-events:none;
+:root{
+  --bg:#0b0c0e; --panel:rgba(22,24,28,.72); --panel2:rgba(32,35,40,.6);
+  --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.14);
+  --t1:#f4f6f8; --t2:rgba(244,246,248,.62); --t3:rgba(244,246,248,.36);
+  --acc:#baff29; --accd:#8fd400; --accr:186,255,41;
+  --red:#ff5a52; --amber:#ffb340; --green:#34d399; --blue:#5ac8fa; --purple:#bf7bff;
+  --r:14px; --shadow:0 24px 60px rgba(0,0,0,.55);
 }
-#dock{
-  display:flex;align-items:flex-end;gap:4px;
-  padding:7px 14px 6px;
-  background:var(--dk);
-  box-shadow:inset 0 0 0 .5px var(--dksep),0 -4px 30px rgba(0,0,0,0.5);
-  border-radius:var(--rdock) var(--rdock) 0 0;
-  backdrop-filter:blur(60px) saturate(240%);-webkit-backdrop-filter:blur(60px) saturate(240%);
-  pointer-events:all;
-  max-width:calc(100vw - 24px);
-  overflow:visible; /* MUST be visible so magnified icons + tooltips show above */
-  scrollbar-width:none;
-  position:relative;
-}
-.dsep{width:.5px;height:28px;background:var(--dksep);margin:0 3px;align-self:center;flex-shrink:0}
+[data-theme="oled"]{ --bg:#000; --panel:rgba(8,10,12,.8); --panel2:rgba(14,16,18,.7); --line:rgba(186,255,41,.1); }
+[data-theme="light"]{ --bg:#eef0f3; --panel:rgba(255,255,255,.78); --panel2:rgba(255,255,255,.6); --line:rgba(0,0,0,.08); --line2:rgba(0,0,0,.14); --t1:#0b0c0e; --t2:rgba(11,12,14,.62); --t3:rgba(11,12,14,.4); --acc:#5a9e00; --accr:90,158,0; --shadow:0 16px 40px rgba(0,0,0,.12); }
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;width:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased;font-size:13px}
+body::before{content:"";position:fixed;inset:0;z-index:0;background:
+  radial-gradient(700px circle at 12% -5%, rgba(var(--accr),.10), transparent 55%),
+  radial-gradient(600px circle at 100% 110%, rgba(120,90,255,.10), transparent 55%);pointer-events:none}
+.glass{background:var(--panel);backdrop-filter:blur(40px) saturate(150%);-webkit-backdrop-filter:blur(40px) saturate(150%);border:1px solid var(--line);border-radius:var(--r)}
+#app{position:fixed;inset:0;z-index:1;display:flex;flex-direction:column;padding:10px;gap:10px}
 
-.di{
-  display:flex;flex-direction:column;align-items:center;
-  cursor:pointer;position:relative;user-select:none;flex-shrink:0;
-  /* each icon item needs overflow:visible for tooltip+mag */
-  overflow:visible;
-}
+/* top bar */
+.topbar{display:flex;align-items:center;gap:14px;padding:10px 16px;flex-shrink:0}
+.dots{display:flex;gap:7px}.dots i{width:12px;height:12px;border-radius:50%;display:block}
+.dots i:nth-child(1){background:#ff5f57}.dots i:nth-child(2){background:#febc2e}.dots i:nth-child(3){background:#28c840}
+.brand{font-weight:800;letter-spacing:3px;font-size:14px;color:var(--acc);text-shadow:0 0 24px rgba(var(--accr),.4)}
+.vitals{display:flex;gap:18px;margin-left:8px}
+.vital{display:flex;align-items:baseline;gap:5px;font-size:12px;color:var(--t2)}
+.vital b{font-size:13px;color:var(--t1);font-variant-numeric:tabular-nums;min-width:30px;text-align:right}
+.spacer{margin-left:auto}
+.themes{display:flex;gap:3px;background:var(--panel2);padding:3px;border-radius:10px;border:1px solid var(--line)}
+.themes button{border:none;background:transparent;color:var(--t3);font-size:11px;font-weight:600;padding:4px 9px;border-radius:7px;cursor:pointer;transition:.15s}
+.themes button.on{background:rgba(var(--accr),.16);color:var(--acc)}
+.iconbtn{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--t2);cursor:pointer;font-size:15px;display:grid;place-items:center;transition:.15s}
+.iconbtn:hover{color:var(--acc);border-color:rgba(var(--accr),.4)}
 
-.dico{
-  width:44px;height:44px;border-radius:22%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:23px;line-height:1;
-  position:relative;
-  transform-origin:bottom center;
-  transition:transform .12s cubic-bezier(.175,.885,.32,1.275);
-  will-change:transform;
-  filter:drop-shadow(0 3px 6px rgba(0,0,0,.45)) drop-shadow(0 6px 14px rgba(0,0,0,.2));
-  /* CRITICAL: overflow visible so icon content never clips */
-  overflow:visible;
-}
-.dico::before{
-  content:'';position:absolute;inset:0;border-radius:22%;
-  background:var(--icbg,rgba(120,120,128,.18));
-  box-shadow:inset 0 1px 1px rgba(255,255,255,.44),inset 0 -1px 1px rgba(0,0,0,.1);
-  z-index:0;
-}
-.dico::after{
-  content:'';position:absolute;top:4%;left:8%;right:8%;height:40%;
-  border-radius:60% 60% 50% 50%;
-  background:linear-gradient(180deg,rgba(255,255,255,.44) 0%,rgba(255,255,255,.04) 100%);
-  z-index:2;pointer-events:none;
-}
-.dico span{position:relative;z-index:1;pointer-events:none}
+/* body grid */
+#body{flex:1;display:flex;gap:10px;min-height:0}
+#nav{width:210px;flex-shrink:0;padding:12px;display:flex;flex-direction:column;gap:3px;overflow-y:auto}
+.navlabel{font-size:10px;font-weight:700;letter-spacing:1.4px;color:var(--t3);text-transform:uppercase;margin:14px 8px 6px}
+.navitem{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;cursor:pointer;color:var(--t2);font-weight:600;font-size:13px;transition:.14s;border:1px solid transparent}
+.navitem .ic{width:20px;text-align:center;font-size:15px}
+.navitem:hover{background:var(--panel2);color:var(--t1)}
+.navitem.on{background:rgba(var(--accr),.13);color:var(--acc);border-color:rgba(var(--accr),.22)}
+.navitem .badge{margin-left:auto;font-size:10px;background:rgba(var(--accr),.18);color:var(--acc);padding:1px 7px;border-radius:20px;font-weight:700}
 
-.ddot{width:4px;height:4px;border-radius:50%;background:var(--acc);opacity:0;margin-top:2px;transition:opacity .2s;box-shadow:0 0 5px var(--acc);flex-shrink:0}
-.di.run .ddot{opacity:1}
+#center{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.view{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+.view.on{display:flex}
+.vhead{display:flex;align-items:center;gap:10px;padding:16px 18px 12px;flex-shrink:0}
+.vhead h2{font-size:18px;font-weight:750;letter-spacing:.2px}
+.vhead .sub{font-size:12px;color:var(--t3)}
+.vbody{flex:1;overflow-y:auto;padding:0 18px 18px}
 
-/* TOOLTIP — floats above dock, never clips, always readable */
-.dtip{
-  position:absolute;
-  bottom:calc(100% + 12px); /* above the icon */
-  left:50%;
-  transform:translateX(-50%) translateY(5px);
-  background:rgba(10,10,12,0.96);
-  border:.5px solid rgba(255,255,255,.22);
-  border-radius:9px;
-  padding:6px 12px;
-  font-size:11px;font-weight:600;color:#fff;
-  white-space:nowrap;
-  pointer-events:none;
-  opacity:0;
-  transition:opacity .14s,transform .14s;
-  box-shadow:0 8px 28px rgba(0,0,0,.7);
-  z-index:1001; /* above dock */
-}
-[data-theme="light"] .dtip{background:rgba(240,240,245,.97);color:#000;border-color:rgba(0,0,0,.14)}
-.di:hover .dtip{opacity:1;transform:translateX(-50%) translateY(0)}
+#right{width:230px;flex-shrink:0;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.rlabel{font-size:10px;font-weight:700;letter-spacing:1.4px;color:var(--t3);text-transform:uppercase;margin:6px 2px 4px}
 
-@keyframes dkb{
-  0%,100%{transform:translateY(0)}
-  20%{transform:translateY(-18px) scale(1.1)}
-  45%{transform:translateY(0) scale(.97)}
-  62%{transform:translateY(-8px) scale(1.03)}
-  80%{transform:translateY(0) scale(.99)}
-  90%{transform:translateY(-3px)}
-}
-.dico.bnc{animation:dkb .55s cubic-bezier(.175,.885,.32,1.275)}
+/* overview cards */
+.gauges{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.gauge{padding:16px;border-radius:var(--r);background:var(--panel2);border:1px solid var(--line);position:relative;overflow:hidden}
+.gauge .ring{width:84px;height:84px;margin:0 auto 8px;position:relative}
+.gauge svg{transform:rotate(-90deg)}
+.gauge .num{position:absolute;inset:0;display:grid;place-items:center;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.gauge .lbl{text-align:center;font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;font-weight:700}
+.gauge .meta{text-align:center;font-size:11px;color:var(--t2);margin-top:2px}
+.infogrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.infocard{padding:12px 14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line)}
+.infocard .k{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:700}
+.infocard .v{font-size:14px;font-weight:700;margin-top:3px;word-break:break-word}
 
-/* ICON COLORS */
-.ic-clean{--icbg:linear-gradient(145deg,#ff6b6b,#c0392b)}
-.ic-purge{--icbg:linear-gradient(145deg,#a855f7,#6d28d9)}
-.ic-scan{--icbg:linear-gradient(145deg,#06b6d4,#0284c7)}
-.ic-kill{--icbg:linear-gradient(145deg,#ff3b30,#991b1b)}
-.ic-files{--icbg:linear-gradient(145deg,#f59e0b,#b45309)}
-.ic-dupes{--icbg:linear-gradient(145deg,#c084fc,#7c3aed)}
-.ic-term{--icbg:linear-gradient(145deg,#2d2d2d,#4a4a4a)}
-.ic-deploy{--icbg:linear-gradient(145deg,#6366f1,#4338ca)}
-.ic-git{--icbg:linear-gradient(145deg,#f97316,#c2410c)}
-.ic-ai{--icbg:linear-gradient(145deg,#00ff88,#059669)}
-.ic-voice{--icbg:linear-gradient(145deg,#f43f5e,#9f1239)}
-.ic-bot{--icbg:linear-gradient(145deg,#22d3ee,#0369a1)}
-.ic-brew{--icbg:linear-gradient(145deg,#fbbf24,#92400e)}
-.ic-wifi{--icbg:linear-gradient(145deg,#4ade80,#15803d)}
-.ic-doctor{--icbg:linear-gradient(145deg,#fb7185,#9f1239)}
-.ic-settings{--icbg:linear-gradient(145deg,#6b7280,#374151)}
+/* toolbar + tables */
+.toolbar{display:flex;align-items:center;gap:8px;padding:10px 18px;flex-shrink:0;flex-wrap:wrap}
+.tabs{display:flex;gap:3px;background:var(--panel2);padding:3px;border-radius:10px;border:1px solid var(--line)}
+.tabs button{border:none;background:transparent;color:var(--t3);font-size:12px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer}
+.tabs button.on{background:rgba(var(--accr),.16);color:var(--acc)}
+.search{flex:1;min-width:140px;display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 12px}
+.search input{flex:1;background:none;border:none;outline:none;color:var(--t1);font-size:12px;font-family:inherit}
+.search input::placeholder{color:var(--t3)}
+.sortsel{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 10px;color:var(--t2);font-size:12px;font-family:inherit;cursor:pointer}
+.count{font-size:11px;color:var(--t3);white-space:nowrap}
 
-/* PALETTE */
-#pal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:520px;z-index:2000;border-radius:15px;backdrop-filter:blur(58px) saturate(220%);-webkit-backdrop-filter:blur(58px) saturate(220%);opacity:0;pointer-events:none;transition:all .2s cubic-bezier(.16,1,.3,1);box-shadow:0 40px 80px rgba(0,0,0,.6)}
-#pal.open{opacity:1;pointer-events:all;transform:translate(-50%,-50%) scale(1)}
-#palinw{display:flex;align-items:center;gap:9px;padding:13px 15px;border-bottom:.5px solid var(--sep)}
-#palin{flex:1;background:none;border:none;outline:none;font-size:15px;color:var(--t1)}
-#palin::placeholder{color:var(--t3)}
-#palres{max-height:300px;overflow-y:auto;padding:5px;scrollbar-width:none}
-.pr{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:9px;cursor:pointer;transition:background .1s}
-.pr:hover{background:rgba(186,255,41,0.07)}
-.prico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
-.prname{font-size:13px;font-weight:600}
-.prdesc{font-size:11px;color:var(--t3);margin-top:1px}
-.prkey{margin-left:auto;font-family:'SF Mono',Menlo,monospace;font-size:9px;color:var(--t3);padding:2px 5px;border:.5px solid var(--sep);border-radius:4px}
+.list{display:flex;flex-direction:column;gap:4px}
+.row{display:flex;align-items:center;gap:12px;padding:9px 11px;border-radius:10px;border:1px solid transparent;transition:.12s}
+.row:hover{background:var(--panel2);border-color:var(--line)}
+.row .fic{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;font-size:17px;flex-shrink:0;background:rgba(255,255,255,.05)}
+.row .info{flex:1;min-width:0}
+.row .nm{font-size:13px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .mt{font-size:11px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.row .sz{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--t2);flex-shrink:0}
+.kindtag{font-size:10px;padding:2px 7px;border-radius:6px;background:rgba(var(--accr),.13);color:var(--acc);font-weight:700;flex-shrink:0}
+.acts{display:flex;gap:5px;flex-shrink:0}
+.miniA{padding:4px 9px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--t2);font-size:11px;font-weight:600;cursor:pointer;transition:.12s}
+.miniA:hover{color:var(--acc);border-color:rgba(var(--accr),.4)}
+.miniA.danger:hover{color:var(--red);border-color:rgba(255,90,82,.5)}
 
-/* DOCK SETTINGS */
-#dset{position:fixed;bottom:82px;right:10px;z-index:1100;border-radius:13px;padding:13px;width:210px;opacity:0;pointer-events:none;transition:all .2s;transform:translateY(5px)}
-#dset.on{opacity:1;pointer-events:all;transform:translateY(0)}
-.dsr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px;color:var(--t2);font-weight:500}
-.dssl{-webkit-appearance:none;width:80px;height:3px;border-radius:2px;background:rgba(186,255,41,0.2);outline:none;cursor:pointer}
-.dssl::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--acc);cursor:pointer}
-.dst{width:34px;height:19px;border-radius:10px;background:rgba(255,255,255,0.12);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;border:none}
-.dst.on{background:var(--acc)}
-.dst::after{content:'';position:absolute;top:2.5px;left:2.5px;width:14px;height:14px;border-radius:50%;background:#000;transition:transform .2s}
-.dst.on::after{transform:translateX(15px)}
+.empty{text-align:center;padding:48px 20px;color:var(--t3)}
+.empty .big{font-size:42px;opacity:.5;margin-bottom:10px}
+.spin{width:42px;height:42px;border:3px solid rgba(var(--accr),.18);border-top-color:var(--acc);border-radius:50%;animation:sp .8s linear infinite;margin:30px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+.proc{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);margin-bottom:5px}
+.proc .pn{flex:1;min-width:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proc .pm{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+.bar{height:5px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;border-radius:3px;background:var(--acc);transition:width .5s}
+.outbox{white-space:pre-wrap;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12px;line-height:1.6;color:var(--acc);background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:12px;padding:16px;overflow:auto}
+.bigbtn{padding:10px 16px;border-radius:11px;border:1px solid rgba(var(--accr),.3);background:rgba(var(--accr),.12);color:var(--acc);font-size:13px;font-weight:700;cursor:pointer;transition:.15s}
+.bigbtn:hover{background:rgba(var(--accr),.2)}
+.bigbtn.solid{background:var(--acc);color:#06210a;border-color:var(--acc)}
+.field{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--t1);font-size:13px;font-family:inherit;outline:none;margin-top:6px}
+.field:focus{border-color:rgba(var(--accr),.5)}
+
+/* dock */
+#dock{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:50;display:flex;gap:6px;padding:8px 12px;background:var(--panel);backdrop-filter:blur(50px);border:1px solid var(--line2);border-radius:18px;box-shadow:var(--shadow)}
+.dapp{position:relative;width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:23px;cursor:pointer;transition:transform .16s cubic-bezier(.2,.8,.3,1.4);background:linear-gradient(160deg,rgba(255,255,255,.1),rgba(255,255,255,.02));border:1px solid var(--line)}
+.dapp:hover{transform:translateY(-12px) scale(1.12)}
+.dapp .tip{position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);background:rgba(20,22,26,.96);border:1px solid var(--line2);color:var(--t1);font-size:11px;font-weight:600;padding:4px 10px;border-radius:7px;white-space:nowrap;opacity:0;pointer-events:none;transition:.12s}
+.dapp:hover .tip{opacity:1}
+
+/* modal */
+#scrim{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px}
+#scrim.on{display:flex}
+.modal{width:min(560px,94vw);max-height:84vh;display:flex;flex-direction:column;border-radius:18px;overflow:hidden}
+.modal .mh{padding:18px 20px 12px;border-bottom:1px solid var(--line)}
+.modal .mh h3{font-size:16px;font-weight:750}
+.modal .mh p{font-size:12px;color:var(--t2);margin-top:5px;line-height:1.5}
+.modal .mb{padding:16px 20px;overflow-y:auto;flex:1}
+.modal .mf{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+.modal .mf button{padding:9px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--line)}
+.btn-cancel{background:var(--panel2);color:var(--t2)}
+.btn-go{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-go:hover{filter:brightness(1.1)}
+.proglog{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12px;line-height:1.7;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:10px;padding:12px;min-height:80px;max-height:280px;overflow-y:auto;color:var(--t2)}
+.proglog .done{color:var(--green);font-weight:700}
+.confirmlist{font-size:12px;color:var(--t2);line-height:1.7;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px}
+
+/* toast */
+#toasts{position:fixed;top:64px;right:14px;z-index:300;display:flex;flex-direction:column;gap:6px}
+.toast{padding:10px 14px;border-radius:11px;background:var(--panel);backdrop-filter:blur(40px);border:1px solid var(--line2);font-size:12px;font-weight:600;box-shadow:var(--shadow);animation:tin .25s}
+@keyframes tin{from{opacity:0;transform:translateX(20px)}}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:5px}::-webkit-scrollbar-track{background:transparent}
 </style>
 </head>
 <body>
-<div id="ytw"><iframe id="ytf" src="" allow="autoplay;encrypted-media" allowfullscreen></iframe></div>
-<div id="ov"></div>
-<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-<canvas id="pcvs"></canvas>
-<div class="scanlines"></div>
-<div id="toasts"></div>
-
-<!-- VOICE OVERLAY -->
-<div id="vov">
-  <div id="vbox" class="gl">
-    <div class="vring" id="vring"><span id="vico">🎤</span></div>
-    <div id="vstatus">Double-Space to activate voice</div>
-    <div id="vtrans"></div>
-    <div id="vresult"></div>
-    <select id="vmode"><option value="overlay">Overlay</option><option value="toast">Toast</option><option value="chat">AI Chat</option></select>
-    <br><button id="vclosebtn" onclick="closeVoice()">Close ✕</button>
-  </div>
-</div>
-
 <div id="app">
-  <!-- TOPBAR -->
-  <div class="gl topbar" style="margin-bottom:7px;flex-shrink:0">
-    <div class="tl">
-      <div class="tld tlr" title="Close"></div>
-      <div class="tld tly" title="Min"></div>
-      <div class="tld tlg" onclick="toggleFS()" title="Full"></div>
+  <!-- TOP BAR -->
+  <div class="topbar glass">
+    <div class="dots"><i></i><i></i><i></i></div>
+    <div class="brand">CHINNA&nbsp;V5</div>
+    <div class="vitals">
+      <span class="vital">CPU <b id="v-cpu">—</b></span>
+      <span class="vital">RAM <b id="v-ram">—</b></span>
+      <span class="vital">DISK <b id="v-disk">—</b></span>
+      <span class="vital">BATT <b id="v-batt">—</b></span>
     </div>
-    <div class="brand">◉ CHINNA V4-PRO</div>
-    <div class="gl ytrow">
-      <span style="font-size:11px;color:var(--t3)">▶</span>
-      <input id="ytin" placeholder="YouTube URL — plays behind OLED glass" type="text">
-      <button class="pbtn" onclick="loadYT()">Play</button>
+    <div class="spacer"></div>
+    <div class="themes" id="themes">
+      <button data-t="dark" class="on">Dark</button>
+      <button data-t="oled">OLED</button>
+      <button data-t="light">Light</button>
     </div>
-    <button class="sbtn" id="sndbtn" onclick="toggleSnd()">🔇 Sound</button>
-    <div class="tsrow">
-      <div class="ts">CPU <b id="tbcpu">—</b></div>
-      <div class="ts">RAM <b id="tbram">—</b></div>
-      <div class="ts">DISK <b id="tbdsk">—</b></div>
-    </div>
-    <div class="seg">
-      <button class="sb on" id="st-macos" onclick="setTheme('macos')">macOS</button>
-      <button class="sb" id="st-oled" onclick="setTheme('oled')">OLED</button>
-      <button class="sb" id="st-light" onclick="setTheme('light')">Light</button>
-      <button class="sb" id="st-neon" onclick="setTheme('neon')">Neon</button>
-      <button class="sb" id="st-blue" onclick="setTheme('blue')">Blue</button>
-    </div>
-    <button class="sbtn" id="vbtn" onclick="toggleVoice()" title="Voice — double-space">🎙️<div class="vdot"></div></button>
-    <button class="sbtn" onclick="openPal()" title="⌘K">⌘K</button>
-    <button class="sbtn" onclick="openComp('settings')">⚙️</button>
-    <button class="sbtn" onclick="document.getElementById('dset').classList.toggle('on')">⊟</button>
+    <button class="iconbtn" onclick="go('settings')" title="Settings">⚙</button>
   </div>
 
-  <!-- MAIN 3-COL -->
-  <div id="main">
-    <!-- LEFT -->
-    <div id="lcol">
-      <div class="gl pane" style="flex-shrink:0">
-        <div class="mrow">
-          <button class="mbtn g" onclick="qa('purge','⚡ Purge RAM')">⚡ Purge</button>
-          <button class="mbtn r" onclick="qa('killhogs','💀 Kill Hogs')">💀 Kill Hogs</button>
-        </div>
-        <div class="mrow">
-          <button class="mbtn y" onclick="qa('clean','🧹 Deep Clean')">🧹 Clean</button>
-          <button class="mbtn g" onclick="openFiles('large')">📁 Files</button>
-        </div>
-      </div>
-      <div class="gl pane scrl" style="flex:1">
-        <div class="ptitle">System Vitals</div>
-        <div class="gauge-row">
-          <div class="gauge"><canvas id="gcc" width="52" height="52"></canvas><div class="gval" id="gvc" style="color:var(--c1)">—%</div><div class="glbl">CPU</div></div>
-          <div class="gauge"><canvas id="gcm" width="52" height="52"></canvas><div class="gval" id="gvm" style="color:var(--c2)">—%</div><div class="glbl">RAM</div></div>
-        </div>
-        <div class="gauge-row">
-          <div class="gauge"><canvas id="gcd" width="52" height="52"></canvas><div class="gval" id="gvd" style="color:var(--c3)">—%</div><div class="glbl">DISK</div></div>
-          <div class="gauge"><canvas id="gcb" width="52" height="52"></canvas><div class="gval" id="gvb" style="color:var(--acc2)">—%</div><div class="glbl">BATT</div></div>
-        </div>
-        <div class="hdiv"></div>
-        <div class="ptitle">Machine</div>
-        <div class="chip"><span>Host</span><span id="sihost">—</span></div>
-        <div class="chip"><span>macOS</span><span id="sios">—</span></div>
-        <div class="chip"><span>Chip</span><span id="siarch">—</span></div>
-        <div class="chip"><span>Uptime</span><span id="siup">—</span></div>
-        <div class="chip"><span>IP</span><span id="siip">—</span></div>
-        <div class="chip"><span>WiFi</span><span id="siwifi">—</span></div>
-        <div class="hdiv"></div>
-        <div class="ptitle">Network</div>
-        <div class="npill"><div class="ndot" id="nd1" style="background:var(--grn)"></div><span>Status</span><span class="nv" id="nst">—</span></div>
-        <div class="npill"><div class="ndot" style="background:var(--acc3)"></div><span>SSID</span><span class="nv" id="nssid">—</span></div>
-      </div>
+  <!-- BODY -->
+  <div id="body">
+    <!-- NAV -->
+    <div id="nav" class="glass">
+      <div class="navlabel">Monitor</div>
+      <div class="navitem on" data-v="overview" onclick="go('overview')"><span class="ic">◉</span> Overview</div>
+      <div class="navitem" data-v="processes" onclick="go('processes')"><span class="ic">⚡</span> Processes</div>
+      <div class="navitem" data-v="network" onclick="go('network')"><span class="ic">🌐</span> Network</div>
+      <div class="navlabel">Storage</div>
+      <div class="navitem" data-v="files" onclick="go('files')"><span class="ic">📁</span> File Manager</div>
+      <div class="navitem" data-v="dupes" onclick="go('dupes')"><span class="ic">⧉</span> Duplicates</div>
+      <div class="navitem" data-v="storage" onclick="go('storage')"><span class="ic">▦</span> Disk Explorer</div>
+      <div class="navlabel">System</div>
+      <div class="navitem" data-v="apps" onclick="go('apps')"><span class="ic">🗑</span> App Uninstaller</div>
+      <div class="navitem" data-v="battery" onclick="go('battery')"><span class="ic">🔋</span> Battery Health</div>
+      <div class="navitem" data-v="doctor" onclick="go('doctor')"><span class="ic">🩺</span> Doctor</div>
+      <div class="navitem" data-v="ai" onclick="go('ai')"><span class="ic">✦</span> Chinna AI</div>
     </div>
 
     <!-- CENTER -->
-    <div id="ccol">
-      <div id="ca" class="gl">
-
-        <!-- DEFAULT -->
-        <div class="comp on" id="comp-def" style="background:var(--gl);backdrop-filter:blur(34px);-webkit-backdrop-filter:blur(34px)">
-          <div class="cbody">
-            <div class="definner">
-              <div class="gl pane defwave">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                  <div class="ptitle" style="margin:0;flex:1">CPU History — 60s</div>
-                  <div id="sarc" style="font-size:10px;font-style:italic;color:var(--t3);max-width:260px;text-align:right;transition:opacity .4s"></div>
-                </div>
-                <canvas id="wcvs"></canvas>
-              </div>
-              <div class="gl pane defprocs">
-                <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
-                  <div class="ptitle" style="margin:0;flex:1">Top Processes — Memory</div>
-                  <button class="wact r" onclick="qa('purge','Purge RAM')">⚡ Purge</button>
-                  <button class="wact" onclick="openComp('procs')">Full List</button>
-                </div>
-                <div id="pmini"></div>
-              </div>
-            </div>
-          </div>
+    <div id="center" class="glass">
+      <!-- OVERVIEW -->
+      <div class="view on" id="view-overview">
+        <div class="vhead"><h2>Overview</h2><span class="sub" id="ov-host">—</span></div>
+        <div class="vbody">
+          <div class="gauges" id="gauges"></div>
+          <div class="infogrid" id="ov-info"></div>
         </div>
-
-        <!-- PROCESSES -->
-        <div class="comp" id="comp-procs" style="background:var(--gl);backdrop-filter:blur(34px);-webkit-backdrop-filter:blur(34px)">
-          <div class="chdr">
-            <span style="font-size:16px">⚙️</span><div class="ctitle">All Processes</div>
-            <select id="psort" onchange="renderProcs()" style="background:rgba(186,255,41,0.1);border:none;color:var(--acc);font-size:10px;border-radius:6px;padding:3px 7px;cursor:pointer">
-              <option value="mem">RAM</option><option value="cpu">CPU</option><option value="name">Name</option>
-            </select>
-            <input id="psrch" placeholder="Filter..." oninput="renderProcs()" style="background:rgba(255,255,255,0.07);border:none;outline:none;color:var(--t1);font-size:10px;border-radius:6px;padding:4px 9px;width:110px">
-            <button class="wact r" onclick="qa('purge','Purge')">⚡</button>
-            <button class="cclose" onclick="openComp('def')">✕</button>
-          </div>
-          <div class="cbody" id="pfull"></div>
-        </div>
-
-        <!-- FILES -->
-        <div class="comp" id="comp-files" style="background:var(--gl);backdrop-filter:blur(34px);-webkit-backdrop-filter:blur(34px)">
-          <div class="chdr">
-            <span style="font-size:16px">📁</span><div class="ctitle">File Manager</div>
-            <div class="tabs">
-              <button class="tab on" id="ftab-large" onclick="switchFTab('large',this)">Large Files</button>
-              <button class="tab" id="ftab-downloads" onclick="switchFTab('downloads',this)">Downloads</button>
-              <button class="tab" id="ftab-dupes" onclick="switchFTab('dupes',this)">Duplicates</button>
-            </div>
-            <button class="cclose" onclick="openComp('def')">✕</button>
-          </div>
-          <div class="cbody" style="display:flex;flex-direction:column">
-            <div class="sbar"><span style="color:var(--t3)">🔍</span><input placeholder="Search files..." id="fsrch" oninput="filterFiles()"></div>
-            <div id="flist" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--sep) transparent"></div>
-          </div>
-        </div>
-
-        <!-- TERMINAL -->
-        <div class="comp" id="comp-term" style="background:transparent">
-          <div class="chdr">
-            <span style="font-size:16px">🖥️</span><div class="ctitle">Terminal</div>
-            <button class="wact" onclick="fetch('/api/openterm',{method:'POST'}).then(()=>toast('🖥️ Opening iTerm...'))">iTerm ↗</button>
-            <button class="cclose" onclick="openComp('def')">✕</button>
-          </div>
-          <div class="term-cbody">
-            <div id="tout"></div>
-            <div id="tinrow">
-              <span class="tprompt">chinna@mac %</span>
-              <input id="tin" placeholder="Enter command..." autocomplete="off" spellcheck="false">
-              <button class="micbtn" onclick="mic2text('tin')" title="Voice">🎤</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- AI CHAT -->
-        <div class="comp" id="comp-ai" style="background:transparent">
-          <div class="chdr">
-            <span style="font-size:16px">✨</span><div class="ctitle">Chinna AI</div>
-            <div id="aimodelbadge"></div>
-            <div style="display:flex;gap:3px">
-              <button class="atab on" id="atab-free" onclick="setAIMode('free',this)">Free</button>
-              <button class="atab" id="atab-pro" onclick="setAIMode('pro',this)">Pro</button>
-              <button class="atab" id="atab-oai" onclick="setAIMode('openai',this)">OpenAI</button>
-            </div>
-            <button class="cclose" onclick="openComp('def')">✕</button>
-          </div>
-          <div class="ai-cbody">
-            <div id="aifprev" style="display:none">
-              <span style="font-size:12px">📎</span>
-              <span class="aifname" id="aifname"></span>
-              <button class="fclr" onclick="clearAIFile()">✕</button>
-            </div>
-            <div id="aimsgs"></div>
-            <input type="file" id="aifinput" accept="image/*,.pdf,.txt,.js,.py,.md" onchange="handleFileUp(this)">
-            <div id="aiinrow">
-              <button class="filebtn" onclick="document.getElementById('aifinput').click()" title="Attach">+</button>
-              <input id="aiin" placeholder="Ask anything — Telugu · Hindi · English · Tinglish...">
-              <button class="micbtn" onclick="mic2text('aiin')" title="Voice">🎤</button>
-              <button class="pbtn" onclick="sendAI()">Send</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- DEPLOY -->
-        <div class="comp" id="comp-deploy" style="background:var(--gl);backdrop-filter:blur(34px);-webkit-backdrop-filter:blur(34px)">
-          <div class="chdr">
-            <span style="font-size:16px">☁️</span><div class="ctitle">Deploy</div>
-            <button class="cclose" onclick="openComp('def')">✕</button>
-          </div>
-          <div class="cbody">
-            <div class="gl pane" style="margin-bottom:8px">
-              <div class="ptitle">Platform</div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-                <button class="mbtn g" onclick="dplat='vercel'">▲ Vercel</button>
-                <button class="mbtn g" onclick="dplat='netlify'">🟢 Netlify</button>
-                <button class="mbtn y" onclick="dplat='railway'">🚂 Railway</button>
-              </div>
-            </div>
-            <div class="gl pane">
-              <div class="ptitle">Project Dir</div>
-              <div class="sbar"><span style="color:var(--t3)">📁</span><input id="ddir" value="." style="color:var(--t1)" placeholder="~/project"></div>
-              <button class="mbtn g" style="width:100%;margin-top:8px" onclick="doDeploy()">🚀 Deploy Now</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- GIT -->
-        <div class="comp" id="comp-git" style="background:var(--gl);backdrop-filter:blur(34px);-webkit-backdrop-filter:blur(34px)">
-          <div class="chdr">
-            <span style="font-size:16px">🌿</span><div class="ctitle">Git — AI Commit</div>
-            <button class="cclose" onclick="openComp('def')">✕</button>
-          </div>
-          <div class="cbody">
-            <div class="gl pane" style="margin-bottom:8px">
-              <div class="ptitle">Repo Dir</div>
-              <div class="sbar"><span style="color:var(--t3)">📁</span><input id="gdir" value="." style="color:var(--t1)" placeholder="~/project"></div>
-            </div>
-            <div class="gl pane">
-              <div class="ptitle">Commit Message (blank = AI)</div>
-              <textarea id="gmsg" placeholder="Leave empty for AI generated commit..." style="width:100%;background:rgba(255,255,255,0.04);border:none;outline:none;color:var(--t1);font-size:12px;border-radius:8px;padding:9px;resize:none;height:60px"></textarea>
-              <div style="display:flex;gap:6px;margin-top:8px">
-                <button class="mbtn g" style="flex:1" onclick="gitCommit()">✅ Commit</button>
-                <button class="mbtn g" style="flex:1" onclick="gitPush()">📤 Push</button>
-                <button class="mbtn y" style="flex:1" onclick="gitAll()">🚀 Both</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- WIFI -->
-        <div class="comp" id="comp-wifi" style="background:var(--gl);backdrop-filter:blur(34px);-webkit-backdrop-filter:blur(34px)">
-          <div class="chdr">
-            <span style="font-size:16px">📶</span><div class="ctitle">Network Diagnostics</div>
-            <button class="wact" onclick="qa('wifi','📶 WiFi Check')">Run Test</button>
-            <button class="cclose" onclick="openComp('def')">✕</button>
-          </div>
-          <div class="cbody"><pre id="wifibody" style="font-family:'SF Mono',Menlo,monospace;font-size:11px;color:var(--acc);line-height:1.7;white-space:pre-wrap">Click Run Test to start diagnostics...</pre></div>
-        </div>
-
-        <!-- DOCTOR -->
-        <div class="comp" id="comp-doctor" style="background:var(--gl);backdrop-filter:blur(34px);-webkit-backdrop-filter:blur(34px)">
-          <div class="chdr">
-            <span style="font-size:16px">🩺</span><div class="ctitle">Health Check</div>
-            <button class="wact" onclick="runDoctor()">Run Check</button>
-            <button class="cclose" onclick="openComp('def')">✕</button>
-          </div>
-          <div class="cbody"><pre id="drbody" style="font-family:'SF Mono',Menlo,monospace;font-size:11px;color:var(--acc);line-height:1.7;white-space:pre-wrap">Click Run Check to diagnose your Mac...</pre></div>
-        </div>
-
-        <!-- SETTINGS -->
-        <div class="comp" id="comp-settings" style="background:var(--gl);backdrop-filter:blur(34px);-webkit-backdrop-filter:blur(34px)">
-          <div class="chdr">
-            <span style="font-size:16px">⚙️</span><div class="ctitle">Settings & API Keys</div>
-            <button class="cclose" onclick="openComp('def')">✕</button>
-          </div>
-          <div class="cbody">
-            <div class="gl pane" style="margin-bottom:8px">
-              <div class="ptitle">Chinna AI — OpenRouter</div>
-              <div class="srow"><div class="slbl"><div class="slbl-t">Chinna AI API Key</div><div class="slbl-s">Powers Free + Pro models</div></div><div style="display:flex;align-items:center;gap:6px"><div class="sdot" id="dot-ca" style="background:var(--red)"></div><input class="stinp" id="inp-ca" type="password" placeholder="sk-or-v1-..."></div></div>
-              <div class="srow"><div class="slbl"><div class="slbl-t">OpenAI API Key</div><div class="slbl-s">Optional — Whisper voice + GPT</div></div><div style="display:flex;align-items:center;gap:6px"><div class="sdot" id="dot-oa" style="background:var(--ylw)"></div><input class="stinp" id="inp-oa" type="password" placeholder="sk-..."></div></div>
-              <div style="display:flex;gap:7px;margin-top:10px">
-                <button class="stbtn" onclick="saveKeys()">Save Keys</button>
-                <button class="stbtn" style="background:rgba(255,255,255,0.1);color:var(--t1)" onclick="checkKeys()">Check Status</button>
-              </div>
-            </div>
-            <div class="gl pane" style="margin-bottom:8px">
-              <div class="ptitle">Telegram Bot</div>
-              <div class="srow"><div class="slbl"><div class="slbl-t">Bot Token</div><div class="slbl-s">From @BotFather</div></div><input class="stinp" id="inp-tg" type="password" placeholder="1234567:ABC..."></div>
-              <div class="srow"><div class="slbl"><div class="slbl-t">Chat ID</div><div class="slbl-s">From @userinfobot</div></div><input class="stinp" id="inp-tc" placeholder="123456789"></div>
-              <button class="stbtn" style="margin-top:10px" onclick="saveKeys()">Save</button>
-            </div>
-            <div class="gl pane">
-              <div class="ptitle">System</div>
-              <div class="srow"><div class="slbl"><div class="slbl-t">Voice Output Mode</div><div class="slbl-s">How Chinna responds to voice</div></div>
-                <select id="vpref" style="background:rgba(186,255,41,0.1);border:none;color:var(--acc);font-size:10px;border-radius:7px;padding:3px 9px">
-                  <option value="overlay">Overlay</option><option value="toast">Toast</option><option value="chat">AI Chat</option>
-                </select>
-              </div>
-              <div class="srow"><div class="slbl"><div class="slbl-t">Auto-launch on Login</div><div class="slbl-s">Starts with macOS</div></div><button class="stbtn" onclick="installLA()">Install LaunchAgent</button></div>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- #ca -->
-    </div><!-- #ccol -->
-
-    <!-- RIGHT -->
-    <div id="rcol">
-      <div class="gl pane" style="flex-shrink:0">
-        <div class="ptitle">CPU — 60s</div>
-        <canvas id="mwcvs"></canvas>
-        <div id="srcm" style="font-size:10px;font-style:italic;color:var(--t3);margin-top:4px;text-align:center;min-height:22px;transition:opacity .4s"></div>
       </div>
-      <div class="gl pane" style="flex-shrink:0">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
-          <div class="ptitle" style="margin:0;flex:1">Top Processes</div>
-          <button class="wact r" onclick="qa('purge','Purge')">⚡</button>
-        </div>
-        <div id="pright"></div>
+
+      <!-- PROCESSES -->
+      <div class="view" id="view-processes">
+        <div class="vhead"><h2>Processes</h2><span class="sub">Top memory consumers · live</span></div>
+        <div class="vbody"><div class="list" id="proc-list"></div></div>
       </div>
-      <div class="gl pane scrl" style="flex:1">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
-          <div class="ptitle" style="margin:0;flex:1">Storage</div>
-          <button class="wact" onclick="qa('scan','Scan')">Scan</button>
+
+      <!-- NETWORK -->
+      <div class="view" id="view-network">
+        <div class="vhead"><h2>Network</h2><span class="sub">Listening ports & connection</span></div>
+        <div class="vbody"><div class="outbox" id="net-out">Loading…</div></div>
+      </div>
+
+      <!-- FILE MANAGER -->
+      <div class="view" id="view-files">
+        <div class="vhead"><h2>File Manager</h2><span class="sub">Find & manage large files</span></div>
+        <div class="toolbar">
+          <div class="tabs" id="file-tabs">
+            <button class="on" data-tab="large" onclick="filesTab('large',this)">Large Files</button>
+            <button data-tab="downloads" onclick="filesTab('downloads',this)">Downloads</button>
+          </div>
+          <div class="search">🔍<input id="file-q" placeholder="Filter by name…" oninput="renderFiles()"></div>
+          <select class="sortsel" id="file-sort" onchange="loadFiles()">
+            <option value="size">Size</option><option value="date">Date</option><option value="name">Name</option>
+          </select>
+          <span class="count" id="file-count"></span>
         </div>
-        <div id="storight"></div>
-        <div class="hdiv"></div>
-        <div class="ptitle">Network</div>
-        <div class="npill"><div class="ndot" id="nd2" style="background:var(--grn)"></div><span>Status</span><span class="nv" id="nst2">—</span></div>
-        <div class="npill"><div class="ndot" style="background:var(--acc3)"></div><span>IP</span><span class="nv" id="nip2">—</span></div>
+        <div class="vbody"><div class="list" id="file-list"></div></div>
+      </div>
+
+      <!-- DUPLICATES -->
+      <div class="view" id="view-dupes">
+        <div class="vhead"><h2>Duplicates</h2><span class="sub">Byte-identical files (size + hash)</span></div>
+        <div class="toolbar">
+          <button class="bigbtn" onclick="loadDupes()">↻ Scan now</button>
+          <span class="count" id="dupe-count"></span>
+          <div class="spacer" style="margin-left:auto"></div>
+          <button class="bigbtn" id="dupe-del" style="display:none" onclick="confirmDeleteDupes()">Delete selected</button>
+        </div>
+        <div class="vbody"><div class="list" id="dupe-list"><div class="empty"><div class="big">⧉</div>Click "Scan now" to find duplicates</div></div></div>
+      </div>
+
+      <!-- DISK EXPLORER -->
+      <div class="view" id="view-storage">
+        <div class="vhead"><h2>Disk Explorer</h2><span class="sub" id="stor-path">~</span></div>
+        <div class="toolbar">
+          <button class="bigbtn" onclick="storUp()">↑ Up</button>
+          <button class="bigbtn" onclick="loadStorage(HOME_PATH)">⌂ Home</button>
+        </div>
+        <div class="vbody"><div class="list" id="stor-list"></div></div>
+      </div>
+
+      <!-- APP UNINSTALLER -->
+      <div class="view" id="view-apps">
+        <div class="vhead"><h2>App Uninstaller</h2><span class="sub">Removes app + leftover support files</span></div>
+        <div class="toolbar">
+          <div class="search">🔍<input id="app-q" placeholder="Filter apps…" oninput="renderApps()"></div>
+          <span class="count" id="app-count"></span>
+        </div>
+        <div class="vbody"><div class="list" id="app-list"></div></div>
+      </div>
+
+      <!-- BATTERY -->
+      <div class="view" id="view-battery">
+        <div class="vhead"><h2>Battery Health</h2><span class="sub">Cycle count & condition</span></div>
+        <div class="vbody"><div class="infogrid" id="batt-info"></div></div>
+      </div>
+
+      <!-- DOCTOR -->
+      <div class="view" id="view-doctor">
+        <div class="vhead"><h2>Doctor</h2><span class="sub">Dev toolchain & system report</span></div>
+        <div class="toolbar">
+          <button class="bigbtn" onclick="loadDoctor()">↻ Re-check</button>
+          <button class="bigbtn" onclick="genReport()">📄 Export system report</button>
+        </div>
+        <div class="vbody"><div class="outbox" id="doc-out">Loading…</div></div>
+      </div>
+
+      <!-- AI -->
+      <div class="view" id="view-ai">
+        <div class="vhead"><h2>Chinna AI</h2><span class="sub" id="ai-status">—</span></div>
+        <div class="vbody" style="display:flex;flex-direction:column">
+          <div class="list" id="ai-msgs" style="flex:1;min-height:120px"></div>
+        </div>
+        <div class="toolbar">
+          <div class="search"><input id="ai-in" placeholder="Ask Chinna anything…" onkeydown="if(event.key==='Enter')sendAI()"></div>
+          <button class="bigbtn solid" onclick="sendAI()">Send</button>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="view" id="view-settings">
+        <div class="vhead"><h2>Settings</h2><span class="sub">API keys (stored locally in ~/.chinna)</span></div>
+        <div class="vbody" style="max-width:520px">
+          <div class="navlabel" style="margin-left:0">OpenRouter key — Chinna AI</div>
+          <input class="field" id="set-or" type="password" placeholder="sk-or-v1-…">
+          <div class="navlabel" style="margin-left:0">OpenAI key — optional (Whisper/GPT)</div>
+          <input class="field" id="set-oa" type="password" placeholder="sk-…">
+          <button class="bigbtn solid" style="margin-top:16px" onclick="saveKeys()">Save Keys</button>
+        </div>
       </div>
     </div>
-  </div><!-- #main -->
-</div><!-- #app -->
 
-<!-- DOCK — fixed bottom, z-index:1000, ABOVE #app z-index:10 -->
-<div id="dockwrap">
-  <div id="dock"></div>
+    <!-- RIGHT RAIL -->
+    <div id="right" class="glass">
+      <div class="rlabel">Top Processes</div>
+      <div id="rail-proc"></div>
+      <div class="rlabel" style="margin-top:10px">Storage Breakdown</div>
+      <div id="rail-disk"></div>
+    </div>
+  </div>
+
+  <!-- DOCK -->
+  <div id="dock">
+    <div class="dapp" onclick="confirmAction('purge')"><span>⚡</span><span class="tip">Purge RAM</span></div>
+    <div class="dapp" onclick="confirmAction('clean')"><span>🧹</span><span class="tip">Deep Clean</span></div>
+    <div class="dapp" onclick="go('files')"><span>📁</span><span class="tip">Files</span></div>
+    <div class="dapp" onclick="go('dupes')"><span>⧉</span><span class="tip">Duplicates</span></div>
+    <div class="dapp" onclick="go('apps')"><span>🗑</span><span class="tip">Uninstaller</span></div>
+    <div class="dapp" onclick="go('storage')"><span>▦</span><span class="tip">Disk</span></div>
+    <div class="dapp" onclick="go('ai')"><span>✦</span><span class="tip">Chinna AI</span></div>
+  </div>
 </div>
 
-<!-- ACTION OVERLAY -->
-<div id="act"><div id="actbox" class="gl"><div class="spin" id="aspin"></div><div id="atitle">Running...</div><div id="astatus"></div><div id="ares"></div><button class="cbtn" onclick="closeAct()">Done</button></div></div>
-
-<!-- PALETTE -->
-<div id="pal" class="gl">
-  <div id="palinw"><span style="font-size:14px;color:var(--t3)">⌘</span><input id="palin" placeholder="Search commands..." autocomplete="off"></div>
-  <div id="palres"></div>
+<!-- CONFIRM / PROGRESS MODAL -->
+<div id="scrim">
+  <div class="modal glass">
+    <div class="mh"><h3 id="m-title">Confirm</h3><p id="m-desc"></p></div>
+    <div class="mb">
+      <div id="m-confirm" class="confirmlist"></div>
+      <div id="m-prog" style="display:none"><div class="proglog" id="m-log"></div></div>
+    </div>
+    <div class="mf" id="m-foot">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-go" id="m-go">Confirm</button>
+    </div>
+  </div>
 </div>
 
-<!-- DOCK SETTINGS -->
-<div id="dset" class="gl">
-  <div style="font-size:9px;font-weight:700;letter-spacing:2px;color:var(--t3);margin-bottom:10px;text-transform:uppercase">Dock & Menu Bar</div>
-  <div class="dsr"><span>Icon Size</span><input class="dssl" type="range" min="36" max="66" value="44" oninput="setDSz(this.value)"></div>
-  <div class="dsr"><span>Magnify</span><button class="dst on" id="dtmag" onclick="togMag()"></button></div>
-  <div class="dsr"><span>Auto-hide</span><button class="dst" id="dthide" onclick="togHide()"></button></div>
-  <div class="dsr"><span>Labels</span><button class="dst on" id="dtlbl" onclick="togLbl()"></button></div>
-</div>
+<div id="toasts"></div>
 
 <script>
-'use strict';
+"use strict";
+const $ = id => document.getElementById(id);
+const api = (p,opt) => fetch('/api/'+p,opt).then(r=>r.json());
+let HOME_PATH = '~';
+let allFiles=[], curTab='large', allApps=[], dupeSel=new Set(), allDupes=[];
 
-const safeLS={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}}};
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;$('toasts').appendChild(t);setTimeout(()=>t.remove(),3500);}
+function ficon(k){return {PDF:'📕',Video:'🎬',Audio:'🎵',Archive:'🗜',App:'📦','Disk Image':'💿',Installer:'📦',Code:'⌨',Data:'🗃',Image:'🖼',Doc:'📄',Sheet:'📊',Slides:'📽',Text:'📝'}[k]||'📄';}
+function color(p){return p>85?'var(--red)':p>65?'var(--amber)':'var(--acc)';}
 
-// COMMANDS
-const CMDS=[
-  {id:'clean', cls:'ic-clean', e:'🧹',l:'Deep Clean', d:'Nuke caches, builds, docker, node_modules',ep:'clean',   comp:null},
-  {id:'purge', cls:'ic-purge', e:'🧠',l:'Purge RAM',  d:'Free inactive memory instantly',           ep:'purge',  comp:null},
-  {id:'scan',  cls:'ic-scan',  e:'🔬',l:'Scan Disk',  d:'Full disk usage breakdown',                ep:'scan',   comp:null},
-  {id:'kill',  cls:'ic-kill',  e:'☠️',l:'Kill Hogs', d:'Terminate RAM hogs',                       ep:'killhogs',comp:'procs'},
-  null,
-  {id:'files', cls:'ic-files', e:'📁',l:'Files',      d:'Browse & delete large files',              ep:null,     comp:'files-large'},
-  {id:'dupes', cls:'ic-dupes', e:'🔍',l:'Duplicates', d:'Find & nuke duplicate files',              ep:null,     comp:'files-dupes'},
-  {id:'term',  cls:'ic-term',  e:'🖥️',l:'Terminal',  d:'Full bash terminal',                       ep:null,     comp:'term'},
-  null,
-  {id:'deploy',cls:'ic-deploy',e:'☁️',l:'Deploy',    d:'Vercel · Netlify · Railway',               ep:null,     comp:'deploy'},
-  {id:'git',   cls:'ic-git',   e:'🌿',l:'Git',        d:'AI commit + push to GitHub',               ep:null,     comp:'git'},
-  {id:'ai',    cls:'ic-ai',    e:'✨',l:'Chinna AI',  d:'Free & Pro AI models',                     ep:null,     comp:'ai'},
-  null,
-  {id:'voice', cls:'ic-voice', e:'🎤',l:'Voice',      d:'Voice — double-space shortcut',            ep:null,     comp:'voice'},
-  {id:'bot',   cls:'ic-bot',   e:'📡',l:'Telegram',   d:'Remote control from phone',                ep:'bot',    comp:null},
-  {id:'brew',  cls:'ic-brew',  e:'🍺',l:'Dev Setup',  d:'Homebrew + node + python check',           ep:'brew',   comp:null},
-  null,
-  {id:'wifi',  cls:'ic-wifi',  e:'📶',l:'WiFi',       d:'Network diagnostics + speed test',         ep:null,     comp:'wifi'},
-  {id:'doctor',cls:'ic-doctor',e:'🩺',l:'Doctor',     d:'Full system health check',                 ep:null,     comp:'doctor'},
-  {id:'settings',cls:'ic-settings',e:'⚙️',l:'Settings',d:'API keys · voice · auto-launch',        ep:null,     comp:'settings'},
-];
-
-let S={},cpuH=new Array(60).fill(0),soundOn=false,palOpen=false;
-let dMag=true,dHide=false,dLbl=true,dSz=44;
-let allProcs=[],allFiles=[],ftab='large';
-let aiMode='free',aiFileB64=null,aiFileMime=null,aiFileName=null;
-let thist=[],tidx=0;
-let voiceOn=false,mRec=null,mChunks=[];
-let sp1=0,spc=0;
-let _kc=null,_kt=0,dplat='vercel';
-
-// SARCASM
-const SARCS=['Chrome at 88% RAM. Zero shame.','Your Mac runs slower than a gov website.','84% memory. 67MB free. Crime scene.','78% disk. Downloads folder is archaeology.','node_modules in 47 folders. Projects shipped: 0.','VSCode + Chrome + Claude = throttling.','Ollama downloaded, never queried. 8GB vibing.','This dashboard uses less RAM than Slack.','Your Mac called. Wants its thermal paste replaced.','14 Chrome tabs. F-O-U-R-T-E-E-N.','Build artifacts from 2024 in dist/. Let go.','Docker running. Nothing deployed. 19GB hostage.'];
-let si=0;
-function nextSarc(){si=(si+1)%SARCS.length;['sarc','srcm'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.style.opacity='0';setTimeout(()=>{e.textContent=SARCS[si];e.style.opacity='1'},350)});}
-setInterval(nextSarc,9e3);
-window.addEventListener('load',()=>{['sarc','srcm'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=SARCS[0]});});
-
-// PARTICLES
-function initP(){
-  const c=document.getElementById('pcvs');if(!c)return;
-  const ctx=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;
-  const st=getComputedStyle(document.documentElement);
-  const cols=['--acc','--acc2','--acc3','--c5'].map(v=>st.getPropertyValue(v).trim()).filter(Boolean);
-  if(!cols.length)return;
-  const pts=Array.from({length:35},()=>({x:Math.random()*c.width,y:Math.random()*c.height,vx:(Math.random()-.5)*.13,vy:(Math.random()-.5)*.13,r:Math.random()*.9+.2,col:cols[Math.floor(Math.random()*cols.length)],a:Math.random()*.06+.016}));
-  let rid;
-  function draw(){ctx.clearRect(0,0,c.width,c.height);pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>c.width)p.vx*=-1;if(p.y<0||p.y>c.height)p.vy*=-1;ctx.globalAlpha=p.a;ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill()});ctx.globalAlpha=.012;ctx.strokeStyle=cols[0];ctx.lineWidth=.5;for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y;if(dx*dx+dy*dy<8500){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.stroke()}}ctx.globalAlpha=1;rid=requestAnimationFrame(draw);}
-  cancelAnimationFrame(rid);draw();
+/* nav */
+function go(v){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  $('view-'+v).classList.add('on');
+  document.querySelectorAll('.navitem').forEach(x=>x.classList.toggle('on',x.dataset.v===v));
+  if(v==='files')loadFiles();
+  if(v==='dupes'&&!allDupes.length){}
+  if(v==='apps')loadApps();
+  if(v==='battery')loadBattery();
+  if(v==='doctor')loadDoctor();
+  if(v==='network')loadNet();
+  if(v==='storage')loadStorage(HOME_PATH);
+  if(v==='ai')loadAIStatus();
 }
-window.addEventListener('resize',()=>{const c=document.getElementById('pcvs');if(c){c.width=innerWidth;c.height=innerHeight}initP()});
 
-// THEMES
-function setTheme(t){document.documentElement.setAttribute('data-theme',t);safeLS.set('ct',t);document.querySelectorAll('.sb').forEach(b=>b.classList.toggle('on',b.id==='st-'+t));setTimeout(initP,80);}
-setTheme(safeLS.get('ct')||'macos');
-
-// FULLSCREEN
-function toggleFS(){if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.();}
-document.addEventListener('keydown',e=>{
-  if(e.key==='F11'){e.preventDefault();toggleFS();}
-  if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();palOpen?closePal():openPal();}
-  if(e.key==='Escape'){if(palOpen)closePal();if(voiceOn)closeVoice();}
-  if(e.code==='Space'&&e.target===document.body){e.preventDefault();const now=Date.now();if(now-sp1<380){spc++;if(spc>=2){toggleVoice();spc=0}}else spc=1;sp1=now;}
-});
-
-// YT
-function loadYT(){const raw=document.getElementById('ytin').value.trim();const m=raw.match(/(?:v=|youtu\.be\/|embed\/)([^&?\s]{11})/);const vid=m?m[1]:(raw.length===11?raw:null);if(!vid){toast('❌ Paste a valid YouTube URL');return;}document.getElementById('ytf').src=`https://www.youtube.com/embed/${vid}?autoplay=1&mute=${soundOn?0:1}&loop=1&playlist=${vid}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1`;document.documentElement.setAttribute('data-video','true');toast('🎬 Playing behind OLED glass');}
-function toggleSnd(){soundOn=!soundOn;const b=document.getElementById('sndbtn');b.textContent=(soundOn?'🔊':'🔇')+' Sound';const fr=document.getElementById('ytf');if(fr.src)fr.src=fr.src.replace(/mute=[01]/,'mute='+(soundOn?0:1));}
-document.getElementById('ytin').addEventListener('keydown',e=>e.key==='Enter'&&loadYT());
-
-// TOAST
-function toast(msg,dur=4200){const c=document.getElementById('toasts');const t=document.createElement('div');t.className='toast';t.textContent=msg;c.appendChild(t);setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),200)},dur);}
-
-// GAUGE
-function drawG(id,pct,col){const c=document.getElementById(id);if(!c)return;const ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2+4,r=18;ctx.clearRect(0,0,w,h);ctx.save();ctx.shadowColor=col;ctx.shadowBlur=5;ctx.beginPath();ctx.arc(cx,cy,r,Math.PI*.75,Math.PI*2.25);ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=5;ctx.lineCap='round';ctx.stroke();if(pct>0){const e=Math.PI*.75+(Math.PI*1.5*(Math.min(100,pct)/100));ctx.beginPath();ctx.arc(cx,cy,r,Math.PI*.75,e);ctx.strokeStyle=col;ctx.stroke();ctx.restore();ctx.save();ctx.shadowColor=col;ctx.shadowBlur=9;const ex=cx+r*Math.cos(e),ey=cy+r*Math.sin(e);ctx.beginPath();ctx.arc(ex,ey,2.6,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();}ctx.restore();}
-
-// WAVE
-function drawW(id,data,h){const cv=document.getElementById(id);if(!cv||!cv.parentElement)return;const ctx=cv.getContext('2d');const w=cv.parentElement.clientWidth-22;if(w<=0)return;cv.width=w*2;cv.height=h*2;cv.style.width=w+'px';cv.style.height=h+'px';ctx.scale(2,2);ctx.clearRect(0,0,w,h);const st=getComputedStyle(document.documentElement);const c1=st.getPropertyValue('--acc').trim()||'#baff29';const c2=st.getPropertyValue('--acc3').trim()||'#00d4ff';ctx.strokeStyle='rgba(186,255,41,0.05)';ctx.lineWidth=.5;[0,1,2,3].forEach(i=>{const y=(h/4)*i;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()});if(data.every(v=>v===0))return;const gf=ctx.createLinearGradient(0,0,0,h);gf.addColorStop(0,c1+'38');gf.addColorStop(1,c1+'00');ctx.beginPath();ctx.moveTo(0,h);data.forEach((v,i)=>{const x=(i/59)*w,y=h-(v/100)*h*.82-4;ctx.lineTo(x,y)});ctx.lineTo(w,h);ctx.closePath();ctx.fillStyle=gf;ctx.fill();const gl=ctx.createLinearGradient(0,0,w,0);gl.addColorStop(0,c1);gl.addColorStop(1,c2);ctx.beginPath();data.forEach((v,i)=>{const x=(i/59)*w,y=h-(v/100)*h*.82-4;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});ctx.strokeStyle=gl;ctx.lineWidth=1.6;ctx.lineJoin='round';ctx.stroke();const lx=w,ly=h-(data[59]/100)*h*.82-4;ctx.save();ctx.shadowColor=c1;ctx.shadowBlur=8;ctx.beginPath();ctx.arc(lx,ly,2.6,0,Math.PI*2);ctx.fillStyle=c1;ctx.fill();ctx.restore();}
-
-// UPDATE UI
-const T=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
-function updateUI(){
-  if(!S||!S.cpu)return;
-  const cpu=Math.round(S.cpu.pct||0),mem=S.memory||{},dsk=S.disk||{},bat=S.battery||{},net=S.network||{},os=S.os||{};
-  T('tbcpu',cpu+'%');T('tbram',(mem.pct||0)+'%');T('tbdsk',(dsk.pct||0)+'%');
-  T('gvc',cpu+'%');T('gvm',(mem.pct||0)+'%');T('gvd',(dsk.pct||0)+'%');T('gvb',(bat.pct||0)+'%');
-  const cs=getComputedStyle(document.documentElement);
-  drawG('gcc',cpu,cs.getPropertyValue('--c1').trim());drawG('gcm',mem.pct||0,cs.getPropertyValue('--c2').trim());
-  drawG('gcd',dsk.pct||0,cs.getPropertyValue('--c3').trim());drawG('gcb',bat.pct||0,cs.getPropertyValue('--acc2').trim());
-  T('sihost',os.hostname||'—');T('sios',(os.name||'macOS')+' '+(os.version||''));T('siarch',os.arch||'—');T('siup',S.uptime||'—');T('siip',net.ip||'—');T('siwifi',net.ssid||'—');
-  const conn=net.ip&&net.ip!=='disconnected';
-  T('nst',conn?'Connected':'Offline');T('nst2',conn?'Connected':'Offline');T('nssid',net.ssid||'—');T('nip2',net.ip||'—');
-  ['nd1','nd2'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.background=conn?'var(--grn)':'var(--red)'});
-  cpuH.push(cpu);cpuH.shift();drawW('wcvs',cpuH,100);drawW('mwcvs',cpuH,68);
-  if(S.processes){allProcs=[...S.processes];renderPM();renderProcs();renderPR();}
-  if(S.disk_breakdown&&S.disk_breakdown.length){
-    const cols=['var(--c1)','var(--c2)','var(--c3)','var(--acc2)','var(--acc3)'];const mx=parseFloat(S.disk_breakdown[0].size)||1;
-    document.getElementById('storight').innerHTML=S.disk_breakdown.map((s,i)=>`<div class="sseg"><div class="sname"><span>${s.path}</span><span class="sval">${s.size}</span></div><div class="strk"><div class="sfill" style="width:${Math.max(4,(parseFloat(s.size)||0)/mx*100)}%;background:${cols[i%cols.length]}"></div></div></div>`).join('');
+/* themes */
+$('themes').addEventListener('click',e=>{
+  if(e.target.dataset.t){
+    document.documentElement.dataset.theme=e.target.dataset.t;
+    document.querySelectorAll('#themes button').forEach(b=>b.classList.toggle('on',b===e.target));
   }
-}
-
-function renderPM(){const cols=['var(--c1)','var(--c2)','var(--c3)','var(--acc2)','var(--acc3)'];const el=document.getElementById('pmini');if(!el)return;el.innerHTML=[...allProcs].sort((a,b)=>b.mem-a.mem).slice(0,7).map((p,i)=>`<div class="prow"><div class="ppid">${p.pid}</div><div class="pname" title="${p.name}">${p.name.split('/').pop()}</div><div class="pbw"><div class="pbf" style="width:${Math.min(100,p.mem*12)}%;background:${cols[i%cols.length]}"></div></div><div class="pcpu">${p.cpu.toFixed(1)}%</div><div class="pmem" style="color:${p.mem>5?'var(--red)':p.mem>2?'var(--ylw)':'var(--t2)'}">${p.mem.toFixed(1)}%</div><button class="pkill" onclick="killP(${p.pid},'${p.name.split('/').pop().replace(/'/g,'')}')">✕</button></div>`).join('');}
-function renderProcs(){const el=document.getElementById('pfull');if(!el)return;const q=(document.getElementById('psrch')?.value||'').toLowerCase();const sort=document.getElementById('psort')?.value||'mem';let p=[...allProcs].filter(p=>!q||p.name.toLowerCase().includes(q));if(sort==='mem')p.sort((a,b)=>b.mem-a.mem);else if(sort==='cpu')p.sort((a,b)=>b.cpu-a.cpu);else p.sort((a,b)=>a.name.localeCompare(b.name));const cols=['var(--c1)','var(--c2)','var(--c3)','var(--acc2)','var(--acc3)'];el.innerHTML=p.map((p,i)=>`<div class="prow"><div class="ppid">${p.pid}</div><div class="pname" title="${p.name}">${p.name.split('/').pop()}</div><div class="pbw"><div class="pbf" style="width:${Math.min(100,p.mem*10)}%;background:${cols[i%cols.length]}"></div></div><div class="pcpu">${p.cpu.toFixed(1)}%</div><div class="pmem" style="color:${p.mem>5?'var(--red)':p.mem>2?'var(--ylw)':'var(--t2)'}">${p.mem.toFixed(1)}%</div><div class="dropdown"><button class="pkill" onclick="togDD(this)">⋯</button><div class="ddm"><button class="ddi" onclick="killP(${p.pid},'${p.name.split('/').pop().replace(/'/g,'')}')">Force Quit</button><button class="ddi r" onclick="killP(${p.pid},'${p.name.split('/').pop().replace(/'/g,'')}')">Kill -9</button></div></div></div>`).join('');}
-function renderPR(){const el=document.getElementById('pright');if(!el)return;const cols=['var(--c1)','var(--c2)','var(--c3)','var(--acc2)','var(--acc3)'];el.innerHTML=[...allProcs].sort((a,b)=>b.mem-a.mem).slice(0,6).map((p,i)=>`<div class="prow"><div class="ppid">${p.pid}</div><div class="pname" title="${p.name}">${p.name.split('/').pop()}</div><div class="pmem" style="color:${p.mem>5?'var(--red)':p.mem>2?'var(--ylw)':'var(--t2)'}">${p.mem.toFixed(1)}%</div><button class="pkill" onclick="killP(${p.pid},'${p.name.split('/').pop().replace(/'/g,'')}')">✕</button></div>`).join('');}
-function togDD(btn){const m=btn.nextElementSibling;document.querySelectorAll('.ddm.open').forEach(x=>{if(x!==m)x.classList.remove('open')});m.classList.toggle('open');}
-document.addEventListener('click',e=>{if(!e.target.closest('.dropdown'))document.querySelectorAll('.ddm.open').forEach(m=>m.classList.remove('open'))});
-async function killP(pid,name){if(!confirm(`Force Quit "${name}"?\nPID ${pid}`))return;try{await fetch('/api/kill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pid})});toast(`☠️ Force quit: ${name}`);}catch(e){toast('❌ Kill failed');}}
-
-// COMP SWITCHER
-function openComp(id){document.querySelectorAll('.comp').forEach(c=>c.classList.remove('on'));const el=document.getElementById('comp-'+id);if(el)el.classList.add('on');else document.getElementById('comp-def').classList.add('on');}
-
-// FILES
-function openFiles(tab){ftab=tab;openComp('files');loadFiles();}
-function switchFTab(tab,btn){ftab=tab;document.querySelectorAll('#comp-files .tab').forEach(t=>t.classList.remove('on'));btn.classList.add('on');loadFiles();}
-async function loadFiles(){
-  const el=document.getElementById('flist');if(!el)return;
-  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">Scanning...</div>';
-  try{
-    const r=await fetch('/api/files?tab='+ftab);
-    if(!r.ok){el.innerHTML=`<div style="color:var(--red);padding:14px;font-size:12px">HTTP ${r.status} — Old server still running!<br><span style="color:var(--t3);font-size:10px">Run: pkill -f dashboard_server && python3 ~/.chinna/dashboard_server.py 7777 &</span></div>`;return;}
-    const d=await r.json();allFiles=d.files||[];renderFiles();
-  }catch(e){el.innerHTML=`<div style="color:var(--red);padding:14px;font-size:12px">Connection error: ${e.message}</div>`;}
-}
-function filterFiles(){const q=document.getElementById('fsrch').value.toLowerCase();renderFilesData(allFiles.filter(f=>!q||f.name.toLowerCase().includes(q)||f.path.toLowerCase().includes(q)));}
-function renderFiles(){renderFilesData(allFiles);}
-function renderFilesData(files){
-  const el=document.getElementById('flist');if(!el)return;
-  if(!files.length){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">No files found</div>';return;}
-  el.innerHTML=files.map(f=>{
-    if(f.type==='info')return`<div style="text-align:center;padding:16px;color:var(--grn);font-size:13px">${f.icon} ${f.name}</div>`;
-    return`<div class="frow"><div class="fico">${f.icon||'📄'}</div><div class="finfo"><div class="ftitle">${f.name}</div><div class="fpath">${f.path}</div></div><div class="fsz">${f.size}</div>${f.path?`<button class="fabtn g" onclick="revealF('${esc(f.path)}')">Reveal</button><div class="dropdown"><button class="fabtn r" onclick="togDD(this)">Del ▾</button><div class="ddm"><button class="ddi" onclick="trashF('${esc(f.path)}','${esc(f.name)}')">Move to Trash</button><button class="ddi r" onclick="delF('${esc(f.path)}','${esc(f.name)}')">Delete Forever</button></div></div>`:''}</div>`;
-  }).join('');
-}
-function esc(s){return(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
-async function revealF(p){try{await fetch('/api/reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:p})});toast('📁 Revealed in Finder');}catch(e){toast('❌ Error');}}
-async function trashF(p,n){if(!confirm(`Move "${n}" to Trash?`))return;try{const r=await fetch('/api/trash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:p})});const d=await r.json();toast('🗑️ '+(d.result||'Trashed'));loadFiles();}catch(e){toast('❌ Failed');}}
-async function delF(p,n){if(!confirm(`⚠️ PERMANENTLY delete "${n}"?`))return;try{const r=await fetch('/api/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:p})});const d=await r.json();toast('💥 '+(d.result||'Deleted'));loadFiles();}catch(e){toast('❌ Failed');}}
-
-// TERMINAL
-let termInit=false;
-function initTerm(){if(termInit)return;termInit=true;tprint('Chinna V4-Pro Terminal — type commands, press ENTER','dim');tprint('Examples: ls ~/Downloads, df -h, top -l 1 -s 0 | head -8','dim');}
-function tprint(txt,cls=''){const o=document.getElementById('tout');if(!o)return;const d=document.createElement('div');d.className='tline'+(cls?' '+cls:'');d.textContent=txt;o.appendChild(d);o.scrollTop=o.scrollHeight;}
-document.getElementById('tin').addEventListener('keydown',async e=>{
-  if(e.key==='Enter'){const cmd=e.target.value.trim();if(!cmd)return;thist.unshift(cmd);tidx=0;tprint('% '+cmd);e.target.value='';try{const r=await fetch('/api/exec',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd,timeout:30})});if(!r.ok){const t=await r.text();tprint('HTTP Error '+r.status,'e');return;}const d=await r.json();if(d.stdout)d.stdout.split('\n').forEach(l=>{if(l)tprint(l,'ok')});if(d.stderr)d.stderr.split('\n').forEach(l=>{if(l)tprint(l,'e')});if(d.error)tprint('Error: '+d.error,'e');}catch(err){tprint('Network error: '+err.message,'e');}}
-  if(e.key==='ArrowUp'){e.preventDefault();if(tidx<thist.length)e.target.value=thist[tidx++];}
-  if(e.key==='ArrowDown'){e.preventDefault();tidx=Math.max(0,tidx-1);e.target.value=thist[tidx]||'';}
 });
 
-// AI CHAT
-function setAIMode(m,btn){aiMode=m;document.querySelectorAll('.atab').forEach(t=>t.classList.remove('on'));if(btn)btn.classList.add('on');const b=document.getElementById('aimodelbadge');if(b)b.textContent=m==='free'?'Llama 3.3':m==='pro'?'Claude Sonnet':'GPT-4o mini';}
-function handleFileUp(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{aiFileB64=e.target.result.split(',')[1];aiFileMime=f.type;aiFileName=f.name;const pv=document.getElementById('aifprev');const nm=document.getElementById('aifname');if(pv)pv.style.display='flex';if(nm)nm.textContent=`${f.name} (${(f.size/1024).toFixed(1)}KB)`;};r.readAsDataURL(f);}
-function clearAIFile(){aiFileB64=null;aiFileMime=null;aiFileName=null;const inp=document.getElementById('aifinput');if(inp)inp.value='';const pv=document.getElementById('aifprev');if(pv)pv.style.display='none';}
-async function sendAI(){
-  const inp=document.getElementById('aiin');const msg=inp.value.trim();if(!msg)return;inp.value='';
-  const msgs=document.getElementById('aimsgs');if(!msgs)return;
-  const ub=document.createElement('div');ub.className='abub u';ub.textContent=msg+(aiFileName?' 📎 '+aiFileName:'');msgs.appendChild(ub);
-  const ab=document.createElement('div');ab.className='abub b';ab.textContent='...';msgs.appendChild(ab);msgs.scrollTop=msgs.scrollHeight;
-  const keys=await checkKeys();
-  if(!keys.chinna_ai_set&&!keys.openai_set){ab.textContent='Set your Chinna AI API key in Settings ⚙️';ab.classList.add('err');openComp('settings');return;}
-  try{const body={prompt:msg,use_pro:aiMode==='pro',use_openai:aiMode==='openai'};if(aiFileB64){body.file_b64=aiFileB64;body.file_mime=aiFileMime;}const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok){const t=await r.text();ab.textContent='Server error '+r.status;ab.classList.add('err');return;}const d=await r.json();if(d.error==='no_key'){ab.textContent='Set your Chinna AI API key in Settings ⚙️';ab.classList.add('err');openComp('settings');}else if(d.error){ab.textContent='Error: '+(d.result||d.error);ab.classList.add('err');}else{ab.textContent=d.result;const bj=document.getElementById('aimodelbadge');if(bj&&d.model)bj.textContent=d.model.split('/').pop().replace(':free','');}clearAIFile();}catch(e){ab.textContent='Connection error — is Chinna server running?';ab.classList.add('err');}
-  msgs.scrollTop=msgs.scrollHeight;
+/* stats poll */
+async function poll(){
+  try{
+    const s=await api('stats');
+    if(!s.cpu)return;
+    HOME_PATH = '/Users/'+(s.os?.hostname?'':'')+''; // placeholder; real home from server paths
+    $('v-cpu').textContent=(s.cpu.pct||0)+'%';
+    $('v-ram').textContent=(s.memory?.pct||0)+'%';
+    $('v-disk').textContent=(s.disk?.pct||0)+'%';
+    $('v-batt').textContent=(s.battery?.pct||0)+'%';
+    $('ov-host').textContent=`${s.os?.hostname||'Mac'} · macOS ${s.os?.version||''} · ${s.os?.arch||''}`;
+    renderGauges(s); renderOvInfo(s); renderProc(s); renderRailProc(s); renderRailDisk(s);
+  }catch(e){}
 }
-document.getElementById('aiin').addEventListener('keydown',e=>e.key==='Enter'&&!e.shiftKey&&(e.preventDefault(),sendAI()));
-
-// KEYS
-async function checkKeys(){if(Date.now()-_kt<5000&&_kc)return _kc;try{const r=await fetch('/api/get_keys');if(!r.ok)return{chinna_ai_set:false,openai_set:false};_kc=await r.json();_kt=Date.now();const dc=document.getElementById('dot-ca');const do2=document.getElementById('dot-oa');if(dc)dc.style.background=_kc.chinna_ai_set?'var(--grn)':'var(--red)';if(do2)do2.style.background=_kc.openai_set?'var(--grn)':'var(--ylw)';return _kc;}catch(e){return{chinna_ai_set:false,openai_set:false};}}
-async function saveKeys(){const body={};const ck=document.getElementById('inp-ca')?.value.trim();const ok=document.getElementById('inp-oa')?.value.trim();const tg=document.getElementById('inp-tg')?.value.trim();const tc=document.getElementById('inp-tc')?.value.trim();if(ck)body.chinna_ai_key=ck;if(ok)body.openai_key=ok;if(tg)body.telegram_token=tg;if(tc)body.telegram_chat=tc;if(!Object.keys(body).length){toast('⚠️ Enter at least one key');return;}try{const r=await fetch('/api/save_keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();toast(d.result||'✅ Saved');_kc=null;checkKeys();}catch(e){toast('❌ Save failed');}}
-async function installLA(){toast('⚙️ Installing LaunchAgent...');try{await fetch('/api/exec',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd:'python3 ~/.chinna/dashboard_server.py --launchagent 2>&1',timeout:15})});toast('✅ Auto-launch installed');}catch(e){toast('❌ Install failed');}}
-
-// VOICE
-function toggleVoice(){if(voiceOn)closeVoice();else openVoice();}
-function openVoice(){voiceOn=true;document.getElementById('vbtn').classList.add('on');document.getElementById('vov').classList.add('show');document.getElementById('vstatus').textContent='Listening... speak now';document.getElementById('vtrans').textContent='';document.getElementById('vresult').textContent='';document.getElementById('vring').className='vring lst';document.getElementById('vico').textContent='🎤';startRec();}
-function closeVoice(){voiceOn=false;document.getElementById('vbtn').classList.remove('on');document.getElementById('vov').classList.remove('show');if(mRec&&mRec.state!=='inactive')mRec.stop();}
-async function startRec(){
-  try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});mChunks=[];mRec=new MediaRecorder(stream,{mimeType:'audio/webm'});mRec.ondataavailable=e=>{if(e.data.size>0)mChunks.push(e.data)};mRec.onstop=async()=>{stream.getTracks().forEach(t=>t.stop());if(!voiceOn)return;const blob=new Blob(mChunks,{type:'audio/webm'});if(blob.size<1500){document.getElementById('vstatus').textContent='No audio. Try again.';setTimeout(()=>{if(voiceOn)startRec()},1200);return;}document.getElementById('vring').className='vring prc';document.getElementById('vstatus').textContent='Transcribing...';document.getElementById('vico').textContent='⏳';const reader=new FileReader();reader.onload=async e=>{const b64=e.target.result.split(',')[1];try{const tr=await fetch('/api/voice-transcribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio_b64:b64})});if(!tr.ok){document.getElementById('vstatus').textContent='Transcription error';return;}const td=await tr.json();const text=td.text||'';if(!text){document.getElementById('vstatus').textContent='Could not hear. Try again.';setTimeout(()=>{if(voiceOn)startRec()},1500);return;}document.getElementById('vtrans').textContent='"'+text+'"';document.getElementById('vstatus').textContent='Thinking...';document.getElementById('vico').textContent='✨';const cr=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:text,use_pro:false})});const cd=await cr.json();const answer=cd.result||'Something went wrong.';const omode=document.getElementById('vmode')?.value||'overlay';if(omode==='overlay'){document.getElementById('vresult').textContent=answer;document.getElementById('vstatus').textContent='Done ✓';document.getElementById('vring').className='vring';}else if(omode==='toast'){toast('🎤 '+answer.slice(0,200));closeVoice();}else if(omode==='chat'){openComp('ai');const msgs=document.getElementById('aimsgs');if(msgs){const ub=document.createElement('div');ub.className='abub u';ub.textContent='🎤 '+text;msgs.appendChild(ub);const ab=document.createElement('div');ab.className='abub b';ab.textContent=answer;msgs.appendChild(ab);msgs.scrollTop=msgs.scrollHeight;}closeVoice();}if('speechSynthesis' in window&&answer){const u=new SpeechSynthesisUtterance(answer.slice(0,280));u.lang='en-US';speechSynthesis.speak(u);}}catch(e){document.getElementById('vstatus').textContent='Error: '+e.message;}};reader.readAsDataURL(blob);};mRec.start();setTimeout(()=>{if(mRec&&mRec.state==='recording')mRec.stop()},8000);}catch(e){document.getElementById('vstatus').textContent='Mic access denied';document.getElementById('vring').className='vring';}
+function gaugeSVG(pct,c){const r=36,C=2*Math.PI*r,off=C*(1-pct/100);
+  return `<svg width="84" height="84"><circle cx="42" cy="42" r="${r}" stroke="rgba(255,255,255,.08)" stroke-width="7" fill="none"/><circle cx="42" cy="42" r="${r}" stroke="${c}" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}"/></svg>`;}
+function renderGauges(s){
+  const g=[['CPU',s.cpu?.pct||0,`${s.cpu?.cores||0} cores`],['RAM',s.memory?.pct||0,`${s.memory?.used||0}/${s.memory?.total||0} GB`],['DISK',s.disk?.pct||0,`${s.disk?.free||'?'} free`],['BATT',s.battery?.pct||0,s.battery?.charging?'charging':'on battery']];
+  $('gauges').innerHTML=g.map(([l,p,m])=>`<div class="gauge"><div class="ring">${gaugeSVG(p,color(p))}<div class="num" style="color:${color(p)}">${p}</div></div><div class="lbl">${l}</div><div class="meta">${m}</div></div>`).join('');
 }
-async function mic2text(inputId){const btn=document.querySelector(`[onclick="mic2text('${inputId}')"]`);if(!btn)return;btn.classList.add('rec');try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});const chunks=[];const mr=new MediaRecorder(stream,{mimeType:'audio/webm'});mr.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data)};mr.onstop=async()=>{stream.getTracks().forEach(t=>t.stop());btn.classList.remove('rec');const blob=new Blob(chunks,{type:'audio/webm'});const reader=new FileReader();reader.onload=async e=>{const b64=e.target.result.split(',')[1];try{const r=await fetch('/api/voice-transcribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio_b64:b64})});const d=await r.json();if(d.text){const inp=document.getElementById(inputId);if(inp){inp.value=d.text;inp.focus();}}}catch(e){}};reader.readAsDataURL(blob);};mr.start();setTimeout(()=>{if(mr.state==='recording')mr.stop()},5000);}catch(e){btn.classList.remove('rec');toast('❌ Mic access denied');}}
-
-// DEPLOY/GIT
-async function doDeploy(){const dir=document.getElementById('ddir').value||'.';showAct('Deploy',`Deploying to ${dplat}...`);try{const r=await fetch('/api/deploy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dir,platform:dplat})});const d=await r.json();finishAct(d.result||'Done');}catch(e){finishAct('Error: '+e.message);}}
-async function gitCommit(){const d=document.getElementById('gdir').value||'.';const m=document.getElementById('gmsg').value;showAct('Git Commit','Generating AI commit...');try{const r=await fetch('/api/git-commit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dir:d,msg:m})});const dd=await r.json();finishAct(dd.result||'Done');if(dd.message)document.getElementById('gmsg').value=dd.message;}catch(e){finishAct('Error: '+e.message);}}
-async function gitPush(){const d=document.getElementById('gdir').value||'.';showAct('Git Push','Pushing...');try{const r=await fetch('/api/git-push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dir:d})});const dd=await r.json();finishAct(dd.result||'Pushed');}catch(e){finishAct('Error: '+e.message);}}
-async function gitAll(){await gitCommit();setTimeout(gitPush,1200);}
-async function runDoctor(){document.getElementById('drbody').textContent='Running...';try{const r=await fetch('/api/doctor');if(!r.ok){document.getElementById('drbody').textContent='HTTP '+r.status;return;}const d=await r.json();document.getElementById('drbody').textContent=d.result;}catch(e){document.getElementById('drbody').textContent='Error: '+e.message;}}
-
-// QA
-async function qa(ep,label){showAct(label,'Running...');try{const r=await fetch('/api/'+ep);if(!r.ok){const t=await r.text();finishAct('HTTP Error '+r.status+'\n'+t.slice(0,300));return;}const d=await r.json();finishAct(d.result||'✓ Done');toast('✅ '+label);}catch(e){finishAct('Error: '+e.message);}}
-
-// ACTION OVERLAY
-function showAct(t,s){T('atitle',t);T('astatus',s);T('ares','');document.getElementById('aspin').style.display='block';document.getElementById('act').classList.add('on');}
-function finishAct(r){document.getElementById('aspin').style.display='none';T('astatus','Complete');T('ares',typeof r==='string'?r.slice(0,600):JSON.stringify(r));}
-function closeAct(){document.getElementById('act').classList.remove('on');}
-
-// DOCK
-function buildDock(){
-  document.getElementById('dock').innerHTML=CMDS.map(cmd=>{
-    if(!cmd)return'<div class="dsep"></div>';
-    return`<div class="di" id="di-${cmd.id}"
-      onclick="dkClick('${cmd.id}','${cmd.ep||''}','${cmd.comp||''}','${cmd.l}')"
-      onmousemove="magify(event,this)"
-      onmouseleave="resetMag()"
-      role="button" aria-label="${cmd.l}" tabindex="0">
-      <div class="dico ${cmd.cls}" id="dico-${cmd.id}"><span>${cmd.e}</span></div>
-      ${dLbl?`<div class="ddot" id="ddot-${cmd.id}"></div>`:''}
-      <div class="dtip">${cmd.l}<br><span style="font-weight:400;font-size:9px;color:rgba(255,255,255,.44)">${cmd.d}</span></div>
-    </div>`;
-  }).join('');
-  document.querySelectorAll('.di').forEach(di=>di.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')di.click()}));
+function renderOvInfo(s){
+  const i=[['Host',s.os?.hostname||'—'],['Uptime',s.uptime||'—'],['Chip',(s.os?.chip||'—').replace('Apple ','')],['IP',s.network?.ip||'—']];
+  $('ov-info').innerHTML=i.map(([k,v])=>`<div class="infocard"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
 }
-buildDock();
-
-function dkClick(id,ep,comp,label){
-  const ico=document.getElementById('dico-'+id);
-  if(ico){ico.classList.remove('bnc');void ico.offsetWidth;ico.classList.add('bnc');setTimeout(()=>ico.classList.remove('bnc'),580);}
-  document.getElementById('di-'+id)?.classList.add('run');
-  if(comp==='files-large'){openFiles('large');return;}
-  if(comp==='files-dupes'){ftab='dupes';openComp('files');loadFiles();return;}
-  if(comp==='term'){openComp('term');initTerm();return;}
-  if(comp==='ai'){openComp('ai');checkKeys();return;}
-  if(comp==='voice'){toggleVoice();return;}
-  if(comp==='deploy'){openComp('deploy');return;}
-  if(comp==='git'){openComp('git');return;}
-  if(comp==='wifi'){openComp('wifi');return;}
-  if(comp==='doctor'){openComp('doctor');return;}
-  if(comp==='settings'){openComp('settings');checkKeys();return;}
-  if(comp==='procs'){openComp('procs');return;}
-  if(ep)qa(ep,label);
+function renderProc(s){
+  $('proc-list').innerHTML=(s.processes||[]).map(p=>`<div class="row"><div class="fic">⚙</div><div class="info"><div class="nm">${(p.name.split('/').pop())}</div><div class="mt">PID ${p.pid} · CPU ${p.cpu.toFixed(1)}%</div></div><div class="sz" style="color:${color(p.mem)}">${p.mem.toFixed(1)}%</div><div class="acts"><button class="miniA danger" onclick="confirmKill(${p.pid},'${(p.name.split('/').pop()).replace(/'/g,'')}')">Kill</button></div></div>`).join('');
+}
+function renderRailProc(s){
+  $('rail-proc').innerHTML=(s.processes||[]).slice(0,5).map(p=>`<div class="proc"><div class="pn">${p.name.split('/').pop()}</div><div class="pm" style="color:${color(p.mem)}">${p.mem.toFixed(1)}%</div></div>`).join('');
+}
+function renderRailDisk(s){
+  $('rail-disk').innerHTML=(s.disk_breakdown||[]).slice(0,6).map(d=>`<div class="proc"><div class="pn">${d.path}</div><div class="pm">${d.size}</div></div>`).join('')||'<div style="font-size:11px;color:var(--t3);padding:6px">—</div>';
 }
 
-// MAGNIFICATION — icons scale upward, no clipping because overflow:visible throughout
-function magify(e,item){
-  if(!dMag)return;
-  const dock=document.getElementById('dock');
-  const r=dock.getBoundingClientRect();
-  const mx=e.clientX-r.left;
-  dock.querySelectorAll('.dico').forEach(ic=>{
-    const ir=ic.getBoundingClientRect();
-    const cx=ir.left+ir.width/2-r.left;
-    const d=Math.abs(mx-cx);
-    const sc=Math.max(1,1.5-d/72);
-    // translateY negative = move UP — never clips dock bottom, always visible above
-    ic.style.transform=`scale(${sc}) translateY(${-(sc-1)*14}px)`;
-    ic.style.zIndex=sc>1.1?'1002':'';
+/* files */
+async function loadFiles(){
+  const L=$('file-list');L.innerHTML='<div class="spin"></div>';
+  const sort=$('file-sort').value;
+  const d=await api(`files?tab=${curTab}&sort=${sort}`);
+  allFiles=d.files||[];$('file-count').textContent=`${d.count} files`;renderFiles();
+}
+function filesTab(t,el){curTab=t;document.querySelectorAll('#file-tabs button').forEach(b=>b.classList.toggle('on',b===el));loadFiles();}
+function renderFiles(){
+  const q=($('file-q').value||'').toLowerCase();
+  const f=allFiles.filter(x=>!q||x.name.toLowerCase().includes(q));
+  const L=$('file-list');
+  if(!f.length){L.innerHTML='<div class="empty"><div class="big">📂</div>No files found</div>';return;}
+  L.innerHTML=f.map(x=>fileRow(x)).join('');
+}
+function fileRow(x){
+  return `<div class="row"><div class="fic">${ficon(x.kind)}</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><span class="kindtag">${x.kind}</span><div class="sz">${x.size}</div><div class="acts"><button class="miniA" onclick="reveal('${esc(x.path)}')">Reveal</button><button class="miniA danger" onclick="confirmTrash('${esc(x.path)}','${esc(x.name)}')">Trash</button></div></div>`;
+}
+function esc(s){return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+
+/* dupes */
+async function loadDupes(){
+  const L=$('dupe-list');L.innerHTML='<div class="spin"></div>';dupeSel.clear();
+  const d=await api('files?tab=dupes');allDupes=d.files||[];
+  $('dupe-count').textContent=`${allDupes.length} duplicate files`;
+  if(!allDupes.length){L.innerHTML='<div class="empty"><div class="big">✓</div>No duplicates found</div>';$('dupe-del').style.display='none';return;}
+  $('dupe-del').style.display='';
+  let html='',lastG='';
+  allDupes.forEach((x,i)=>{
+    if(x.dupe_group!==lastG){lastG=x.dupe_group;html+=`<div class="rlabel" style="margin-top:8px">Group · ${x.size}</div>`;}
+    html+=`<div class="row"><input type="checkbox" onchange="toggleDupe('${esc(x.path)}',this.checked)" style="width:18px;height:18px;accent-color:var(--acc)"><div class="fic">${ficon(x.kind)}</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><div class="sz">${x.size}</div><div class="acts"><button class="miniA" onclick="reveal('${esc(x.path)}')">Reveal</button></div></div>`;
   });
+  L.innerHTML=html;
 }
-function resetMag(){document.querySelectorAll('.dico').forEach(ic=>{ic.style.transform='';ic.style.zIndex=''});}
+function toggleDupe(p,on){on?dupeSel.add(p):dupeSel.delete(p);$('dupe-del').textContent=`Delete selected (${dupeSel.size})`;}
 
-function setDSz(sz){dSz=+sz;document.querySelectorAll('.dico').forEach(ic=>{ic.style.width=sz+'px';ic.style.height=sz+'px';ic.style.fontSize=(sz*.52)+'px';});}
-function togMag(){dMag=!dMag;document.getElementById('dtmag').classList.toggle('on',dMag);}
-function togHide(){dHide=!dHide;document.getElementById('dthide').classList.toggle('on',dHide);const w=document.getElementById('dockwrap');if(dHide){w.style.transition='transform .3s';w.style.transform='translateY(76px)';const fn=e=>{w.style.transform=e.clientY>innerHeight-24?'':'translateY(76px)'};document.addEventListener('mousemove',fn);}else{w.style.transform='';}}
-function togLbl(){dLbl=!dLbl;document.getElementById('dtlbl').classList.toggle('on',dLbl);buildDock();}
+/* apps */
+async function loadApps(){
+  const L=$('app-list');L.innerHTML='<div class="spin"></div>';
+  const d=await api('apps');allApps=d.apps||[];$('app-count').textContent=`${allApps.length} apps`;renderApps();
+}
+function renderApps(){
+  const q=($('app-q').value||'').toLowerCase();
+  const a=allApps.filter(x=>!q||x.name.toLowerCase().includes(q));
+  const L=$('app-list');
+  if(!a.length){L.innerHTML='<div class="empty"><div class="big">📦</div>No apps</div>';return;}
+  L.innerHTML=a.map(x=>`<div class="row"><div class="fic">📦</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><div class="sz">${x.size}</div><div class="acts"><button class="miniA danger" onclick="confirmUninstall('${esc(x.path)}','${esc(x.name)}')">Uninstall</button></div></div>`).join('');
+}
 
-// PALETTE
-function openPal(){palOpen=true;document.getElementById('pal').classList.add('open');document.getElementById('palin').focus();renderPal('');}
-function closePal(){palOpen=false;document.getElementById('pal').classList.remove('open');}
-function renderPal(q){const res=CMDS.filter(c=>c&&(!q||c.l.toLowerCase().includes(q.toLowerCase())||c.d.toLowerCase().includes(q.toLowerCase())));document.getElementById('palres').innerHTML=res.map(c=>`<div class="pr" onclick="dkClick('${c.id}','${c.ep||''}','${c.comp||''}','${c.l}');closePal()"><div class="prico ${c.cls}">${c.e}</div><div><div class="prname">${c.l}</div><div class="prdesc">${c.d}</div></div><div class="prkey">${c.ep||c.comp||'—'}</div></div>`).join('')||'<div style="text-align:center;padding:14px;color:var(--t3);font-size:12px">No results</div>';}
-document.getElementById('palin').addEventListener('input',e=>renderPal(e.target.value));
-document.getElementById('palin').addEventListener('keydown',e=>{if(e.key==='Escape')closePal();if(e.key==='Enter'){const f=document.querySelector('.pr');if(f)f.click();}});
+/* battery / doctor / network */
+async function loadBattery(){
+  const d=await api('batteryhealth');
+  $('batt-info').innerHTML=[['Cycle Count',d.cycles],['Condition',d.condition],['Max Capacity',d.max_capacity],['Charging',d.charging]].map(([k,v])=>`<div class="infocard"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+}
+async function loadDoctor(){$('doc-out').textContent='Loading…';const d=await api('doctor');$('doc-out').textContent=d.result;}
+async function genReport(){const d=await api('sysreport');$('doc-out').textContent=d.result+(d.saved?`\n\n✅ Saved to: ${d.saved}`:'');toast(d.saved?'Report saved to Desktop':'Report generated');}
+async function loadNet(){$('net-out').textContent='Loading…';const d=await api('ports');$('net-out').textContent=d.result;}
 
-// POLL
-async function poll(){try{const r=await fetch('/api/stats');if(r.ok){S=await r.json();updateUI();}}catch(e){}}
-poll();setInterval(poll,1000);
+/* storage explorer */
+let storStack=[];
+async function loadStorage(path){
+  const L=$('stor-list');L.innerHTML='<div class="spin"></div>';
+  const d=await api('storage?path='+encodeURIComponent(path));
+  $('stor-path').textContent=d.path;storStack.push(d.path);HOME_PATH=HOME_PATH==='~'?d.path:HOME_PATH;
+  if(!d.items.length){L.innerHTML='<div class="empty"><div class="big">▦</div>Empty</div>';return;}
+  L.innerHTML=d.items.map(x=>`<div class="row" ${x.is_dir?`onclick="loadStorage('${esc(x.path)}')" style="cursor:pointer"`:''}><div class="fic">${x.is_dir?'📁':'📄'}</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><div class="sz">${x.size}</div></div>`).join('');
+}
+function storUp(){if(storStack.length>1){storStack.pop();const p=storStack.pop();loadStorage(p);}}
 
-// BOOT
-setTimeout(()=>{toast('🟢 Chinna V4-Pro — double-space for voice');checkKeys();initP();},900);
+/* AI */
+async function loadAIStatus(){const k=await api('get_keys');$('ai-status').textContent=k.chinna_ai_set?'Connected · ready':'No API key — add one in Settings';}
+async function sendAI(){
+  const inp=$('ai-in'),msg=inp.value.trim();if(!msg)return;inp.value='';
+  const M=$('ai-msgs');
+  M.innerHTML+=`<div class="row" style="justify-content:flex-end"><div class="info" style="text-align:right"><div class="nm">${msg}</div></div></div>`;
+  M.innerHTML+=`<div class="row" id="ai-think"><div class="fic">✦</div><div class="info"><div class="mt">thinking…</div></div></div>`;
+  M.scrollTop=M.scrollHeight;
+  const d=await api('chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+  $('ai-think')?.remove();
+  M.innerHTML+=`<div class="row"><div class="fic">✦</div><div class="info"><div class="nm" style="white-space:normal">${(d.reply||d.error||'(no response)')}</div></div></div>`;
+  M.scrollTop=M.scrollHeight;
+}
+
+/* keys */
+async function saveKeys(){
+  const b={};if($('set-or').value)b.chinna_ai_key=$('set-or').value;if($('set-oa').value)b.openai_key=$('set-oa').value;
+  const d=await api('save_keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  toast(d.result||'Saved');$('set-or').value='';$('set-oa').value='';
+}
+
+/* simple actions */
+async function reveal(p){await api('reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:p})});toast('Revealed in Finder');}
+
+/* ===== CONFIRM + LIVE PROGRESS MODAL ===== */
+let pendingGo=null;
+function openModal(title,desc,confirmHTML,onGo,goLabel){
+  $('m-title').textContent=title;$('m-desc').textContent=desc;
+  $('m-confirm').innerHTML=confirmHTML;$('m-confirm').style.display='';
+  $('m-prog').style.display='none';$('m-log').innerHTML='';
+  $('m-foot').style.display='';$('m-go').textContent=goLabel||'Confirm';$('m-go').style.display='';
+  pendingGo=onGo;$('scrim').classList.add('on');
+}
+function closeModal(){$('scrim').classList.remove('on');pendingGo=null;}
+$('m-go').onclick=()=>{if(pendingGo)pendingGo();};
+
+function showProgress(title){
+  $('m-title').textContent=title;$('m-desc').textContent='Working… live progress below';
+  $('m-confirm').style.display='none';$('m-prog').style.display='';$('m-go').style.display='none';
+}
+async function runJob(startPromise,doneLabel){
+  const {job}=await startPromise;
+  const log=$('m-log');
+  const poll=setInterval(async()=>{
+    const j=await api('job?id='+job);
+    log.innerHTML=j.lines.map(l=>l.toLowerCase().includes('complete')||l.toLowerCase().includes('uninstalled')||l.toLowerCase().includes('removed ')||l.toLowerCase().includes('purged')?`<div class="done">${l}</div>`:`<div>${l}</div>`).join('');
+    log.scrollTop=log.scrollHeight;
+    if(j.done){clearInterval(poll);$('m-foot').style.display='';$('m-go').style.display='none';
+      $('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModalRefresh()">Done</button>';toast(doneLabel||'Done');}
+  },500);
+}
+function closeModalRefresh(){closeModal();$('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-go" id="m-go">Confirm</button>';$('m-go').onclick=()=>{if(pendingGo)pendingGo();};
+  const cur=document.querySelector('.navitem.on')?.dataset.v;if(cur)go(cur);}
+
+/* confirm flows */
+function confirmAction(kind){
+  const meta={purge:['Purge RAM','Free inactive memory. Safe, may briefly slow apps.','sudo purge — may prompt for your password in the terminal where the server runs','Purge'],
+              clean:['Deep Clean','Clears user caches, npm cache, Homebrew cache and empties Trash.','Targets: ~/Library/Caches, npm cache, brew cleanup, ~/.Trash','Clean']}[kind];
+  openModal(meta[0],meta[1],meta[2],()=>{showProgress(meta[0]);runJob(api(kind,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}),meta[0]+' complete');},meta[3]);
+}
+function confirmUninstall(path,name){
+  openModal('Uninstall '+name,'This removes the app and its leftover support files. This cannot be undone.',
+    `Will remove:\n• ${path}\n• ~/Library/Application Support/${name}\n• ~/Library/Caches/${name}\n• ~/Library/Preferences/*${name}*\n• Logs & saved state`.replace(/\n/g,'<br>'),
+    ()=>{showProgress('Uninstalling '+name);runJob(api('uninstall',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path,name})}),name+' uninstalled');},'Uninstall');
+}
+function confirmTrash(path,name){
+  openModal('Move to Trash','Send this file to Trash? You can restore it from Trash later.',
+    `• ${path}`,()=>{showProgress('Moving to Trash');
+      api('trash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path})}).then(()=>{$('m-log').innerHTML='<div class="done">Moved to Trash.</div>';$('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModalRefresh()">Done</button>';toast('Moved to Trash');});
+    },'Move to Trash');
+}
+function confirmDeleteDupes(){
+  if(!dupeSel.size){toast('Select files first');return;}
+  const paths=[...dupeSel];
+  openModal('Delete '+paths.length+' duplicates','Permanently remove the selected duplicate files. This cannot be undone.',
+    paths.map(p=>'• '+p).join('<br>'),
+    ()=>{showProgress('Deleting duplicates');runJob(api('delete-dupes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paths})}),'Duplicates deleted').then(()=>{dupeSel.clear();});},
+    'Delete '+paths.length+' files');
+}
+function confirmKill(pid,name){
+  openModal('Kill process','Force-quit this process? Unsaved work in it will be lost.',`• ${name} (PID ${pid})`,
+    ()=>{showProgress('Killing '+name);api('kill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pid})}).then(()=>{$('m-log').innerHTML='<div class="done">Killed '+name+'.</div>';$('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModalRefresh()">Done</button>';toast('Killed '+name);});},'Kill');
+}
+
+poll();setInterval(poll,2500);
 </script>
 </body>
 </html>
