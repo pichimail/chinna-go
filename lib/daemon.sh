@@ -5,6 +5,7 @@ CHINNA_HOME="${CHINNA_HOME:-$HOME/.chinna}"
 CHINNA_LOG="$CHINNA_HOME/chinna.log"
 CHINNA_PID="$CHINNA_HOME/chinna.pid"
 PLIST_PATH="$HOME/Library/LaunchAgents/com.chinna.daemon.plist"
+UPDATE_PROMPT_FILE="$CHINNA_HOME/update_prompted_version"
 
 source "$CHINNA_HOME/config" 2>/dev/null || true
 source "$CHINNA_HOME/lib/notify.sh" 2>/dev/null || true
@@ -50,6 +51,11 @@ PY
 load_api_json_keys
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$CHINNA_LOG"; }
+
+version_gt() {
+    [ "$1" != "$2" ] || return 1
+    [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -n1)" = "$1" ]
+}
 
 # ─── Install LaunchAgent plist ─────────────────────────────────
 install_launchagent() {
@@ -164,19 +170,37 @@ check_update() {
         return 0
     fi
 
-    if [ "$remote_ver" != "$current_ver" ]; then
-        log "Update available: $current_ver → $remote_ver — installing silently"
-        local new_bin
-        new_bin=$(curl -fsSL "https://raw.githubusercontent.com/${repo}/main/bin/chinna" 2>/dev/null)
-        if [ -n "$new_bin" ]; then
-            echo "$new_bin" > "$CHINNA_HOME/bin/chinna"
-            chmod +x "$CHINNA_HOME/bin/chinna"
-            sudo cp "$CHINNA_HOME/bin/chinna" /usr/local/bin/chinna 2>/dev/null || true
-            log "Updated to $remote_ver"
-            osascript -e "display notification \"Chinna updated to v${remote_ver} silently.\" with title \"🟠 Chinna Updated\" sound name \"Ping\"" 2>/dev/null
+    if version_gt "$remote_ver" "$current_ver"; then
+        local last_prompted=""
+        [ -f "$UPDATE_PROMPT_FILE" ] && last_prompted=$(cat "$UPDATE_PROMPT_FILE" 2>/dev/null || true)
+
+        if [ "$last_prompted" = "$remote_ver" ]; then
+            log "Update available but already prompted for v${remote_ver}"
+            return 0
+        fi
+
+        log "Update available: $current_ver → $remote_ver"
+        printf '%s\n' "$remote_ver" > "$UPDATE_PROMPT_FILE" 2>/dev/null || true
+
+        local choice
+        choice=$(chinna_toast_action \
+            "Chinna Update Available" \
+            "v${remote_ver} is ready.\nUpdate now? Your data and API keys stay intact." \
+            "Update Now|Later" 2>/dev/null)
+        [ -n "$choice" ] || choice="Later"
+
+        if [ "$choice" = "Update Now" ]; then
+            log "User approved update to v${remote_ver}"
+            local chinna_bin
+            chinna_bin="$(command -v chinna 2>/dev/null || echo "$CHINNA_HOME/bin/chinna")"
+            nohup "$chinna_bin" update --apply >> "$CHINNA_LOG" 2>&1 &
+            chinna_info_toast "Update started" "Chinna is updating to v${remote_ver} now." 2>/dev/null || true
+        else
+            log "User postponed update to v${remote_ver}"
         fi
     else
         log "Already on latest version $current_ver"
+        rm -f "$UPDATE_PROMPT_FILE" 2>/dev/null || true
     fi
 }
 

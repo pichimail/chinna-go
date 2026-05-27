@@ -130,6 +130,60 @@ ensure_dep() {
     fi
 }
 
+version_gt() {
+    [ "$1" != "$2" ] || return 1
+    [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -n1)" = "$1" ]
+}
+
+remote_version() {
+    curl -fsSL "https://raw.githubusercontent.com/${CHINNA_REPO}/main/VERSION" 2>/dev/null | tr -d '[:space:]'
+}
+
+resolve_installer() {
+    local local_installer home_installer tmp_installer
+    local_installer="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/install/install.sh"
+    if [ -x "$local_installer" ]; then
+        printf '%s\n' "$local_installer"
+        return 0
+    fi
+
+    home_installer="$CHINNA_HOME/install/install.sh"
+    if [ -x "$home_installer" ]; then
+        printf '%s\n' "$home_installer"
+        return 0
+    fi
+
+    tmp_installer="$(mktemp -t chinna-install.XXXXXX)"
+    if curl -fsSL "https://raw.githubusercontent.com/${CHINNA_REPO}/main/install/install.sh" -o "$tmp_installer" 2>/dev/null; then
+        chmod +x "$tmp_installer"
+        printf '%s\n' "$tmp_installer"
+        return 0
+    fi
+
+    rm -f "$tmp_installer" 2>/dev/null || true
+    return 1
+}
+
+apply_update() {
+    local remote_ver="$1" installer rc=0
+    installer="$(resolve_installer)" || { fail "Installer unavailable"; return 1; }
+
+    info "Applying update to v${remote_ver}..."
+    info "User data, configs, and API keys will be preserved."
+
+    bash "$installer" update "$remote_ver"
+    rc=$?
+
+    rm -f "$CHINNA_HOME/update_prompted_version" 2>/dev/null || true
+
+    case "$installer" in
+        "$CHINNA_HOME"/*|*"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"/*) ;;
+        *) rm -f "$installer" 2>/dev/null || true ;;
+    esac
+
+    return "$rc"
+}
+
 # ═══════════════════════════════════════════════════════════════
 # COMMAND: clean
 # ═══════════════════════════════════════════════════════════════
@@ -723,6 +777,21 @@ cmd_publish() {
         -d "$payload" 2>/dev/null)
 
     if echo "$result" | jq -e '.content.name' >/dev/null 2>&1; then
+        local version_sha version_payload version_result
+        version_sha=$(curl -s -H "Authorization: token $token" \
+            "https://api.github.com/repos/$repo/contents/VERSION" 2>/dev/null | \
+            jq -r '.sha // empty')
+        version_payload=$(jq -n \
+            --arg msg "chore: release v$new_ver" \
+            --arg content "$(printf '%s' "$new_ver" | base64 | tr -d '\n')" \
+            --arg sha "$version_sha" \
+            '{message: $msg, content: $content, sha: $sha}')
+        version_result=$(curl -s -X PUT \
+            -H "Authorization: token $token" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/$repo/contents/VERSION" \
+            -d "$version_payload" 2>/dev/null)
+
         ok "Published v$new_ver to github.com/$repo"
         info "All friends auto-update within 24h"
         chinna_ok_toast "Chinna Published" "v$new_ver live — friends auto-update in 24h" 2>/dev/null || true
@@ -777,7 +846,35 @@ cmd_doctor() {
 cmd_update() {
     banner
     echo -e "   ${BOLD}${ORANGE}⬆️  UPDATE${RESET}"; echo ""
-    curl -fsSL "https://raw.githubusercontent.com/$CHINNA_REPO/main/install/install.sh" | bash
+    local remote_ver
+    remote_ver="$(remote_version)"
+    [ -n "$remote_ver" ] || { fail "Could not fetch remote version"; return 1; }
+
+    if ! version_gt "$remote_ver" "$CHINNA_VERSION"; then
+        ok "Already on the latest version ($CHINNA_VERSION)"
+        return 0
+    fi
+
+    info "Available: v$CHINNA_VERSION → v$remote_ver"
+    info "This update keeps your data, config, and API keys intact."
+
+    if [ "${1:-}" = "--apply" ]; then
+        apply_update "$remote_ver"
+        return $?
+    fi
+
+    local choice
+    choice=$(chinna_toast_action \
+        "Chinna Update Available" \
+        "v${remote_ver} is ready. Update now?\nYour files, config, and API keys will stay intact." \
+        "Update Now|Later" 2>/dev/null)
+    [ -n "$choice" ] || choice="Later"
+
+    if [ "$choice" = "Update Now" ]; then
+        apply_update "$remote_ver"
+    else
+        info "Update postponed"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -817,14 +914,36 @@ cmd_dashboard() {
 cmd_uninstall() {
     banner
     echo -e "   ${BOLD}${R}🗑️  UNINSTALL${RESET}"; echo ""
+    local purge=0
+    case "${1:-}" in
+        --purge|--full|-f) purge=1 ;;
+    esac
+
+    launchctl unload "$HOME/Library/LaunchAgents/com.chinna.daemon.plist" 2>/dev/null || true
+    rm -f "$HOME/Library/LaunchAgents/com.chinna.daemon.plist"
+    rm -f "$CHINNA_HOME/dashboard.pid" "$CHINNA_HOME/chinna.pid" 2>/dev/null || true
+
+    if [ "$purge" -eq 1 ]; then
+        warn "This will delete the entire Chinna home, caches, configs, and API keys."
+        echo -ne "   ${Y}Type 'purge' to confirm:${RESET} "
+        read -r yn
+        if [ "$yn" = "purge" ]; then
+            rm -rf "$CHINNA_HOME"
+            sudo rm -f /usr/local/bin/chinna /opt/homebrew/bin/chinna 2>/dev/null || true
+            ok "Chinna fully removed from this Mac"
+        else
+            info "Cancelled"
+        fi
+        return 0
+    fi
+
+    warn "This removes the app code but keeps your config, API keys, and user data."
     echo -ne "   ${Y}Type 'yes' to confirm:${RESET} "
     read -r yn
     if [ "$yn" = "yes" ]; then
-        launchctl unload "$HOME/Library/LaunchAgents/com.chinna.daemon.plist" 2>/dev/null || true
-        rm -f "$HOME/Library/LaunchAgents/com.chinna.daemon.plist"
-        rm -rf "$CHINNA_HOME"
-        sudo rm -f /usr/local/bin/chinna /opt/homebrew/bin/chinna 2>/dev/null
-        ok "Chinna removed. Bye 👋"
+        rm -rf "$CHINNA_HOME/bin" "$CHINNA_HOME/lib" "$CHINNA_HOME/dashboard" "$CHINNA_HOME/install" "$CHINNA_HOME/dashboard_server.py"
+        sudo rm -f /usr/local/bin/chinna /opt/homebrew/bin/chinna 2>/dev/null || true
+        ok "Chinna removed. Your data and keys were preserved."
     else
         info "Cancelled"
     fi
@@ -974,7 +1093,7 @@ show_help() {
      ${C}publish${RESET}                Push update to GitHub
      ${C}doctor${RESET}                 Health check
      ${C}update${RESET}                 Self-update Chinna
-     ${C}uninstall${RESET}              Remove Chinna
+     ${C}uninstall${RESET} [--purge]    Remove Chinna app or fully purge everything
 
    ${BOLD}NATURAL LANGUAGE EXAMPLES${RESET}
      chinna "na mac slow aindhi"         → purge RAM + diagnostics
@@ -1025,8 +1144,8 @@ main() {
         config|setup)               shift; cmd_config "$@" ;;
         publish)                    cmd_publish ;;
         doctor|health)              cmd_doctor ;;
-        update|upgrade)             cmd_update ;;
-        uninstall|remove)           cmd_uninstall ;;
+        update|upgrade)             shift; cmd_update "$@" ;;
+        uninstall|remove)           shift; cmd_uninstall "$@" ;;
         help|-h|--help)             show_help ;;
         version|-v|--version)       echo "Chinna v$CHINNA_VERSION" ;;
         *)
