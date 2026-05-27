@@ -60,14 +60,25 @@ body::before{content:"";position:fixed;inset:0;z-index:0;background:
 #right{width:230px;flex-shrink:0;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
 .rlabel{font-size:10px;font-weight:700;letter-spacing:1.4px;color:var(--t3);text-transform:uppercase;margin:6px 2px 4px}
 
-/* overview cards */
-.gauges{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
-.gauge{padding:16px;border-radius:var(--r);background:var(--panel2);border:1px solid var(--line);position:relative;overflow:hidden}
-.gauge .ring{width:84px;height:84px;margin:0 auto 8px;position:relative}
-.gauge svg{transform:rotate(-90deg)}
-.gauge .num{position:absolute;inset:0;display:grid;place-items:center;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
-.gauge .lbl{text-align:center;font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;font-weight:700}
-.gauge .meta{text-align:center;font-size:11px;color:var(--t2);margin-top:2px}
+/* overview cards — live sparkline gauges */
+.gauges{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.gcard{position:relative;overflow:hidden;padding:16px 16px 0;border-radius:var(--r);background:var(--panel2);border:1px solid var(--line);transition:border-color .4s}
+.gcard.alert{border-color:rgba(255,90,82,.35)}
+.gcard-glow{position:absolute;top:-60%;left:50%;transform:translateX(-50%);width:160%;height:120%;border-radius:50%;pointer-events:none;transition:opacity .5s}
+.gcard.alert .gcard-glow{animation:gpulse 2s ease-in-out infinite}
+@keyframes gpulse{0%,100%{opacity:.12}50%{opacity:.28}}
+.gcard-body{display:flex;align-items:center;gap:12px}
+.gring{position:relative;flex-shrink:0;width:96px;height:96px}
+.gring svg{position:absolute;inset:0;width:100%;height:100%}
+.gnum{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.gnum .pct{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;transition:color .4s}
+.gnum .unit{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);font-weight:700;margin-top:2px}
+.ginfo{flex:1;min-width:0}
+.glabel{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3)}
+.gmeta{font-size:11px;color:var(--t2);margin-top:4px;line-height:1.5}
+.gtrend{font-size:11px;font-weight:700;margin-top:6px;display:flex;align-items:center;gap:4px}
+.gspark{margin-top:10px;height:40px;margin-left:-16px;margin-right:-16px}
+.gspark svg{display:block;width:100%;height:40px}
 .infogrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .infocard{padding:12px 14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line)}
 .infocard .k{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:700}
@@ -342,6 +353,10 @@ const $ = id => document.getElementById(id);
 const api = (p,opt) => fetch('/api/'+p,opt).then(r=>r.json());
 let HOME_PATH = '~';
 let allFiles=[], curTab='large', allApps=[], dupeSel=new Set(), allDupes=[];
+const HIST={cpu:[],ram:[],disk:[],batt:[]};const HMAX=40;
+function pushHist(s){const add=(k,v)=>{HIST[k].push(v);if(HIST[k].length>HMAX)HIST[k].shift();};add('cpu',s.cpu?.pct||0);add('ram',s.memory?.pct||0);add('disk',s.disk?.pct||0);add('batt',s.battery?.pct||0);}
+function sparkSVG(data,c,idx){if(data.length<2)return '';const W=200,H=36;const pts=data.map((v,i)=>{const x=(i/(data.length-1))*W;const y=H-(Math.min(100,Math.max(0,v))/100)*(H-2)-1;return `${x.toFixed(1)},${y.toFixed(1)}`;});const area=`M0,${H} L${pts.join(' L')} L${W},${H}Z`;const line=`M${pts.join(' L')}`;const gid=`sg${idx}`;return `<svg width="100%" height="40" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${c}" stop-opacity=".35"/><stop offset="100%" stop-color="${c}" stop-opacity=".02"/></linearGradient></defs><path d="${area}" fill="url(#${gid})"/><path d="${line}" stroke="${c}" stroke-width="1.6" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>`;}
+function trendInfo(data){if(data.length<6)return {arrow:'→',color:'var(--t3)',label:'—'};const r=data.slice(-3).reduce((a,b)=>a+b,0)/3;const p=data.slice(-8,-5).reduce((a,b)=>a+b,0)/3;const d=r-p;if(d>4)return {arrow:'↑',color:'var(--red)',label:`+${d.toFixed(0)}%`};if(d<-4)return {arrow:'↓',color:'var(--green)',label:`${d.toFixed(0)}%`};return {arrow:'→',color:'var(--t3)',label:'stable'};}
 
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;$('toasts').appendChild(t);setTimeout(()=>t.remove(),3500);}
 function ficon(k){return {PDF:'📕',Video:'🎬',Audio:'🎵',Archive:'🗜',App:'📦','Disk Image':'💿',Installer:'📦',Code:'⌨',Data:'🗃',Image:'🖼',Doc:'📄',Sheet:'📊',Slides:'📽',Text:'📝'}[k]||'📄';}
@@ -381,14 +396,14 @@ async function poll(){
     $('v-disk').textContent=(s.disk?.pct||0)+'%';
     $('v-batt').textContent=(s.battery?.pct||0)+'%';
     $('ov-host').textContent=`${s.os?.hostname||'Mac'} · macOS ${s.os?.version||''} · ${s.os?.arch||''}`;
-    renderGauges(s); renderOvInfo(s); renderProc(s); renderRailProc(s); renderRailDisk(s);
+    pushHist(s); renderGauges(s); renderOvInfo(s); renderProc(s); renderRailProc(s); renderRailDisk(s);
   }catch(e){}
 }
-function gaugeSVG(pct,c){const r=36,C=2*Math.PI*r,off=C*(1-pct/100);
-  return `<svg width="84" height="84"><circle cx="42" cy="42" r="${r}" stroke="rgba(255,255,255,.08)" stroke-width="7" fill="none"/><circle cx="42" cy="42" r="${r}" stroke="${c}" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}"/></svg>`;}
+function gaugeSVG(pct,c){const r=42,C=2*Math.PI*r,off=C*(1-pct/100);
+  return `<svg viewBox="0 0 100 100" style="transform:rotate(-90deg)"><circle cx="50" cy="50" r="${r}" stroke="rgba(255,255,255,.07)" stroke-width="8" fill="none"/><circle cx="50" cy="50" r="${r}" stroke="${c}" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" style="filter:drop-shadow(0 0 6px ${c});transition:stroke-dashoffset .85s cubic-bezier(.4,0,.2,1),stroke .4s"/></svg>`;}
 function renderGauges(s){
-  const g=[['CPU',s.cpu?.pct||0,`${s.cpu?.cores||0} cores`],['RAM',s.memory?.pct||0,`${s.memory?.used||0}/${s.memory?.total||0} GB`],['DISK',s.disk?.pct||0,`${s.disk?.free||'?'} free`],['BATT',s.battery?.pct||0,s.battery?.charging?'charging':'on battery']];
-  $('gauges').innerHTML=g.map(([l,p,m])=>`<div class="gauge"><div class="ring">${gaugeSVG(p,color(p))}<div class="num" style="color:${color(p)}">${p}</div></div><div class="lbl">${l}</div><div class="meta">${m}</div></div>`).join('');
+  const metrics=[{key:'cpu',label:'CPU',pct:s.cpu?.pct||0,meta:`${s.cpu?.cores||0} cores`,hist:HIST.cpu},{key:'ram',label:'RAM',pct:s.memory?.pct||0,meta:`${s.memory?.used||0}/${s.memory?.total||0} GB`,hist:HIST.ram},{key:'disk',label:'DISK',pct:s.disk?.pct||0,meta:`${s.disk?.free||'?'} free`,hist:HIST.disk},{key:'batt',label:'BATT',pct:s.battery?.pct||0,meta:s.battery?.charging?'charging ⚡':'on battery',hist:HIST.batt}];
+  $('gauges').innerHTML=metrics.map((m,i)=>{const c=color(m.pct);const tr=trendInfo(m.hist);const spark=m.hist.length>2?sparkSVG(m.hist,c,i):sparkSVG(new Array(20).fill(m.pct),c,i);return `<div class="gcard${m.pct>85?' alert':''}"><div class="gcard-glow" style="background:${c};opacity:.10"></div><div class="gcard-body"><div class="gring">${gaugeSVG(m.pct,c)}<div class="gnum"><span class="pct" style="color:${c}">${m.pct}</span><span class="unit">%</span></div></div><div class="ginfo"><div class="glabel">${m.label}</div><div class="gmeta">${m.meta}</div><div class="gtrend" style="color:${tr.color}">${tr.arrow}&nbsp;<span style="opacity:.8;font-size:10px">${tr.label}</span></div></div></div><div class="gspark">${spark}</div></div>`;}).join('');
 }
 function renderOvInfo(s){
   const i=[['Host',s.os?.hostname||'—'],['Uptime',s.uptime||'—'],['Chip',(s.os?.chip||'—').replace('Apple ','')],['IP',s.network?.ip||'—']];

@@ -205,7 +205,11 @@ class H(http.server.SimpleHTTPRequestHandler):
     def get_files(self, tab, sort):
         files = []
         if tab == 'large':
-            out = sh("find ~ /Volumes -maxdepth 7 -size +10M -not -path '*/.Trash/*' -not -path '*/System/Library/*' -not -path '*/.git/*' -not -path '*/node_modules/*' 2>/dev/null | head -120", 30)
+            # Use Spotlight (mdfind) — instant on macOS, no TCC permission issues
+            out = sh("mdfind -onlyin ~ 'kMDItemFSSize > 10485760' 2>/dev/null | grep -v '/.Trash/' | grep -v '/node_modules/' | grep -v '/.git/' | head -200", 12)
+            if not out.strip():
+                # Fallback: targeted find on common user directories
+                out = sh(f"find '{HOME}/Downloads' '{HOME}/Desktop' '{HOME}/Documents' '{HOME}/Movies' '{HOME}/Music' '{HOME}/Pictures' -maxdepth 5 -type f -size +10M -not -path '*/.Trash/*' 2>/dev/null | head -120", 25)
             for f in [x for x in out.split('\n') if x.strip()]:
                 e = entry(f)
                 if e: files.append(e)
