@@ -9,6 +9,46 @@ PLIST_PATH="$HOME/Library/LaunchAgents/com.chinna.daemon.plist"
 source "$CHINNA_HOME/config" 2>/dev/null || true
 source "$CHINNA_HOME/lib/notify.sh" 2>/dev/null || true
 
+load_api_json_keys() {
+    [ -f "$CHINNA_HOME/api_keys.json" ] || return 0
+    command -v python3 >/dev/null 2>&1 || return 0
+    eval "$(python3 - "$CHINNA_HOME/api_keys.json" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+try:
+    with open(path) as f:
+        data = json.load(f)
+except Exception:
+    data = {}
+for key in ('OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'):
+    value = str(data.get(key, '') or '').replace("'", "'\"'\"'")
+    print(f"export {key}='{value}'")
+PY
+)"
+}
+
+save_api_json_key() {
+    local key="$1" value="$2"
+    command -v python3 >/dev/null 2>&1 || return 1
+    python3 - "$CHINNA_HOME/api_keys.json" "$key" "$value" <<'PY'
+import json, os, sys
+path, key, value = sys.argv[1:4]
+data = {}
+try:
+    if os.path.exists(path):
+        with open(path) as f:
+            data = json.load(f)
+except Exception:
+    data = {}
+data[key] = value
+os.makedirs(os.path.dirname(path), exist_ok=True)
+with open(path, 'w') as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+PY
+}
+
+load_api_json_keys
+
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$CHINNA_LOG"; }
 
 # ─── Install LaunchAgent plist ─────────────────────────────────
@@ -143,8 +183,20 @@ check_update() {
 # ─── Telegram polling (runs in daemon) ────────────────────────
 telegram_poll() {
     local token="${TELEGRAM_BOT_TOKEN:-}"
+    [ -z "$token" ] && return 0
     local chat_id="${TELEGRAM_CHAT_ID:-}"
-    [ -z "$token" ] || [ -z "$chat_id" ] && return 0
+    local pair_code=""
+    [ -f "$CHINNA_HOME/telegram_pair.json" ] && pair_code=$(python3 - "$CHINNA_HOME/telegram_pair.json" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+try:
+    with open(path) as f:
+        data = json.load(f)
+    print(data.get('code', '') or '')
+except Exception:
+    pass
+PY
+)
 
     local offset_file="$CHINNA_HOME/tg_offset"
     local offset=0
@@ -163,8 +215,27 @@ telegram_poll() {
         offset=$((update_id+1))
         echo "$offset" > "$offset_file"
 
-        [ "$from_id" != "$chat_id" ] && continue
         [ -z "$text" ] && continue
+
+        local lower
+        lower=$(printf '%s' "$text" | tr '[:upper:]' '[:lower:]')
+        if [ -n "$pair_code" ] && [ "$chat_id" != "$from_id" ]; then
+            case "$lower" in
+                "/start pair_${pair_code}"|"/pair ${pair_code}"|"pair ${pair_code}"|"/start ${pair_code}")
+                    chat_id="$from_id"
+                    save_api_json_key "TELEGRAM_CHAT_ID" "$chat_id"
+                    export TELEGRAM_CHAT_ID="$chat_id"
+                    log "Telegram paired with chat id ${chat_id}"
+                    curl -s -X POST "https://api.telegram.org/bot${token}/sendMessage" \
+                        --data-urlencode "chat_id=${chat_id}" \
+                        --data-urlencode "text=✅ Chinna paired. You can now send /status, /scan, /clean, /purge, free <text>, pro <text>, or shell <cmd>." \
+                        >/dev/null 2>&1
+                    continue
+                    ;;
+            esac
+        fi
+
+        [ -n "$chat_id" ] && [ "$from_id" != "$chat_id" ] && continue
 
         log "Telegram: $text"
 

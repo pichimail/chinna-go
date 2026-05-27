@@ -60,25 +60,14 @@ body::before{content:"";position:fixed;inset:0;z-index:0;background:
 #right{width:230px;flex-shrink:0;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
 .rlabel{font-size:10px;font-weight:700;letter-spacing:1.4px;color:var(--t3);text-transform:uppercase;margin:6px 2px 4px}
 
-/* overview cards — live sparkline gauges */
-.gauges{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-.gcard{position:relative;overflow:hidden;padding:16px 16px 0;border-radius:var(--r);background:var(--panel2);border:1px solid var(--line);transition:border-color .4s}
-.gcard.alert{border-color:rgba(255,90,82,.35)}
-.gcard-glow{position:absolute;top:-60%;left:50%;transform:translateX(-50%);width:160%;height:120%;border-radius:50%;pointer-events:none;transition:opacity .5s}
-.gcard.alert .gcard-glow{animation:gpulse 2s ease-in-out infinite}
-@keyframes gpulse{0%,100%{opacity:.12}50%{opacity:.28}}
-.gcard-body{display:flex;align-items:center;gap:12px}
-.gring{position:relative;flex-shrink:0;width:96px;height:96px}
-.gring svg{position:absolute;inset:0;width:100%;height:100%}
-.gnum{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
-.gnum .pct{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;transition:color .4s}
-.gnum .unit{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);font-weight:700;margin-top:2px}
-.ginfo{flex:1;min-width:0}
-.glabel{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3)}
-.gmeta{font-size:11px;color:var(--t2);margin-top:4px;line-height:1.5}
-.gtrend{font-size:11px;font-weight:700;margin-top:6px;display:flex;align-items:center;gap:4px}
-.gspark{margin-top:10px;height:40px;margin-left:-16px;margin-right:-16px}
-.gspark svg{display:block;width:100%;height:40px}
+/* overview cards */
+.gauges{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.gauge{padding:16px;border-radius:var(--r);background:var(--panel2);border:1px solid var(--line);position:relative;overflow:hidden}
+.gauge .ring{width:84px;height:84px;margin:0 auto 8px;position:relative}
+.gauge svg{transform:rotate(-90deg)}
+.gauge .num{position:absolute;inset:0;display:grid;place-items:center;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.gauge .lbl{text-align:center;font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;font-weight:700}
+.gauge .meta{text-align:center;font-size:11px;color:var(--t2);margin-top:2px}
 .infogrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .infocard{padding:12px 14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line)}
 .infocard .k{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:700}
@@ -122,8 +111,24 @@ body::before{content:"";position:fixed;inset:0;z-index:0;background:
 .bigbtn{padding:10px 16px;border-radius:11px;border:1px solid rgba(var(--accr),.3);background:rgba(var(--accr),.12);color:var(--acc);font-size:13px;font-weight:700;cursor:pointer;transition:.15s}
 .bigbtn:hover{background:rgba(var(--accr),.2)}
 .bigbtn.solid{background:var(--acc);color:#06210a;border-color:var(--acc)}
+.bigbtn.ghost{background:transparent;color:var(--t2)}
+.bigbtn.ghost:hover{color:var(--acc);border-color:rgba(var(--accr),.4)}
 .field{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--t1);font-size:13px;font-family:inherit;outline:none;margin-top:6px}
 .field:focus{border-color:rgba(var(--accr),.5)}
+.panelgrid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin-top:14px}
+.paircard,.statuscard{padding:14px;border-radius:14px;background:var(--panel2);border:1px solid var(--line)}
+.paircard h4,.statuscard h4{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:8px}
+.paircode{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:18px;font-weight:800;letter-spacing:2px;color:var(--acc)}
+.pairhint{font-size:12px;color:var(--t2);line-height:1.5;margin-top:6px}
+.pairqr{width:176px;height:176px;border-radius:14px;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.pairqr img{width:100%;height:100%;display:block;object-fit:cover}
+.stack{display:flex;flex-direction:column;gap:8px}
+.chiprow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{padding:5px 10px;border-radius:999px;background:rgba(var(--accr),.12);color:var(--acc);font-size:11px;font-weight:700}
+.muted{color:var(--t3)}
+.sourcebox{margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.24);border:1px solid var(--line);font-size:11px;color:var(--t2);white-space:pre-wrap}
+.loadmore{display:flex;justify-content:center;padding:10px 0 6px}
+.smallbtn{padding:6px 10px;border-radius:9px;font-size:12px}
 
 /* dock */
 #dock{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:50;display:flex;gap:6px;padding:8px 12px;background:var(--panel);backdrop-filter:blur(50px);border:1px solid var(--line2);border-radius:18px;box-shadow:var(--shadow)}
@@ -254,6 +259,9 @@ body::before{content:"";position:fixed;inset:0;z-index:0;background:
         <div class="toolbar">
           <button class="bigbtn" onclick="storUp()">↑ Up</button>
           <button class="bigbtn" onclick="loadStorage(HOME_PATH)">⌂ Home</button>
+          <span class="count" id="stor-count"></span>
+          <div class="spacer"></div>
+          <button class="bigbtn ghost smallbtn" id="stor-more" style="display:none" onclick="loadMoreStorage()">Load more</button>
         </div>
         <div class="vbody"><div class="list" id="stor-list"></div></div>
       </div>
@@ -286,12 +294,16 @@ body::before{content:"";position:fixed;inset:0;z-index:0;background:
 
       <!-- AI -->
       <div class="view" id="view-ai">
-        <div class="vhead"><h2>Chinna AI</h2><span class="sub" id="ai-status">—</span></div>
+        <div class="vhead">
+          <h2>Chinna AI</h2>
+          <span class="sub" id="ai-status">—</span>
+          <button class="bigbtn" style="margin-left:auto;padding:8px 12px" id="voice-btn" onclick="toggleVoiceMode()">🎙 Voice Off</button>
+        </div>
         <div class="vbody" style="display:flex;flex-direction:column">
           <div class="list" id="ai-msgs" style="flex:1;min-height:120px"></div>
         </div>
         <div class="toolbar">
-          <div class="search"><input id="ai-in" placeholder="Ask Chinna anything…" onkeydown="if(event.key==='Enter')sendAI()"></div>
+          <div class="search"><input id="ai-in" autocomplete="off" spellcheck="false" placeholder="Ask Chinna anything…" onkeydown="if(event.key==='Enter')sendAI()"></div>
           <button class="bigbtn solid" onclick="sendAI()">Send</button>
         </div>
       </div>
@@ -301,10 +313,31 @@ body::before{content:"";position:fixed;inset:0;z-index:0;background:
         <div class="vhead"><h2>Settings</h2><span class="sub">API keys (stored locally in ~/.chinna)</span></div>
         <div class="vbody" style="max-width:520px">
           <div class="navlabel" style="margin-left:0">OpenRouter key — Chinna AI</div>
-          <input class="field" id="set-or" type="password" placeholder="sk-or-v1-…">
+          <input class="field" id="set-or" type="password" autocomplete="new-password" placeholder="sk-or-v1-…">
           <div class="navlabel" style="margin-left:0">OpenAI key — optional (Whisper/GPT)</div>
-          <input class="field" id="set-oa" type="password" placeholder="sk-…">
+          <input class="field" id="set-oa" type="password" autocomplete="new-password" placeholder="sk-…">
           <button class="bigbtn solid" style="margin-top:16px" onclick="saveKeys()">Save Keys</button>
+          <div class="panelgrid">
+            <div class="paircard">
+              <h4>Telegram Pairing</h4>
+              <div class="stack">
+                <input class="field" id="tg-token" type="password" autocomplete="off" placeholder="Telegram bot token">
+                <button class="bigbtn" onclick="saveTelegramToken()">Save Telegram Token</button>
+                <button class="bigbtn solid" onclick="createTelegramPair()">Generate Pair Code</button>
+              </div>
+              <div class="chiprow">
+                <span class="chip" id="tg-bot">Bot: —</span>
+                <span class="chip" id="tg-state">State: —</span>
+              </div>
+              <div class="pairhint" id="tg-link">Pairing link will appear here after generating a code.</div>
+            </div>
+            <div class="statuscard">
+              <h4>Pair Card</h4>
+              <div class="pairqr"><img id="tg-qr" alt="Telegram pair QR" src=""></div>
+              <div class="pairhint">Scan the QR or open the link on your phone, then tap Start in Telegram. The dashboard will bind that chat automatically.</div>
+              <button class="bigbtn ghost smallbtn" style="margin-top:10px" onclick="testTelegram()">Send test</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -326,6 +359,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;background:
     <div class="dapp" onclick="go('dupes')"><span>⧉</span><span class="tip">Duplicates</span></div>
     <div class="dapp" onclick="go('apps')"><span>🗑</span><span class="tip">Uninstaller</span></div>
     <div class="dapp" onclick="go('storage')"><span>▦</span><span class="tip">Disk</span></div>
+    <div class="dapp" onclick="toggleVoiceMode()"><span>🎙</span><span class="tip">Voice</span></div>
     <div class="dapp" onclick="go('ai')"><span>✦</span><span class="tip">Chinna AI</span></div>
   </div>
 </div>
@@ -353,14 +387,203 @@ const $ = id => document.getElementById(id);
 const api = (p,opt) => fetch('/api/'+p,opt).then(r=>r.json());
 let HOME_PATH = '~';
 let allFiles=[], curTab='large', allApps=[], dupeSel=new Set(), allDupes=[];
-const HIST={cpu:[],ram:[],disk:[],batt:[]};const HMAX=40;
-function pushHist(s){const add=(k,v)=>{HIST[k].push(v);if(HIST[k].length>HMAX)HIST[k].shift();};add('cpu',s.cpu?.pct||0);add('ram',s.memory?.pct||0);add('disk',s.disk?.pct||0);add('batt',s.battery?.pct||0);}
-function sparkSVG(data,c,idx){if(data.length<2)return '';const W=200,H=36;const pts=data.map((v,i)=>{const x=(i/(data.length-1))*W;const y=H-(Math.min(100,Math.max(0,v))/100)*(H-2)-1;return `${x.toFixed(1)},${y.toFixed(1)}`;});const area=`M0,${H} L${pts.join(' L')} L${W},${H}Z`;const line=`M${pts.join(' L')}`;const gid=`sg${idx}`;return `<svg width="100%" height="40" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${c}" stop-opacity=".35"/><stop offset="100%" stop-color="${c}" stop-opacity=".02"/></linearGradient></defs><path d="${area}" fill="url(#${gid})"/><path d="${line}" stroke="${c}" stroke-width="1.6" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>`;}
-function trendInfo(data){if(data.length<6)return {arrow:'→',color:'var(--t3)',label:'—'};const r=data.slice(-3).reduce((a,b)=>a+b,0)/3;const p=data.slice(-8,-5).reduce((a,b)=>a+b,0)/3;const d=r-p;if(d>4)return {arrow:'↑',color:'var(--red)',label:`+${d.toFixed(0)}%`};if(d<-4)return {arrow:'↓',color:'var(--green)',label:`${d.toFixed(0)}%`};return {arrow:'→',color:'var(--t3)',label:'stable'};}
+let storStack=[], storState={path:'~', items:[], offset:0, hasMore:false, limit:40};
 
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;$('toasts').appendChild(t);setTimeout(()=>t.remove(),3500);}
 function ficon(k){return {PDF:'📕',Video:'🎬',Audio:'🎵',Archive:'🗜',App:'📦','Disk Image':'💿',Installer:'📦',Code:'⌨',Data:'🗃',Image:'🖼',Doc:'📄',Sheet:'📊',Slides:'📽',Text:'📝'}[k]||'📄';}
 function color(p){return p>85?'var(--red)':p>65?'var(--amber)':'var(--acc)';}
+
+let voiceEnabled=false, voiceListening=false, voiceRecognizer=null, voiceRecorder=null, voiceStream=null, voiceChunks=[], voiceTranscript='', voiceShouldSubmit=false, voiceLastSpace=0, voiceMode='speech';
+function isTypingTarget(el){return !!el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.isContentEditable);}
+function setVoiceButton(){
+  const btn=$('voice-btn');
+  if(!btn) return;
+  if(!voiceEnabled){
+    btn.textContent='🎙 Voice Off';
+    btn.style.background='';
+    btn.style.color='';
+    return;
+  }
+  btn.textContent=voiceListening?'🎙 Listening...':'🎙 Voice On';
+  btn.style.background='rgba(var(--accr),.16)';
+  btn.style.color='var(--acc)';
+}
+function toggleVoiceMode(force){
+  const next=typeof force==='boolean'?force:!voiceEnabled;
+  if(next){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    voiceEnabled=true;
+    voiceMode=SR?'speech':'media';
+    setVoiceButton();
+    toast(voiceMode==='speech'?'Voice armed. Hold Space to talk.':'Voice armed. Hold Space to record.');
+    return;
+  }
+  stopVoiceCapture(false);
+  voiceEnabled=false;
+  setVoiceButton();
+  toast('Voice mode off.');
+}
+function ensureVoiceRecognition(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR) return null;
+  if(!voiceRecognizer){
+    voiceRecognizer=new SR();
+    voiceRecognizer.continuous=false;
+    voiceRecognizer.interimResults=true;
+    voiceRecognizer.lang='en-US';
+    voiceRecognizer.onresult=ev=>{
+      let text='';
+      for(const res of ev.results) text+=res[0].transcript;
+      voiceTranscript=text.trim();
+    };
+    voiceRecognizer.onerror=ev=>{
+      toast('Voice error: '+(ev.error||'unknown'));
+      stopVoiceCapture(false);
+    };
+    voiceRecognizer.onend=()=>{
+      const text=voiceTranscript.trim();
+      const submit=voiceShouldSubmit && text;
+      voiceShouldSubmit=false;
+      voiceListening=false;
+      setVoiceButton();
+      voiceTranscript='';
+      if(submit){
+        const inp=$('ai-in');
+        inp.value=text;
+        sendAI(text, true);
+      }
+    };
+  }
+  return voiceRecognizer;
+}
+async function startVoiceCapture(){
+  if(!voiceEnabled || voiceListening) return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  voiceTranscript='';
+  voiceShouldSubmit=false;
+  voiceListening=true;
+  setVoiceButton();
+  if(SR){
+    const rec=ensureVoiceRecognition();
+    toast('Listening... release Space to send.');
+    try{rec.start();}catch(e){voiceListening=false;setVoiceButton();toast('Voice start failed.');}
+    return;
+  }
+  try{
+    if(!voiceStream){
+      voiceStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    }
+    voiceChunks=[];
+    voiceRecorder=new MediaRecorder(voiceStream, {mimeType:'audio/webm'});
+    voiceRecorder.ondataavailable=e=>{ if(e.data && e.data.size) voiceChunks.push(e.data); };
+    voiceRecorder.onstop=()=>finishRecordedVoice();
+    voiceRecorder.start();
+    toast('Recording... release Space to transcribe.');
+  }catch(e){
+    voiceListening=false;
+    setVoiceButton();
+    toast('Mic access failed.');
+  }
+}
+function stopVoiceCapture(shouldSubmit){
+  if(!voiceListening) return;
+  voiceShouldSubmit=!!shouldSubmit;
+  try{
+    if(voiceMode==='speech' && voiceRecognizer){ voiceRecognizer.stop(); }
+    if(voiceMode==='media' && voiceRecorder && voiceRecorder.state!=='inactive'){ voiceRecorder.stop(); }
+  }catch(e){
+    voiceShouldSubmit=false;
+    voiceListening=false;
+    setVoiceButton();
+  }
+  if(shouldSubmit) toast('Processing voice...');
+}
+async function finishRecordedVoice(){
+  const shouldSubmit=voiceShouldSubmit;
+  voiceShouldSubmit=false;
+  voiceListening=false;
+  setVoiceButton();
+  if(!shouldSubmit) return;
+  if(!voiceChunks.length){ toast('No audio captured.'); return; }
+  const blob=new Blob(voiceChunks, {type:'audio/webm'});
+  const audio=await blobToBase64(blob);
+  toast('Transcribing...');
+  try{
+    const d=await api('voice/transcribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio_b64:audio,mime_type:blob.type})});
+    const text=(d.text||d.error||'').trim();
+    if(!text){ toast('Could not transcribe.'); return; }
+    $('ai-in').value=text;
+    sendAI(text, true);
+  }catch(e){
+    toast('Voice transcription failed.');
+  }
+}
+function blobToBase64(blob){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(String(r.result||'').split(',')[1]||'');
+    r.onerror=()=>reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+function appendChat(role,text){
+  const row=document.createElement('div');
+  row.className='row';
+  if(role==='user'){
+    row.style.justifyContent='flex-end';
+    const info=document.createElement('div');
+    info.className='info';
+    info.style.textAlign='right';
+    const nm=document.createElement('div');
+    nm.className='nm';
+    nm.style.whiteSpace='pre-wrap';
+    nm.textContent=text;
+    info.appendChild(nm);
+    row.appendChild(info);
+    return row;
+  }
+  const fic=document.createElement('div');
+  fic.className='fic';
+  fic.textContent='✦';
+  const info=document.createElement('div');
+  info.className='info';
+  const nm=document.createElement('div');
+  nm.className='nm';
+  nm.style.whiteSpace='pre-wrap';
+  nm.textContent=text;
+  info.appendChild(nm);
+  row.appendChild(fic);
+  row.appendChild(info);
+  return row;
+}
+document.addEventListener('keydown',e=>{
+  if(e.code==='Escape' && voiceEnabled){
+    toggleVoiceMode(false);
+    return;
+  }
+  if(e.code!=='Space' || e.repeat) return;
+  if(isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+  const now=Date.now();
+  if(voiceEnabled){
+    e.preventDefault();
+    if(!voiceListening) startVoiceCapture();
+    return;
+  }
+  if(now-voiceLastSpace<350){
+    e.preventDefault();
+    voiceLastSpace=0;
+    toggleVoiceMode(true);
+  }else{
+    voiceLastSpace=now;
+  }
+});
+document.addEventListener('keyup',e=>{
+  if(e.code!=='Space') return;
+  if(voiceListening && !isTypingTarget(e.target)){
+    e.preventDefault();
+    stopVoiceCapture(true);
+  }
+});
 
 /* nav */
 function go(v){
@@ -373,8 +596,9 @@ function go(v){
   if(v==='battery')loadBattery();
   if(v==='doctor')loadDoctor();
   if(v==='network')loadNet();
-  if(v==='storage')loadStorage(HOME_PATH);
+  if(v==='storage')loadStorage(HOME_PATH,false);
   if(v==='ai')loadAIStatus();
+  if(v==='settings')loadTelegramStatus();
 }
 
 /* themes */
@@ -390,20 +614,20 @@ async function poll(){
   try{
     const s=await api('stats');
     if(!s.cpu)return;
-    HOME_PATH = '/Users/'+(s.os?.hostname?'':'')+''; // placeholder; real home from server paths
+    HOME_PATH = s.home || HOME_PATH;
     $('v-cpu').textContent=(s.cpu.pct||0)+'%';
     $('v-ram').textContent=(s.memory?.pct||0)+'%';
     $('v-disk').textContent=(s.disk?.pct||0)+'%';
     $('v-batt').textContent=(s.battery?.pct||0)+'%';
     $('ov-host').textContent=`${s.os?.hostname||'Mac'} · macOS ${s.os?.version||''} · ${s.os?.arch||''}`;
-    pushHist(s); renderGauges(s); renderOvInfo(s); renderProc(s); renderRailProc(s); renderRailDisk(s);
+    renderGauges(s); renderOvInfo(s); renderProc(s); renderRailProc(s); renderRailDisk(s);
   }catch(e){}
 }
-function gaugeSVG(pct,c){const r=42,C=2*Math.PI*r,off=C*(1-pct/100);
-  return `<svg viewBox="0 0 100 100" style="transform:rotate(-90deg)"><circle cx="50" cy="50" r="${r}" stroke="rgba(255,255,255,.07)" stroke-width="8" fill="none"/><circle cx="50" cy="50" r="${r}" stroke="${c}" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" style="filter:drop-shadow(0 0 6px ${c});transition:stroke-dashoffset .85s cubic-bezier(.4,0,.2,1),stroke .4s"/></svg>`;}
+function gaugeSVG(pct,c){const r=36,C=2*Math.PI*r,off=C*(1-pct/100);
+  return `<svg width="84" height="84"><circle cx="42" cy="42" r="${r}" stroke="rgba(255,255,255,.08)" stroke-width="7" fill="none"/><circle cx="42" cy="42" r="${r}" stroke="${c}" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}"/></svg>`;}
 function renderGauges(s){
-  const metrics=[{key:'cpu',label:'CPU',pct:s.cpu?.pct||0,meta:`${s.cpu?.cores||0} cores`,hist:HIST.cpu},{key:'ram',label:'RAM',pct:s.memory?.pct||0,meta:`${s.memory?.used||0}/${s.memory?.total||0} GB`,hist:HIST.ram},{key:'disk',label:'DISK',pct:s.disk?.pct||0,meta:`${s.disk?.free||'?'} free`,hist:HIST.disk},{key:'batt',label:'BATT',pct:s.battery?.pct||0,meta:s.battery?.charging?'charging ⚡':'on battery',hist:HIST.batt}];
-  $('gauges').innerHTML=metrics.map((m,i)=>{const c=color(m.pct);const tr=trendInfo(m.hist);const spark=m.hist.length>2?sparkSVG(m.hist,c,i):sparkSVG(new Array(20).fill(m.pct),c,i);return `<div class="gcard${m.pct>85?' alert':''}"><div class="gcard-glow" style="background:${c};opacity:.10"></div><div class="gcard-body"><div class="gring">${gaugeSVG(m.pct,c)}<div class="gnum"><span class="pct" style="color:${c}">${m.pct}</span><span class="unit">%</span></div></div><div class="ginfo"><div class="glabel">${m.label}</div><div class="gmeta">${m.meta}</div><div class="gtrend" style="color:${tr.color}">${tr.arrow}&nbsp;<span style="opacity:.8;font-size:10px">${tr.label}</span></div></div></div><div class="gspark">${spark}</div></div>`;}).join('');
+  const g=[['CPU',s.cpu?.pct||0,`${s.cpu?.cores||0} cores`],['RAM',s.memory?.pct||0,`${s.memory?.used||0}/${s.memory?.total||0} GB`],['DISK',s.disk?.pct||0,`${s.disk?.free||'?'} free`],['BATT',s.battery?.pct||0,s.battery?.charging?'charging':'on battery']];
+  $('gauges').innerHTML=g.map(([l,p,m])=>`<div class="gauge"><div class="ring">${gaugeSVG(p,color(p))}<div class="num" style="color:${color(p)}">${p}</div></div><div class="lbl">${l}</div><div class="meta">${m}</div></div>`).join('');
 }
 function renderOvInfo(s){
   const i=[['Host',s.os?.hostname||'—'],['Uptime',s.uptime||'—'],['Chip',(s.os?.chip||'—').replace('Apple ','')],['IP',s.network?.ip||'—']];
@@ -478,28 +702,89 @@ async function genReport(){const d=await api('sysreport');$('doc-out').textConte
 async function loadNet(){$('net-out').textContent='Loading…';const d=await api('ports');$('net-out').textContent=d.result;}
 
 /* storage explorer */
-let storStack=[];
-async function loadStorage(path){
-  const L=$('stor-list');L.innerHTML='<div class="spin"></div>';
-  const d=await api('storage?path='+encodeURIComponent(path));
-  $('stor-path').textContent=d.path;storStack.push(d.path);HOME_PATH=HOME_PATH==='~'?d.path:HOME_PATH;
-  if(!d.items.length){L.innerHTML='<div class="empty"><div class="big">▦</div>Empty</div>';return;}
-  L.innerHTML=d.items.map(x=>`<div class="row" ${x.is_dir?`onclick="loadStorage('${esc(x.path)}')" style="cursor:pointer"`:''}><div class="fic">${x.is_dir?'📁':'📄'}</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><div class="sz">${x.size}</div></div>`).join('');
+async function loadStorage(path,push=true,offset=0,append=false){
+  const L=$('stor-list');
+  if(!append) L.innerHTML='<div class="spin"></div>';
+  const target=path||HOME_PATH;
+  const d=await api(`storage?path=${encodeURIComponent(target)}&limit=${storState.limit||40}&offset=${offset||0}`);
+  const nextPath=d.path||target||HOME_PATH;
+  if(push){
+    if(!storStack.length || storStack[storStack.length-1]!==nextPath) storStack.push(nextPath);
+  }else if(!storStack.length){
+    storStack.push(nextPath);
+  }
+  HOME_PATH=nextPath||HOME_PATH;
+  storState={path:nextPath,items:append?(storState.items||[]).concat(d.items||[]):(d.items||[]),offset:d.next_offset||0,hasMore:!!d.has_more,limit:d.limit||storState.limit||40};
+  $('stor-path').textContent=nextPath;
+  $('stor-count').textContent=`${d.count||storState.items.length} items`;
+  $('stor-more').style.display=storState.hasMore?'':'none';
+  renderStorageList();
 }
-function storUp(){if(storStack.length>1){storStack.pop();const p=storStack.pop();loadStorage(p);}}
+function renderStorageList(){
+  const L=$('stor-list');
+  const items=storState.items||[];
+  if(!items.length){
+    L.innerHTML='<div class="empty"><div class="big">▦</div>Empty</div>';
+    $('stor-more').style.display='none';
+    return;
+  }
+  const more=storState.hasMore?`<div class="loadmore"></div>`:'';
+  L.innerHTML=items.map(x=>`<div class="row" ${x.is_dir?`onclick="loadStorage('${esc(x.path)}')" style="cursor:pointer"`:''}><div class="fic">${x.is_dir?'📁':'📄'}</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><div class="sz">${x.size}</div></div>`).join('')+more;
+}
+function loadMoreStorage(){if(storState.hasMore) loadStorage(storState.path,false,storState.offset,true);}
+function storUp(){if(storStack.length>1){storStack.pop();loadStorage(storStack[storStack.length-1],false);}}
 
 /* AI */
-async function loadAIStatus(){const k=await api('get_keys');$('ai-status').textContent=k.chinna_ai_set?'Connected · ready':'No API key — add one in Settings';}
-async function sendAI(){
-  const inp=$('ai-in'),msg=inp.value.trim();if(!msg)return;inp.value='';
+async function loadAIStatus(){
+  const k=await api('get_keys');
+  $('ai-status').textContent=k.chinna_ai_set?'Connected · ready':'No API key — add one in Settings';
+  setVoiceButton();
+}
+async function loadTelegramStatus(){
+  const d=await api('telegram/status');
+  $('tg-bot').textContent=`Bot: ${d.bot_username?('@'+d.bot_username):'—'}`;
+  $('tg-state').textContent=`State: ${d.paired?'paired':'not paired'}`;
+  $('tg-link').innerHTML=d.pair_url?`Pair link: <span class="muted">${d.pair_url}</span>`:'Pairing link will appear here after generating a code.';
+  if(d.qr_url){ $('tg-qr').src=d.qr_url; } else { $('tg-qr').removeAttribute('src'); }
+}
+function showSources(row,sources){
+  if(!sources || !sources.length) return;
+  const box=document.createElement('div');
+  box.className='sourcebox';
+  box.textContent='Local context\n' + sources.slice(0,5).map(s=>`• ${s}`).join('\n');
+  row.querySelector('.info')?.appendChild(box);
+}
+async function sendAI(forcedMsg,fromVoice=false){
+  const inp=$('ai-in'),msg=(forcedMsg!==undefined?forcedMsg:inp.value).trim();if(!msg)return;inp.value='';
   const M=$('ai-msgs');
-  M.innerHTML+=`<div class="row" style="justify-content:flex-end"><div class="info" style="text-align:right"><div class="nm">${msg}</div></div></div>`;
-  M.innerHTML+=`<div class="row" id="ai-think"><div class="fic">✦</div><div class="info"><div class="mt">thinking…</div></div></div>`;
+  M.appendChild(appendChat('user',msg));
+  const think=appendChat('assistant','thinking…');
+  think.id='ai-think';
+  think.querySelector('.nm').classList.add('mt');
+  M.appendChild(think);
   M.scrollTop=M.scrollHeight;
-  const d=await api('chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+  let d;
+  try{
+    d=await api('chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+  }catch(err){
+    d={reply:'',error:String(err?.message||err)};
+  }
   $('ai-think')?.remove();
-  M.innerHTML+=`<div class="row"><div class="fic">✦</div><div class="info"><div class="nm" style="white-space:normal">${(d.reply||d.error||'(no response)')}</div></div></div>`;
+  const reply=(d.reply||d.error||'(no response)');
+  const assistant=appendChat('assistant',reply);
+  showSources(assistant,d.sources||[]);
+  M.appendChild(assistant);
   M.scrollTop=M.scrollHeight;
+  if(voiceEnabled && !voiceListening){
+    const speakText=reply.slice(0,500);
+    if(speakText && 'speechSynthesis' in window){
+      speechSynthesis.cancel();
+      const utter=new SpeechSynthesisUtterance(speakText);
+      utter.rate=1;
+      utter.pitch=1;
+      speechSynthesis.speak(utter);
+    }
+  }
 }
 
 /* keys */
@@ -507,6 +792,26 @@ async function saveKeys(){
   const b={};if($('set-or').value)b.chinna_ai_key=$('set-or').value;if($('set-oa').value)b.openai_key=$('set-oa').value;
   const d=await api('save_keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
   toast(d.result||'Saved');$('set-or').value='';$('set-oa').value='';
+}
+async function saveTelegramToken(){
+  const token=$('tg-token').value.trim();
+  if(!token){ toast('Paste a Telegram bot token first.'); return; }
+  const d=await api('save_keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telegram_token:token})});
+  toast(d.result||'Telegram token saved');
+  $('tg-token').value='';
+  loadTelegramStatus();
+}
+async function createTelegramPair(){
+  const d=await api('telegram/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  if(d.error){ toast(d.error); return; }
+  $('tg-qr').src=d.qr_url||'';
+  $('tg-link').innerHTML=`Pair link: <span class="muted">${d.pair_url}</span><div class="paircode" style="margin-top:6px">${d.code}</div>`;
+  toast('Pair code generated');
+  loadTelegramStatus();
+}
+async function testTelegram(){
+  const d=await api('telegram/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'✅ Chinna dashboard test'})});
+  toast(d.result||d.error||'Test sent');
 }
 
 /* simple actions */
@@ -572,6 +877,8 @@ function confirmKill(pid,name){
     ()=>{showProgress('Killing '+name);api('kill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pid})}).then(()=>{$('m-log').innerHTML='<div class="done">Killed '+name+'.</div>';$('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModalRefresh()">Done</button>';toast('Killed '+name);});},'Kill');
 }
 
+setVoiceButton();
+loadTelegramStatus().catch(()=>{});
 poll();setInterval(poll,2500);
 </script>
 </body>

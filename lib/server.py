@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Chinna V5 — Dashboard Server (Python stdlib only, zero deps)."""
-import http.server, json, subprocess, os, re, sys, threading, time, urllib.parse, hashlib
+import base64, hashlib, http.server, json, os, re, subprocess, sys, threading, time, traceback, unicodedata, urllib.parse, urllib.request
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 7777
 CHINNA_HOME = os.environ.get('CHINNA_HOME', os.path.expanduser('~/.chinna'))
 DASHBOARD_DIR = os.path.join(CHINNA_HOME, 'dashboard')
 HOME = os.path.expanduser('~')
 API_KEYS_FILE = os.path.join(CHINNA_HOME, 'api_keys.json')
+PAIR_STATE_FILE = os.path.join(CHINNA_HOME, 'telegram_pair.json')
 os.makedirs(DASHBOARD_DIR, exist_ok=True)
 
 stats_cache = {}
@@ -20,19 +21,71 @@ def sh(cmd, timeout=20):
     except Exception:
         return ''
 
-def load_keys():
+def safe_text(value, keep_newlines=False):
+    if value is None:
+        return ''
+    text = unicodedata.normalize('NFKC', str(value)).replace('\u2028', ' ').replace('\u2029', ' ')
+    out = []
+    for ch in text:
+        if ch == '\n' and keep_newlines:
+            out.append(ch)
+        elif ch in '\r\t':
+            out.append(' ')
+        elif ch.isprintable():
+            out.append(ch)
+        else:
+            out.append(' ')
+    cleaned = ''.join(out)
+    return re.sub(r'[ \t]+', ' ', cleaned).strip() if not keep_newlines else '\n'.join(re.sub(r'[ \t]+', ' ', line).strip() for line in cleaned.splitlines()).strip()
+
+def read_json(path, default=None):
     try:
-        if os.path.exists(API_KEYS_FILE):
-            with open(API_KEYS_FILE) as f:
+        if os.path.exists(path):
+            with open(path) as f:
                 return json.load(f)
     except Exception:
         pass
-    return {}
+    return default if default is not None else {}
+
+def write_json(path, payload):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'w') as f:
+        json.dump(payload, f, indent=2, ensure_ascii=False)
+
+def read_shell_config():
+    cfg = {}
+    path = os.path.join(CHINNA_HOME, 'config')
+    if not os.path.exists(path):
+        return cfg
+    try:
+        with open(path) as f:
+            for line in f:
+                m = re.match(r"export\s+([A-Z0-9_]+)=['\"]?(.*?)['\"]?$", line.strip())
+                if m:
+                    cfg[m.group(1)] = m.group(2)
+    except Exception:
+        pass
+    return cfg
+
+def load_keys():
+    keys = read_json(API_KEYS_FILE, {})
+    shell_cfg = read_shell_config()
+    for name in ('OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'):
+        if not keys.get(name) and shell_cfg.get(name):
+            keys[name] = shell_cfg[name]
+        if not keys.get(name) and os.environ.get(name):
+            keys[name] = os.environ[name]
+    return keys
 
 def save_keys(d):
     cur = load_keys(); cur.update(d)
-    with open(API_KEYS_FILE, 'w') as f:
-        json.dump(cur, f, indent=2)
+    write_json(API_KEYS_FILE, cur)
+
+def save_pair_state(state):
+    write_json(PAIR_STATE_FILE, state)
+
+def load_pair_state():
+    return read_json(PAIR_STATE_FILE, {})
 
 def new_job():
     jid = hashlib.md5(str(time.time()).encode()).hexdigest()[:10]
@@ -51,6 +104,7 @@ def job_done(jid, ok=True):
 
 def collect_stats():
     s = {}
+    s['home'] = HOME
     df = sh("df -h /System/Volumes/Data 2>/dev/null || df -h /")
     ln = df.split('\n')
     if len(ln) > 1:
@@ -88,6 +142,10 @@ def collect_stats():
             except: pass
     procs.sort(key=lambda x:x['mem'], reverse=True)
     s['processes'] = procs[:40]
+    try:
+        s['disk_breakdown'] = storage_breakdown(HOME, limit=6, offset=0).get('items', [])
+    except Exception:
+        s['disk_breakdown'] = []
     return s
 
 def stats_loop():
@@ -125,6 +183,222 @@ def md5_quick(fp, chunk=65536):
         return h.hexdigest()
     except: return None
 
+def quote_join(paths):
+    return ' '.join("'{}'".format(p.replace("'", "'\\''")) for p in paths)
+
+def list_children(path):
+    try:
+        entries = []
+        with os.scandir(path) as it:
+            for ent in it:
+                if ent.name.startswith('.Trash'):
+                    continue
+                entries.append(ent)
+        entries.sort(key=lambda e: (not e.is_dir(follow_symlinks=False), e.name.lower()))
+        return entries
+    except Exception:
+        return []
+
+def storage_breakdown(path, limit=60, offset=0):
+    path = os.path.expanduser(path or HOME)
+    if not os.path.exists(path):
+        path = HOME
+    items = []
+    children = list_children(path)
+    slice_children = children[offset:offset + max(1, int(limit or 60))]
+    for ent in slice_children:
+        fp = ent.path
+        try:
+            st = ent.stat(follow_symlinks=False)
+            size_bytes = st.st_size
+            if ent.is_dir(follow_symlinks=False):
+                size_txt = sh(f"du -sk '{fp}' 2>/dev/null | cut -f1", 4)
+                if size_txt.strip().isdigit():
+                    size_bytes = int(size_txt.strip()) * 1024
+            items.append({
+                'path': fp,
+                'name': ent.name,
+                'size': fsize(size_bytes),
+                'size_bytes': size_bytes,
+                'is_dir': ent.is_dir(follow_symlinks=False)
+            })
+        except Exception:
+            continue
+    return {
+        'items': items,
+        'path': path,
+        'count': len(children),
+        'offset': offset,
+        'limit': limit,
+        'has_more': (offset + len(slice_children)) < len(children),
+        'next_offset': offset + len(slice_children)
+    }
+
+def file_snippet(path, max_lines=24):
+    try:
+        if os.path.isdir(path):
+            return ''
+        if os.path.getsize(path) > 1024 * 64:
+            return ''
+        with open(path, 'r', encoding='utf-8', errors='replace') as f:
+            return safe_text('\n'.join(f.readlines()[:max_lines]), keep_newlines=True)
+    except Exception:
+        return ''
+
+def extract_query_tokens(message):
+    tokens = []
+    for token in re.findall(r"[A-Za-z0-9_.-]{3,}", safe_text(message)):
+        lower = token.lower()
+        if lower in {
+            'what', 'show', 'tell', 'about', 'this', 'that', 'file', 'folder', 'config', 'status', 'disk', 'current',
+            'currentstatus', 'local', 'storage', 'context', 'any', 'and', 'the', 'with', 'from', 'into', 'that', 'this',
+            'your', 'you', 'please', 'can', 'could', 'would', 'should', 'help', 'me', 'for', 'open', 'find', 'search'
+        }:
+            continue
+        tokens.append(token)
+    return tokens[:4]
+
+def current_status_context():
+    with cache_lock:
+        s = dict(stats_cache)
+    keys = load_keys()
+    telegram = keys.get('TELEGRAM_BOT_TOKEN')
+    pair = load_pair_state()
+    return [
+        f"Mac status: CPU {s.get('cpu', {}).get('pct', 0)}%, RAM {s.get('memory', {}).get('pct', 0)}%, Disk {s.get('disk', {}).get('pct', 0)}%, Battery {s.get('battery', {}).get('pct', 0)}%, Host {s.get('os', {}).get('hostname', 'Mac')}, IP {s.get('network', {}).get('ip', 'offline')}, Uptime {s.get('uptime', '—')}",
+        f"Config: OpenRouter={'yes' if keys.get('OPENROUTER_API_KEY') else 'no'}, OpenAI={'yes' if keys.get('OPENAI_API_KEY') else 'no'}, TelegramBot={'yes' if telegram else 'no'}, TelegramPaired={'yes' if keys.get('TELEGRAM_CHAT_ID') else 'no'}",
+        f"Telegram pair: active={'yes' if pair.get('code') else 'no'}, code={pair.get('code', '—') if pair.get('code') else '—'}"
+    ]
+
+def local_context_for(prompt, extra_path=None):
+    prompt = safe_text(prompt).lower()
+    sources = []
+    if any(word in prompt for word in ('disk', 'storage', 'ram', 'cpu', 'battery', 'status', 'config', 'current', 'system', 'mac', 'health')):
+        sources.extend(current_status_context())
+    if any(word in prompt for word in ('storage', 'disk', 'space')) or extra_path:
+        target = os.path.expanduser(extra_path or HOME)
+        target = target if os.path.exists(target) else HOME
+        breakdown = storage_breakdown(target, limit=8, offset=0)
+        if breakdown['items']:
+            sources.append(f"Storage at {breakdown['path']}: " + '; '.join(f"{item['name']} ({item['size']})" for item in breakdown['items'][:8]))
+    if any(word in prompt for word in ('file', 'folder', 'path', 'directory', 'where', 'open', 'contents', 'snippet', 'find', 'search')) or extra_path:
+        target = os.path.expanduser(extra_path or HOME)
+        target = target if os.path.exists(target) else HOME
+        tokens = extract_query_tokens(prompt)
+        if tokens:
+            for token in tokens[:3]:
+                hits = sh(f"find '{HOME}' -maxdepth 6 -iname '*{token}*' -not -path '*/.Trash/*' 2>/dev/null | head -8", 10)
+                for hit in [x for x in hits.split('\n') if x.strip()]:
+                    if os.path.exists(hit):
+                        sources.append(f"Match for '{token}': {hit}")
+                        snippet = file_snippet(hit)
+                        if snippet:
+                            sources.append(f"Snippet from {hit}:\n{snippet}")
+                        break
+    if not sources:
+        sources.extend(current_status_context()[:1])
+    return sources[:8]
+
+def build_chat_prompt(message, context):
+    safe_message = safe_text(message, keep_newlines=True)
+    safe_context = '\n'.join(f"- {safe_text(line, keep_newlines=True)}" for line in context)
+    return (
+        "You are Chinna, a concise but helpful Mac assistant.\n"
+        "Answer directly using the local context below when relevant.\n"
+        "If the local context does not contain the answer, say so clearly.\n"
+        "Never invent file names, paths, settings, or status values.\n"
+        "Use short bullet points when listing facts.\n\n"
+        f"Local context:\n{safe_context}\n\n"
+        f"User question:\n{safe_message}"
+    )
+
+def openrouter_chat(prompt, model='meta-llama/llama-3.3-70b-instruct:free'):
+    key = load_keys().get('OPENROUTER_API_KEY', '')
+    if not key:
+        return None, 'no_key'
+    payload = json.dumps({'model': model, 'max_tokens': 900, 'messages': [{'role': 'user', 'content': prompt}]}, ensure_ascii=False).encode('utf-8')
+    cmd = [
+        'curl', '-sS', '--max-time', '40',
+        'https://openrouter.ai/api/v1/chat/completions',
+        '-H', f'Authorization: Bearer {key}',
+        '-H', 'Content-Type: application/json; charset=utf-8',
+        '-H', 'HTTP-Referer: https://chinna.local',
+        '-H', 'X-Title: Chinna Dashboard',
+        '--data-binary', '@-'
+    ]
+    proc = subprocess.run(cmd, input=payload, capture_output=True)
+    if proc.returncode != 0 or not proc.stdout:
+        return None, f'curl_failed:{proc.returncode}'
+    data = json.loads(proc.stdout.decode('utf-8', errors='replace'))
+    return safe_text(data.get('choices', [{}])[0].get('message', {}).get('content', '')), model
+
+def openai_chat(prompt, model='gpt-4o-mini'):
+    key = load_keys().get('OPENAI_API_KEY', '')
+    if not key:
+        return None, 'no_key'
+    payload = json.dumps({'model': model, 'max_tokens': 900, 'messages': [{'role': 'user', 'content': prompt}]}, ensure_ascii=False).encode('utf-8')
+    cmd = [
+        'curl', '-sS', '--max-time', '40',
+        'https://api.openai.com/v1/chat/completions',
+        '-H', f'Authorization: Bearer {key}',
+        '-H', 'Content-Type: application/json; charset=utf-8',
+        '--data-binary', '@-'
+    ]
+    proc = subprocess.run(cmd, input=payload, capture_output=True)
+    if proc.returncode != 0 or not proc.stdout:
+        return None, f'curl_failed:{proc.returncode}'
+    data = json.loads(proc.stdout.decode('utf-8', errors='replace'))
+    return safe_text(data.get('choices', [{}])[0].get('message', {}).get('content', '')), model
+
+def telegram_bot_meta():
+    token = load_keys().get('TELEGRAM_BOT_TOKEN', '')
+    if not token:
+        return {}
+    try:
+        resp = sh(f"curl -s 'https://api.telegram.org/bot{token}/getMe' 2>/dev/null", 10)
+        data = json.loads(resp or '{}')
+        if data.get('ok'):
+            return data.get('result', {}) or {}
+    except Exception:
+        pass
+    return {}
+
+def telegram_send_message(text):
+    keys = load_keys()
+    token = keys.get('TELEGRAM_BOT_TOKEN', '')
+    chat_id = keys.get('TELEGRAM_CHAT_ID', '')
+    if not token or not chat_id:
+        return False, 'Telegram is not fully configured'
+    payload = urllib.parse.urlencode({'chat_id': chat_id, 'text': safe_text(text, keep_newlines=True)[:3900]}).encode()
+    req = urllib.request.Request(f'https://api.telegram.org/bot{token}/sendMessage', data=payload)
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            json.loads(resp.read())
+        return True, 'sent'
+    except Exception as e:
+        return False, str(e)
+
+def update_telegram_chat_id(chat_id):
+    keys = load_keys()
+    keys['TELEGRAM_CHAT_ID'] = str(chat_id)
+    save_keys(keys)
+
+def telegram_status():
+    keys = load_keys()
+    meta = telegram_bot_meta()
+    pair = load_pair_state()
+    return {
+        'configured': bool(keys.get('TELEGRAM_BOT_TOKEN')),
+        'paired': bool(keys.get('TELEGRAM_CHAT_ID')),
+        'chat_id': keys.get('TELEGRAM_CHAT_ID', ''),
+        'bot_username': meta.get('username', ''),
+        'bot_name': meta.get('first_name', ''),
+        'pair_code': pair.get('code', ''),
+        'pair_expires': pair.get('expires', 0),
+        'pair_url': pair.get('pair_url', ''),
+        'qr_url': pair.get('qr_url', '')
+    }
+
 class H(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k): super().__init__(*a, directory=DASHBOARD_DIR, **k)
     def log_message(self, *a): pass
@@ -137,12 +411,15 @@ class H(http.server.SimpleHTTPRequestHandler):
         self.send_response(200); self.send_header('Access-Control-Allow-Origin','*'); self.send_header('Access-Control-Allow-Methods','GET,POST,OPTIONS'); self.send_header('Access-Control-Allow-Headers','Content-Type'); self.end_headers()
 
     def do_GET(self):
-        p = self.path.split('?')[0]
-        q = dict(urllib.parse.parse_qsl(urllib.parse.urlparse(self.path).query))
+        parsed = urllib.parse.urlparse(self.path)
+        p = parsed.path
+        q = dict(urllib.parse.parse_qsl(parsed.query))
         if p == '/api/stats':
-            with cache_lock: self._json(stats_cache)
+            with cache_lock:
+                self._json(stats_cache)
         elif p == '/api/job':
-            with jobs_lock: self._json(jobs.get(q.get('id',''), {'lines':['job not found'],'done':True,'ok':False}))
+            with jobs_lock:
+                self._json(jobs.get(q.get('id',''), {'lines':['job not found'],'done':True,'ok':False}))
         elif p == '/api/files':
             self._json(self.get_files(q.get('tab','large'), q.get('sort','size')))
         elif p == '/api/apps':
@@ -152,7 +429,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         elif p == '/api/batteryhealth':
             self._json(self.battery_health())
         elif p == '/api/storage':
-            self._json({'items': self.storage_breakdown(q.get('path', HOME)), 'path': os.path.expanduser(q.get('path', HOME))})
+            self._json(storage_breakdown(q.get('path', HOME), limit=int(q.get('limit', '60') or 60), offset=int(q.get('offset', '0') or 0)))
         elif p == '/api/ports':
             self._json({'result': sh("lsof -iTCP -sTCP:LISTEN -n -P 2>/dev/null | awk 'NR>1{print $1\"  pid:\"$2\"  \"$9}' | head -30") or 'No listening ports'})
         elif p == '/api/doctor':
@@ -160,7 +437,17 @@ class H(http.server.SimpleHTTPRequestHandler):
         elif p == '/api/sysreport':
             self._json(self.sys_report())
         elif p == '/api/get_keys':
-            k = load_keys(); self._json({'chinna_ai_set': bool(k.get('OPENROUTER_API_KEY')), 'openai_set': bool(k.get('OPENAI_API_KEY'))})
+            k = load_keys()
+            self._json({
+                'chinna_ai_set': bool(k.get('OPENROUTER_API_KEY')),
+                'openai_set': bool(k.get('OPENAI_API_KEY')),
+                'telegram_set': bool(k.get('TELEGRAM_BOT_TOKEN')),
+                'telegram_paired': bool(k.get('TELEGRAM_CHAT_ID')),
+                'telegram_bot': telegram_status().get('bot_username', ''),
+                'pair_code': telegram_status().get('pair_code', '')
+            })
+        elif p == '/api/telegram/status':
+            self._json(telegram_status())
         elif p in ('/',''):
             self.path = '/index.html'; super().do_GET()
         else:
@@ -172,6 +459,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             d = {}
             if b.get('chinna_ai_key'): d['OPENROUTER_API_KEY'] = b['chinna_ai_key']
             if b.get('openai_key'): d['OPENAI_API_KEY'] = b['openai_key']
+            if b.get('telegram_token'): d['TELEGRAM_BOT_TOKEN'] = b['telegram_token']
+            if b.get('telegram_chat'): d['TELEGRAM_CHAT_ID'] = b['telegram_chat']
             save_keys(d); self._json({'result':'✅ Keys saved'})
         elif p == '/api/purge':
             jid = new_job(); threading.Thread(target=self.job_purge, args=(jid,), daemon=True).start(); self._json({'job': jid})
@@ -199,6 +488,13 @@ class H(http.server.SimpleHTTPRequestHandler):
             else: self._json({'error':'no pid'},400)
         elif p == '/api/chat':
             self.chat(b)
+        elif p == '/api/telegram/pair':
+            self.telegram_pair(b)
+        elif p == '/api/telegram/test':
+            ok, msg = telegram_send_message(b.get('message') or '✅ Chinna dashboard test message')
+            self._json({'ok': ok, 'result': msg}, 200 if ok else 400)
+        elif p == '/api/voice/transcribe':
+            self.voice_transcribe(b)
         else:
             self._json({'error': f'unknown {p}'}, 404)
 
@@ -272,20 +568,6 @@ class H(http.server.SimpleHTTPRequestHandler):
         return {'cycles': grab('Cycle Count'), 'condition': grab('Condition'),
                 'max_capacity': grab('Maximum Capacity'), 'charging': grab('Charging')}
 
-    def storage_breakdown(self, path):
-        path = os.path.expanduser(path)
-        out = sh(f"du -sk '{path}'/* 2>/dev/null | sort -rn | head -25", 30)
-        items = []
-        for ln in out.split('\n'):
-            if not ln.strip(): continue
-            parts = ln.split('\t')
-            if len(parts) == 2:
-                try: szb = int(parts[0])*1024
-                except: szb = 0
-                items.append({'path': parts[1], 'name': os.path.basename(parts[1]),
-                              'size': fsize(szb), 'size_bytes': szb, 'is_dir': os.path.isdir(parts[1])})
-        return items
-
     def doctor(self):
         return '\n'.join([
             "Homebrew: " + (sh("brew --version | head -1") or "not installed"),
@@ -314,19 +596,90 @@ class H(http.server.SimpleHTTPRequestHandler):
             return {'result': rpt, 'saved': None}
 
     def chat(self, b):
-        msg = b.get('message',''); model = b.get('model','meta-llama/llama-3.3-70b-instruct:free')
+        msg = safe_text(b.get('message',''), keep_newlines=True)
+        model = safe_text(b.get('model','meta-llama/llama-3.3-70b-instruct:free'))
         key = load_keys().get('OPENROUTER_API_KEY','')
-        if not key: self._json({'error':'No API key. Open Settings and add your OpenRouter key.'},400); return
+        if not key:
+            self._json({'error':'No API key. Open Settings and add your OpenRouter key.'}, 400)
+            return
         try:
-            import urllib.request
-            data = json.dumps({'model':model,'messages':[{'role':'user','content':msg}]}).encode()
-            req = urllib.request.Request('https://openrouter.ai/api/v1/chat/completions', data=data,
-                headers={'Content-Type':'application/json','Authorization':f'Bearer {key}'})
-            r = urllib.request.urlopen(req, timeout=40)
-            d = json.loads(r.read())
-            self._json({'reply': d.get('choices',[{}])[0].get('message',{}).get('content','(no response)')})
+            with open(os.path.join(CHINNA_HOME, 'dashboard.log'), 'a') as log:
+                log.write(f"chat:start msg_len={len(msg)}\n")
+            context = local_context_for(msg, b.get('path'))
+            with open(os.path.join(CHINNA_HOME, 'dashboard.log'), 'a') as log:
+                log.write(f"chat:context count={len(context)}\n")
+            prompt = build_chat_prompt(msg, context)
+            with open(os.path.join(CHINNA_HOME, 'dashboard.log'), 'a') as log:
+                log.write(f"chat:prompt len={len(prompt)}\n")
+            reply, used_model = openrouter_chat(prompt, model=model or 'meta-llama/llama-3.3-70b-instruct:free')
+            if not reply and load_keys().get('OPENAI_API_KEY'):
+                with open(os.path.join(CHINNA_HOME, 'dashboard.log'), 'a') as log:
+                    log.write("chat:fallback=openai\n")
+                reply, used_model = openai_chat(prompt, model='gpt-4o-mini')
+            with open(os.path.join(CHINNA_HOME, 'dashboard.log'), 'a') as log:
+                log.write(f"chat:reply type={type(reply).__name__} len={len(reply or '')}\n")
+            if reply is None:
+                self._json({'error':'AI request failed — try again'}, 502)
+                return
+            self._json({'reply': reply, 'model': used_model, 'sources': context})
         except Exception as e:
-            self._json({'error': str(e)}, 500)
+            try:
+                with open(os.path.join(CHINNA_HOME, 'dashboard.log'), 'a') as log:
+                    log.write(traceback.format_exc() + '\n')
+            except Exception:
+                pass
+            self._json({'error': safe_text(e)}, 500)
+
+    def telegram_pair(self, b):
+        keys = load_keys()
+        token = keys.get('TELEGRAM_BOT_TOKEN', '')
+        if not token:
+            self._json({'error': 'Telegram bot token is not configured'}, 400)
+            return
+        meta = telegram_bot_meta()
+        code = re.sub(r'[^A-Z0-9]', '', hashlib.sha1(f"{token}-{time.time()}".encode()).hexdigest().upper())[:8]
+        bot_username = meta.get('username', '')
+        pair_url = f"https://t.me/{bot_username}?start=PAIR_{code}" if bot_username else f"https://t.me/share/url?url=PAIR_{code}"
+        qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={urllib.parse.quote(pair_url, safe='')}"
+        save_pair_state({'code': code, 'created': int(time.time()), 'expires': int(time.time()) + 15 * 60, 'pair_url': pair_url, 'qr_url': qr_url})
+        self._json({'code': code, 'bot_username': bot_username, 'pair_url': pair_url, 'qr_url': qr_url, 'expires': int(time.time()) + 15 * 60})
+
+    def voice_transcribe(self, b):
+        audio_b64 = b.get('audio_b64', '')
+        mime = b.get('mime_type', 'audio/webm')
+        if not audio_b64:
+            self._json({'error': 'No audio provided'}, 400)
+            return
+        keys = load_keys()
+        api_key = keys.get('OPENAI_API_KEY', '')
+        if not api_key:
+            self._json({'error': 'OpenAI key required for transcription'}, 400)
+            return
+        try:
+            audio = base64.b64decode(audio_b64)
+            boundary = f'chinna_{int(time.time())}'
+            body = b''.join([
+                f'--{boundary}\r\n'.encode(),
+                b'Content-Disposition: form-data; name="model"\r\n\r\nwhisper-1\r\n',
+                f'--{boundary}\r\n'.encode(),
+                b'Content-Disposition: form-data; name="file"; filename="audio.webm"\r\n',
+                f'Content-Type: {mime}\r\n\r\n'.encode(),
+                audio, b'\r\n',
+                f'--{boundary}--\r\n'.encode()
+            ])
+            req = urllib.request.Request(
+                'https://api.openai.com/v1/audio/transcriptions',
+                data=body,
+                headers={
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': f'multipart/form-data; boundary={boundary}'
+                }
+            )
+            with urllib.request.urlopen(req, timeout=40) as resp:
+                d = json.loads(resp.read())
+            self._json({'text': safe_text(d.get('text', ''))})
+        except Exception as e:
+            self._json({'error': safe_text(e), 'text': ''}, 500)
 
     def job_purge(self, jid):
         job_log(jid, "Requesting RAM purge (may prompt for sudo in your terminal)...")
