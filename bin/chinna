@@ -13,11 +13,31 @@ CHINNA_CONFIG="$CHINNA_HOME/config"
 CHINNA_LIB="$CHINNA_HOME/lib"
 
 mkdir -p "$CHINNA_HOME" "$CHINNA_LIB"
-[ -f "$CHINNA_CONFIG" ] && source "$CHINNA_CONFIG"
+if [ -f "$CHINNA_CONFIG" ]; then
+    # Older/user-edited config files may reference unset vars; do not hard-fail startup.
+    set +u
+    source "$CHINNA_CONFIG"
+    set -u
+fi
 
 # ─── Source libs ───────────────────────────────────────────────
+safe_source_lib() {
+    local lib_path="$1"
+    local lib_name
+    lib_name="$(basename "$lib_path")"
+    [ -f "$lib_path" ] || return 0
+
+    if ! bash -n "$lib_path" >/dev/null 2>&1; then
+        warn "Skipping broken library: $lib_name"
+        return 0
+    fi
+
+    # shellcheck source=/dev/null
+    source "$lib_path"
+}
+
 for lib in notify lang stack voice daemon; do
-    [ -f "$CHINNA_LIB/${lib}.sh" ] && source "$CHINNA_LIB/${lib}.sh" 2>/dev/null || true
+    safe_source_lib "$CHINNA_LIB/${lib}.sh"
 done
 
 # ─── Colors ───────────────────────────────────────────────────
@@ -1020,7 +1040,11 @@ show_menu() {
     echo -e "   ${ORANGE}q${RESET})  ${D}Quit${RESET}"
     echo ""
     echo -ne "   ${BOLD}>${RESET} "
-    read -r input
+    if ! read -r input; then
+        echo ""
+        info "No interactive input available. Use: chinna help"
+        return 0
+    fi
 
     # Try numeric menu first
     case "$input" in
@@ -1118,7 +1142,13 @@ main() {
     [ "$cmd" = "_daemon_loop" ] && { daemon_loop; exit 0; }
 
     case "$cmd" in
-        ""|menu)                    show_menu ;;
+        ""|menu)
+            if [ ! -t 0 ]; then
+                show_help
+                return 0
+            fi
+            show_menu
+            ;;
         clean|cleanmymac)           cmd_clean ;;
         purge|purgeram)             cmd_purge ;;
         scan)                       cmd_scan ;;
