@@ -16,6 +16,19 @@ What it does:
 - Sets up the local command in your shell path
 - Keeps your user data and API keys separate from app code
 
+## Upgrade From Older Versions
+
+If you already have any older Chinna install, run the same one-touch install command again:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh)
+```
+
+This will:
+- Replace the old app code with V5
+- Preserve your local data, config, and API keys
+- Refresh the command so `chinna` points to the new version
+
 ## Run Locally
 
 After install, use these commands:
