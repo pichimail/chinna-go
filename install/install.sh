@@ -8,9 +8,10 @@ CHINNA_REPO="${CHINNA_REPO:-pichimail/chinna-go}"
 CHINNA_HOME="${CHINNA_HOME:-$HOME/.chinna}"
 INSTALL_MODE="${1:-install}"
 REMOTE_VERSION="${2:-}"
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT=""
+if [ -f "./bin/chinna" ] && [ -f "./lib/server.py" ]; then
+    REPO_ROOT="$(pwd)"
+fi
 
 log() { printf '%s\n' "$*"; }
 warn() { printf 'WARN: %s\n' "$*" >&2; }
@@ -18,7 +19,7 @@ fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 fetch_remote_tree() {
     local tmp root archive_url repo_name
-    if [ -f "$REPO_ROOT/bin/chinna" ] && [ -f "$REPO_ROOT/lib/server.py" ]; then
+    if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/bin/chinna" ] && [ -f "$REPO_ROOT/lib/server.py" ]; then
         printf '%s\n' "$REPO_ROOT"
         return 0
     fi

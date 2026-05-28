@@ -7,6 +7,12 @@ Chinna is a local Mac sidekick for cleanup, system checks, disk exploration, AI 
 Copy and paste this into Terminal on macOS to install or replace any older Chinna version with V5:
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
+```
+
+Alternative form (also supported):
+
+```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh)
 ```
 
@@ -21,7 +27,7 @@ What it does:
 If you already have any older Chinna install, run the same one-touch install command again:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh)
+curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
 ```
 
 This will:
@@ -34,6 +40,8 @@ This will:
 After install, use these commands:
 
 ```bash
+chinna --version
+chinna help
 chinna dashboard
 chinna start
 chinna config
@@ -98,6 +106,12 @@ chinna uninstall --purge
 ## Troubleshooting
 
 - If `chinna` is not found, reopen Terminal or run the installer again.
+- Check command location:
+
+  ```bash
+  which chinna
+  chinna --version
+  ```
 - If the dashboard does not open, run:
 
   ```bash
