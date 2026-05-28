@@ -46,15 +46,16 @@ install_command_binary() {
 
     mkdir -p "$target_dir" 2>/dev/null || true
 
+    if [ -L "$target" ] && [ "$(readlink "$target" 2>/dev/null)" = "$src" ]; then
+        return 0
+    fi
+
     if [ -w "$target_dir" ]; then
-        cp "$src" "$target"
-        chmod +x "$target"
+        ln -sfn "$src" "$target"
     else
-        if ! sudo cp "$src" "$target" 2>/dev/null; then
-            warn "Could not install $target"
+        if ! sudo ln -sfn "$src" "$target" 2>/dev/null; then
             return 1
         fi
-        sudo chmod +x "$target" 2>/dev/null || true
     fi
 }
 
@@ -97,8 +98,17 @@ refresh_installed_code() {
     fi
 
     # Refresh the public command location(s).
-    install_command_binary "$CHINNA_HOME/bin/chinna" /usr/local/bin/chinna || true
-    install_command_binary "$CHINNA_HOME/bin/chinna" /opt/homebrew/bin/chinna || true
+    local installed=0
+    if install_command_binary "$CHINNA_HOME/bin/chinna" /opt/homebrew/bin/chinna; then
+        installed=1
+    fi
+    if install_command_binary "$CHINNA_HOME/bin/chinna" /usr/local/bin/chinna; then
+        installed=1
+    fi
+
+    if [ "$installed" -eq 0 ]; then
+        warn "Could not place chinna on your PATH. Add $CHINNA_HOME/bin to PATH or rerun the installer."
+    fi
 }
 
 main() {
