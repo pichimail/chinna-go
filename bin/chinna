@@ -36,9 +36,13 @@ safe_source_lib() {
     source "$lib_path"
 }
 
-for lib in notify lang stack voice daemon; do
+for lib in notify lang stack voice daemon config clean registry plugins; do
     safe_source_lib "$CHINNA_LIB/${lib}.sh"
 done
+
+# Load user config + models on every run
+chinna_load_env 2>/dev/null || true
+chinna_write_defaults 2>/dev/null || true
 
 # ─── Colors ───────────────────────────────────────────────────
 if [ -t 1 ]; then
@@ -415,6 +419,28 @@ cmd_status() {
     else
         warn "Not running. Start with: chinna start"
     fi
+
+    section "Tracked Projects"
+    if [ -f "$CHINNA_HOME/state/projects.json" ]; then
+        python3 - "$CHINNA_HOME/state/projects.json" <<'PY'
+import json, sys, os
+from datetime import datetime
+f = sys.argv[1]
+try:
+    with open(f) as fp: data = json.load(fp)
+except: data = {"projects": {}}
+projs = data.get("projects", {})
+print(f"  {len(projs)} projects in registry")
+for path, info in sorted(projs.items(), key=lambda x: -x[1].get("updated",0))[:3]:
+    short = path.replace(os.path.expanduser("~"), "~")
+    note = info.get("notes","")[:50]
+    tags = " ".join(f"#{t}" for t in info.get("tags",[])[:2])
+    print(f"    • {info.get('stack','?'):12} {short}  {tags}")
+    if note: print(f"      {note}")
+PY
+    else
+        info "No projects registered"
+    fi
     echo ""
 }
 
@@ -668,56 +694,105 @@ cmd_preview() {
 cmd_config() {
     banner
     echo -e "   ${BOLD}${ORANGE}⚙️  CONFIG${RESET}"; echo ""
-    local target="${1:-all}"
+    local target="${1:-status}"
 
-    _save_key() {
-        local key="$1" val="$2"
-        # Remove existing line, append new
-        grep -v "^export $key=" "$CHINNA_CONFIG" > "$CHINNA_CONFIG.tmp" 2>/dev/null || true
-        echo "export $key='$val'" >> "$CHINNA_CONFIG.tmp"
-        mv "$CHINNA_CONFIG.tmp" "$CHINNA_CONFIG"
-        source "$CHINNA_CONFIG"
-    }
+    case "$target" in
+        openrouter|or)
+            chinna_setup_openrouter
+            ;;
+        anthropic|claude)
+            chinna_setup_anthropic
+            ;;
+        status|show|"")
+            chinna_config_status
+            ;;
+        models|model)
+            chinna_model_set "${2:-}"
+            ;;
+        *)
+            chinna_config_status
+            echo ""
+            info "Usage:"
+            echo "  chinna config openrouter     # Set OpenRouter key (secure)"
+            echo "  chinna config anthropic      # Set Anthropic key"
+            echo "  chinna config models         # List / switch AI model preset"
+            echo "  chinna model-set sonnet4     # Quick switch"
+            ;;
+    esac
+}
 
-    if [[ "$target" == "openrouter" || "$target" == "all" ]]; then
-        section "OpenRouter API Key"
-        info "Get yours free at: https://openrouter.ai/keys"
-        echo -ne "  Paste key (ENTER to skip): "
-        read -r key
-        [ -n "$key" ] && _save_key "OPENROUTER_API_KEY" "$key" && ok "OpenRouter key saved"
-    fi
+# Projects registry (Godspeed style)
+cmd_projects() {
+    local sub="${1:-list}"
 
-    if [[ "$target" == "openai" || "$target" == "all" ]]; then
-        section "OpenAI API Key (for voice transcription)"
-        echo -ne "  Paste key (ENTER to skip): "
-        read -r key
-        [ -n "$key" ] && _save_key "OPENAI_API_KEY" "$key" && ok "OpenAI key saved"
-    fi
+    case "$sub" in
+        list|status|"")
+            chinna_project_status
+            ;;
+        clean)
+            chinna_clear_old_projects
+            ok "Registry cleaned"
+            ;;
+        history)
+            shift
+            chinna_project_history "$@"
+            ;;
+        note|notes)
+            shift
+            chinna_project_set_note "$@"
+            ;;
+        tag)
+            shift
+            chinna_project_add_tag "$@"
+            ;;
+        export)
+            shift
+            local fmt="${1:-json}"
+            local out_file="$CHINNA_HOME/audits/projects-export-$(date +%Y%m%d-%H%M%S).${fmt}"
+            mkdir -p "$(dirname "$out_file")"
 
-    if [[ "$target" == "telegram" || "$target" == "all" ]]; then
-        section "Telegram Bot"
-        info "1. Message @BotFather → /newbot → copy token"
-        info "2. Message @userinfobot → copy your user ID"
-        echo -ne "  Bot token (ENTER to skip): "
-        read -r token
-        if [ -n "$token" ]; then
-            _save_key "TELEGRAM_BOT_TOKEN" "$token"
-            echo -ne "  Your user ID: "
-            read -r uid
-            [ -n "$uid" ] && _save_key "TELEGRAM_CHAT_ID" "$uid"
-            ok "Telegram configured. Start bot: chinna bot"
-        fi
-    fi
+            if [ "$fmt" = "csv" ]; then
+                python3 - "$CHINNA_HOME/state/projects.json" > "$out_file" <<'PY'
+import json, sys, csv, io
+with open(sys.argv[1]) as f: data = json.load(f)
+output = io.StringIO()
+w = csv.writer(output)
+w.writerow(['path','stack','port','url','status','updated'])
+for p, i in data.get('projects',{}).items():
+    w.writerow([p, i.get('stack'), i.get('port'), i.get('url'), i.get('status'), i.get('updated')])
+print(output.getvalue())
+PY
+            else
+                cp "$CHINNA_HOME/state/projects.json" "$out_file"
+            fi
+            ok "Exported to $out_file"
+            ;;
+        *)
+            echo "Usage: chinna projects [list | clean | history <path> | note <path> <text> | tag <path> <tag> | export json|csv]"
+            ;;
+    esac
+}
 
-    if [[ "$target" == "github" || "$target" == "all" ]]; then
-        section "GitHub Token (for chinna publish)"
-        info "Create at: https://github.com/settings/tokens (repo scope)"
-        echo -ne "  Token (ENTER to skip): "
-        read -r token
-        [ -n "$token" ] && _save_key "GITHUB_TOKEN" "$token" && ok "GitHub token saved"
-    fi
+# Plugins (Godspeed style)
+cmd_plugins() {
+    local sub="${1:-list}"
 
-    info "Config: $CHINNA_CONFIG"; echo ""
+    case "$sub" in
+        list|"")
+            plugins_list
+            ;;
+        load)
+            shift
+            load_plugin "$@"
+            ;;
+        bootstrap)
+            shift
+            bootstrap_here "${1:-.}"
+            ;;
+        *)
+            echo "Usage: chinna plugins [list | load <name> | bootstrap [dir]]"
+            ;;
+    esac
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -836,28 +911,162 @@ cmd_git() {
 # ═══════════════════════════════════════════════════════════════
 cmd_doctor() {
     banner
-    echo -e "   ${BOLD}${TEAL}🩺 HEALTH CHECK${RESET}"; echo ""
+    echo -e "   ${BOLD}${TEAL}🩺 CHINNA DOCTOR${RESET}"; echo ""
 
-    _chk() { command -v "$1" >/dev/null 2>&1 && ok "$1" || warn "$1 missing"; }
-    section "Dependencies"
-    for t in brew jq node python3 fdupes sox curl git gh bc; do _chk "$t"; done
+    # Use printf for clean columns (Godspeed style)
+    _check() {
+        local name="$1" cmd="$2"
+        if command -v "$cmd" >/dev/null 2>&1; then
+            local ver
+            ver=$($cmd --version 2>/dev/null | head -1 || $cmd -v 2>/dev/null | head -1 || echo "installed")
+            printf "  %-16s %s\n" "$name" "${G}✓${RESET} $ver"
+        else
+            printf "  %-16s %s\n" "$name" "${R}✗ missing${RESET}"
+        fi
+    }
 
-    section "API keys"
-    [ -n "${OPENROUTER_API_KEY:-}" ] && ok "OPENROUTER_API_KEY" || warn "OPENROUTER_API_KEY missing → chinna config openrouter"
-    [ -n "${OPENAI_API_KEY:-}" ]     && ok "OPENAI_API_KEY"     || info "OPENAI_API_KEY optional (voice transcription)"
-    [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && ok "TELEGRAM_BOT_TOKEN" || warn "TELEGRAM_BOT_TOKEN missing → chinna config telegram"
-    [ -n "${GITHUB_TOKEN:-}" ]       && ok "GITHUB_TOKEN"       || info "GITHUB_TOKEN optional (for chinna publish)"
+    section "Core CLI Tools"
+    _check "git" git
+    _check "jq" jq
+    _check "node" node
+    _check "python3" python3
+    _check "docker" docker
+    _check "bun" bun
+    _check "go" go
+    _check "rustc" rustc
+    _check "flutter" flutter
+    _check "rg" rg
+    _check "fd" fd
+
+    section "AI Configuration"
+    chinna_load_env
+    [ -n "${OPENROUTER_API_KEY:-}" ] && ok "OpenRouter key set" || warn "OpenRouter key missing → chinna config openrouter"
+    [ -n "${ANTHROPIC_API_KEY:-}" ]  && ok "Anthropic key set"  || info "Anthropic optional"
+    [ -n "${OPENAI_API_KEY:-}" ]     && ok "OpenAI key set"     || info "OpenAI optional (voice + fallback)"
+    echo "  Active model:  ${ACTIVE_MODEL:-<not set>}"
+
+    section "Automation & Dashboard"
+    echo "  Automation mode: ${APPAUTOMATIONMODE:-off}"
+    if pgrep -f "dashboard_server.py" >/dev/null 2>&1; then
+        ok "Dashboard running → http://localhost:7777"
+    else
+        info "Dashboard not running (chinna dashboard)"
+    fi
 
     section "System"
-    info "macOS: $(sw_vers -productVersion 2>/dev/null)"
-    info "Arch:  $(uname -m)"
-    info "Shell: $SHELL"
-    info "Disk:  $(disk_usage)"
-    info "Chinna: v$CHINNA_VERSION @ $CHINNA_HOME"
+    printf "  %-16s %s\n" "macOS" "$(sw_vers -productVersion 2>/dev/null || echo unknown)"
+    printf "  %-16s %s\n" "Arch" "$(uname -m)"
+    printf "  %-16s %s\n" "Shell" "$SHELL"
+    printf "  %-16s %s\n" "Chinna" "v$CHINNA_VERSION @ $CHINNA_HOME"
 
     section "Daemon"
     daemon_status 2>/dev/null || info "Daemon module not loaded"
+
+    section "Project Registry"
+    if [ -f "$CHINNA_HOME/state/projects.json" ]; then
+        python3 - "$CHINNA_HOME/state/projects.json" <<'PY'
+import json, sys, os
+from datetime import datetime
+
+f = sys.argv[1]
+try:
+    with open(f) as fp: data = json.load(fp)
+except:
+    data = {"projects": {}}
+
+projs = data.get("projects", {})
+print(f"  {len(projs)} projects tracked")
+
+# Show top 4 most recent with notes/tags
+sorted_p = sorted(projs.items(), key=lambda x: -x[1].get("updated", 0))[:4]
+for path, info in sorted_p:
+    short = path.replace(os.path.expanduser("~"), "~")
+    stack = info.get("stack", "?")
+    notes = info.get("notes", "")
+    tags = info.get("tags", [])
+    note_preview = (notes[:60] + "…") if notes else ""
+    tag_str = " ".join(f"#{t}" for t in tags[:3]) if tags else ""
+    print(f"    • {stack:12} {short}")
+    if note_preview or tag_str:
+        print(f"      {note_preview} {tag_str}")
+PY
+    else
+        info "No project registry found yet"
+    fi
+
     echo ""
+    mac_notify "Chinna Doctor completed"
+    mac_sound
+}
+
+# Audit Reporter (Godspeed PROMPT 6)
+cmd_audit() {
+    banner
+    echo -e "   ${BOLD}${TEAL}📋 PROJECT AUDIT${RESET}\n"
+
+    local timestamp
+    timestamp=$(date +%Y%m%d-%H%M%S)
+    local audit_dir="$CHINNA_HOME/audits"
+    mkdir -p "$audit_dir"
+    local report="$audit_dir/audit-$timestamp.txt"
+
+    {
+        echo "CHINNA V5 AUDIT REPORT"
+        echo "Generated: $(date)"
+        echo "Path: $(pwd)"
+        echo "Stack: $(detect_stack .)"
+        echo "========================================"
+        echo ""
+
+        echo "=== DISK USAGE (Top 20) ==="
+        du -sh * 2>/dev/null | sort -hr | head -20
+        echo ""
+
+        echo "=== GIT STATUS ==="
+        git status --short 2>/dev/null || echo "Not a git repo"
+        echo ""
+
+        echo "=== RECENT GIT LOG ==="
+        git log --oneline -10 2>/dev/null || echo "No git history"
+        echo ""
+
+        echo "=== LARGE FILES (>5MB) ==="
+        find . -type f -size +5M \
+            -not -path '*/node_modules/*' \
+            -not -path '*/.git/*' \
+            -not -path '*/.venv/*' 2>/dev/null | head -30
+        echo ""
+
+        echo "=== TODO / FIXME / HACK ==="
+        if command -v rg >/dev/null 2>&1; then
+            rg -n --type-not binary '(TODO|FIXME|HACK|XXX)' . 2>/dev/null | head -50 || echo "None found"
+        else
+            echo "ripgrep not installed (install with: chinna brew)"
+        fi
+        echo ""
+
+        if [ -f package.json ]; then
+            echo "=== NPM AUDIT ==="
+            npm audit --json 2>/dev/null | head -80 || echo "npm audit completed"
+            echo ""
+        fi
+
+        if [ -f requirements.txt ] || [ -f pyproject.toml ]; then
+            echo "=== PYTHON SYNTAX CHECK ==="
+            python3 -m py_compile **/*.py 2>&1 | head -20 || echo "No Python syntax errors"
+            echo ""
+        fi
+
+        echo "=== CHINNA CONFIG ==="
+        chinna_config_status 2>/dev/null || true
+        echo ""
+
+    } | tee "$report"
+
+    echo ""
+    ok "Audit saved to: $report"
+    mac_notify "Audit complete"
+    mac_sound
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -1016,7 +1225,11 @@ show_menu() {
     banner
     echo -e "   ${BOLD}What do you need? (type anything, I understand)${RESET}"
     echo ""
-    echo -e "   ${ORANGE}1${RESET})  🧹  ${BOLD}Deep Clean${RESET}        ${D}Aggressive disk cleanup${RESET}"
+    echo -e "   ${ORANGE}1${RESET})  🧹  ${BOLD}Deep Clean${RESET}        ${D}Heavy cleanup (current powerful version)${RESET}"
+    echo -e "   ${ORANGE}1a${RESET}) 🧼  ${BOLD}Clean Mac${RESET}         ${D}Godspeed-style full system clean${RESET}"
+    echo -e "   ${ORANGE}1b${RESET}) 📦  ${BOLD}Clean Nodes${RESET}       ${D}Nuke all node_modules in ~/Documents & Downloads${RESET}"
+    echo -e "   ${ORANGE}1c${RESET}) 🐳  ${BOLD}Clean Docker${RESET}      ${D}Prune everything${RESET}"
+    echo -e "   ${ORANGE}1d${RESET}) 📁  ${BOLD}Clean Project${RESET}     ${D}Clean current dir build artifacts${RESET}"
     echo -e "   ${ORANGE}2${RESET})  🧠  ${BOLD}Purge RAM${RESET}         ${D}Free inactive memory${RESET}"
     echo -e "   ${ORANGE}3${RESET})  🔬  ${BOLD}Scan${RESET}              ${D}What's eating your disk${RESET}"
     echo -e "   ${ORANGE}4${RESET})  🔍  ${BOLD}Find Duplicates${RESET}   ${D}Hunt & kill duplicate files${RESET}"
@@ -1037,6 +1250,7 @@ show_menu() {
     echo -e "   ${ORANGE}19${RESET}) 🩺  ${BOLD}Doctor${RESET}            ${D}Health check${RESET}"
     echo -e "   ${ORANGE}20${RESET}) 🚀  ${BOLD}Start Daemon${RESET}      ${D}Run Chinna in background${RESET}"
     echo -e "   ${ORANGE}21${RESET}) 🌐  ${BOLD}Dashboard${RESET}         ${D}Premium web UI in browser${RESET}"
+    echo -e "   ${ORANGE}22${RESET}) 🧩  ${BOLD}Plugins${RESET}           ${D}List / load / bootstrap plugins${RESET}"
     echo -e "   ${ORANGE}q${RESET})  ${D}Quit${RESET}"
     echo ""
     echo -ne "   ${BOLD}>${RESET} "
@@ -1049,6 +1263,10 @@ show_menu() {
     # Try numeric menu first
     case "$input" in
         1) cmd_clean ;;
+        1a) cmd_clean_mac ;;
+        1b) cmd_clean_nodes ;;
+        1c) cmd_clean_docker ;;
+        1d) cmd_clean_project ;;
         2) cmd_purge ;;
         3) cmd_scan ;;
         4) cmd_dupes ;;
@@ -1069,6 +1287,7 @@ show_menu() {
         19) cmd_doctor ;;
         20) cmd_start ;;
         21) cmd_dashboard ;;
+        22) cmd_plugins ;;
         q|Q) echo -e "  ${ORANGE}Later 👋${RESET}"; exit 0 ;;
         "")  show_menu ;;
         *)
@@ -1092,7 +1311,10 @@ show_help() {
      chinna "anything"        Natural language — I understand Telugu/Hindi/Tinglish
 
    ${BOLD}COMMANDS${RESET}
-     ${C}clean${RESET}                  Deep clean disk (node_modules, caches, builds, docker)
+     ${C}clean${RESET}                  Deep clean (current powerful version)
+     ${C}clean mac${RESET}              Godspeed-style full Mac cleanup
+     ${C}clean nodes${RESET}            Nuke all node_modules in Documents/Downloads
+     ${C}clean project${RESET}          Clean build artifacts in current dir
      ${C}purge${RESET}                  Purge inactive RAM
      ${C}scan${RESET}                   Show disk usage breakdown
      ${C}dupes${RESET} [path]           Find & delete duplicate files
@@ -1150,6 +1372,11 @@ main() {
             show_menu
             ;;
         clean|cleanmymac)           cmd_clean ;;
+        "clean mac"|"clean-mac")    cmd_clean_mac ;;
+        "clean nodes"|"clean-nodes") cmd_clean_nodes ;;
+        "clean docker"|"clean-docker") cmd_clean_docker ;;
+        "clean project"|"clean-project") cmd_clean_project ;;
+        "clean light")              cmd_clean_light ;;
         purge|purgeram)             cmd_purge ;;
         scan)                       cmd_scan ;;
         status|stats)               cmd_status ;;
@@ -1172,8 +1399,14 @@ main() {
         start)                      cmd_start ;;
         stop)                       cmd_stop ;;
         config|setup)               shift; cmd_config "$@" ;;
+        model-set|model)            shift; chinna_model_set "$@" ;;
+        setup-openrouter)           chinna_setup_openrouter ;;
+        setup-anthropic)            chinna_setup_anthropic ;;
         publish)                    cmd_publish ;;
         doctor|health)              cmd_doctor ;;
+        audit)                      cmd_audit ;;
+        projects)                   shift; cmd_projects "$@" ;;
+        plugin|plugins)             shift; cmd_plugins "$@" ;;
         update|upgrade)             shift; cmd_update "$@" ;;
         uninstall|remove)           shift; cmd_uninstall "$@" ;;
         help|-h|--help)             show_help ;;

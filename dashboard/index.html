@@ -565,6 +565,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
       <div class="navitem" data-v="battery" onclick="go('battery')"><span class="ic">🔋</span> Battery Health</div>
       <div class="navitem" data-v="doctor" onclick="go('doctor')"><span class="ic">🩺</span> Doctor</div>
       <div class="navitem" data-v="ai" onclick="go('ai')"><span class="ic">✦</span> Chinna AI</div>
+      <div class="navitem" data-v="projects" onclick="go('projects')"><span class="ic">📁</span> Projects</div>
     </div>
 
     <!-- CENTER -->
@@ -575,6 +576,12 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
         <div class="vbody">
           <div class="gauges" id="gauges"></div>
           <div class="infogrid" id="ov-info"></div>
+
+          <!-- Recent Projects on Overview -->
+          <div style="margin-top:18px">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:6px">Recent Projects</div>
+            <div id="overview-projects" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;font-size:11px"></div>
+          </div>
         </div>
       </div>
 
@@ -679,6 +686,43 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
         <div class="attachment-chips" id="ai-attachments"></div>
       </div>
 
+      <!-- PROJECTS (Full View) -->
+      <div class="view" id="view-projects">
+        <div class="vhead">
+          <h2>Tracked Projects</h2>
+          <span class="sub">From chinna run + registry</span>
+          <button class="bigbtn" style="margin-left:auto" onclick="loadProjectsView()">↻ Refresh</button>
+          <button class="bigbtn" onclick="go('projects')">Full View →</button>
+        </div>
+        <div class="vbody">
+          <!-- Add Manual Project Form -->
+          <div style="padding:0 18px 12px">
+            <details style="background:rgba(255,255,255,.03);border-radius:8px;padding:8px 12px">
+              <summary style="cursor:pointer;font-size:12px;opacity:.85">+ Add manual project to registry</summary>
+              <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                <input id="manual-path" class="field" style="flex:2;min-width:220px" placeholder="Full path (e.g. ~/dev/myapp)">
+                <input id="manual-stack" class="field" style="width:140px" placeholder="Stack (node-next)">
+                <input id="manual-port" class="field" style="width:80px" placeholder="Port">
+                <input id="manual-url" class="field" style="flex:1;min-width:160px" placeholder="URL (optional)">
+                <button class="bigbtn solid" style="padding:8px 16px" onclick="addManualProject()">Add</button>
+              </div>
+            </details>
+          </div>
+
+          <div class="toolbar" style="padding-top:0">
+            <div class="search">🔍<input id="proj-q" placeholder="Filter projects..." oninput="renderProjectsView()"></div>
+            <div style="display:flex;gap:4px;align-items:center;font-size:11px">
+              <span style="opacity:.6">Age:</span>
+              <button class="miniA" onclick="setAgeFilter('all')" id="age-all">All</button>
+              <button class="miniA" onclick="setAgeFilter('24h')" id="age-24h">&lt;24h</button>
+              <button class="miniA" onclick="setAgeFilter('7d')" id="age-7d">&lt;7d</button>
+              <button class="miniA" onclick="setAgeFilter('older')" id="age-older">Older</button>
+            </div>
+          </div>
+          <div id="projects-list" class="list" style="padding:0 18px"></div>
+        </div>
+      </div>
+
       <!-- SETTINGS -->
       <div class="view" id="view-settings">
         <div class="vhead"><h2>Settings</h2><span class="sub">API keys (stored locally in ~/.chinna)</span></div>
@@ -719,6 +763,9 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
       <div id="rail-proc"></div>
       <div class="rlabel" style="margin-top:10px">Storage Breakdown</div>
       <div id="rail-disk"></div>
+
+      <div class="rlabel" style="margin-top:14px">Tracked Projects <span style="font-size:9px;opacity:.5">(right-click for more)</span></div>
+      <div id="rail-projects" style="font-size:11px;line-height:1.4"></div>
     </div>
   </div>
 
@@ -1205,6 +1252,7 @@ function go(v){
   if(v==='storage')loadStorage(HOME_PATH,false);
   if(v==='ai'){ loadAIStatus(); if(voiceEnabled) ensureVoiceUI(); setupAttachmentUI(); }
   if(v==='settings')loadTelegramStatus();
+  if(v==='projects') loadProjectsView();
 }
 
 /* themes */
@@ -1230,7 +1278,7 @@ async function doPoll(){
     $('v-disk').textContent=(s.disk?.pct||0)+'%';
     $('v-batt').textContent=(s.battery?.pct||0)+'%';
     $('ov-host').textContent=`${s.os?.hostname||'Mac'} · macOS ${s.os?.version||''} · ${s.os?.arch||''}`;
-    renderGauges(s); renderOvInfo(s); renderProc(s); renderRailProc(s); renderRailDisk(s);
+    renderGauges(s); renderOvInfo(s); renderProc(s); renderRailProc(s); renderRailDisk(s); renderRailProjects();
     if(wasOffline){ document.body.classList.remove('offline'); wasOffline=false; }
   }catch(e){
     fails++;
@@ -1269,6 +1317,526 @@ function renderRailProc(s){
 function renderRailDisk(s){
   $('rail-disk').innerHTML=(s.disk_breakdown||[]).slice(0,6).map(d=>`<div class="proc"><div class="pn">${d.path}</div><div class="pm">${d.size}</div></div>`).join('')||'<div style="font-size:11px;color:var(--t3);padding:6px">—</div>';
 }
+
+async function renderRailProjects(){
+  try {
+    const res = await api('projects');
+    const projects = res.projects || [];
+    const el = $('rail-projects');
+    if (!el) return;
+
+    if (!projects.length) {
+      el.innerHTML = '<div style="font-size:10px;color:var(--t3);padding:6px 4px">No projects tracked yet.<br>Run projects with <code>chinna run</code></div>';
+      return;
+    }
+
+    el.innerHTML = projects.slice(0, 7).map(p => {
+      const isRunning = p.status === 'running';
+      const statusColor = isRunning ? 'var(--green)' : 'var(--t3)';
+      const shortPath = p.short_path || p.path;
+      const hasUrl = p.url ? true : false;
+
+      return `
+        <div class="proj-card" style="padding:8px 10px;margin-bottom:5px;border:1px solid rgba(255,255,255,.07);border-radius:10px;cursor:pointer;transition:.1s;background:rgba(255,255,255,.02);position:relative"
+             onclick="openProjectFolder('${p.path.replace(/'/g, "\\'")}')">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px">
+              <span style="color:${statusColor}">●</span> ${p.stack}
+            </div>
+            <div style="font-size:10px;opacity:.6">${p.port || ''}</div>
+          </div>
+          <div style="font-size:10px;opacity:.55;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            ${shortPath}
+          </div>
+          ${hasUrl ? `<div onclick="event.stopImmediatePropagation(); openProjectUrl('${p.url.replace(/'/g, "\\'")}');" style="position:absolute;top:6px;right:6px;font-size:10px;opacity:.7;background:rgba(0,0,0,.3);padding:1px 5px;border-radius:4px">URL</div>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    // Also update the mini overview projects section
+    renderOverviewProjects(projects);
+  } catch(e) {
+    console.warn('Failed to load projects for rail');
+  }
+}
+
+function renderOverviewProjects(projects) {
+  const el = $('overview-projects');
+  if (!el) return;
+
+  if (!projects || !projects.length) {
+    el.innerHTML = '<div style="font-size:10px;color:var(--t3);padding:4px">No tracked projects yet</div>';
+    return;
+  }
+
+  el.innerHTML = projects.slice(0, 4).map(p => {
+    const short = p.short_path || p.path;
+    const isRunning = p.status === 'running';
+    return `
+      <div onclick="openProjectActions('${p.path.replace(/'/g, "\\'")}', '${(p.url||'').replace(/'/g, "\\'")}', event)"
+           style="padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid rgba(255,255,255,.05);cursor:pointer">
+        <div style="display:flex;justify-content:space-between;font-size:11px">
+          <span style="color:${isRunning ? 'var(--green)' : 'var(--t3)'}">●</span>
+          <span style="font-weight:600;opacity:.9">${p.stack}</span>
+          <span style="opacity:.5">${p.port || ''}</span>
+        </div>
+        <div style="font-size:10px;opacity:.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${short}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+let projectMenu = null;
+
+async function openProjectActions(path, url, ev) {
+  ev.stopPropagation();
+
+  if (projectMenu) projectMenu.remove();
+
+  projectMenu = document.createElement('div');
+  projectMenu.style.cssText = `position:fixed;left:${ev.clientX}px;top:${ev.clientY}px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:999;padding:4px 0;font-size:12px;min-width:160px`;
+
+  const items = [];
+
+  if (path) {
+    items.push({ text: '📁 Reveal in Finder', action: async () => {
+      await api(`project/open-folder?path=${encodeURIComponent(path)}`);
+    }});
+  }
+  if (url) {
+    items.push({ text: '🌐 Open in Browser', action: async () => {
+      await api(`project/open-url?url=${encodeURIComponent(url)}`);
+    }});
+  }
+
+  items.push({ text: '────────────', action: null });
+
+  items.push({ text: '🗑 Remove from Registry', action: async () => {
+    if (confirm('Remove this project from registry?')) {
+      await api('project', { method:'POST', body: JSON.stringify({path, action:'delete'}) });
+      renderRailProjects();
+      if ($('view-projects').classList.contains('on')) loadProjectsView();
+    }
+  }});
+
+  items.push({ text: '📋 Copy Path', action: () => {
+    navigator.clipboard.writeText(path).then(() => toast('Path copied'));
+  }});
+
+  if (url) {
+    items.push({ text: '📋 Copy URL', action: () => {
+      navigator.clipboard.writeText(url).then(() => toast('URL copied'));
+    }});
+  }
+
+  projectMenu.innerHTML = items.map(item => {
+    if (item.text.startsWith('─')) {
+      return `<div style="height:1px;background:var(--line);margin:4px 0"></div>`;
+    }
+    return `<div class="proj-menu-item" style="padding:6px 14px;cursor:pointer;white-space:nowrap" data-action="true">${item.text}</div>`;
+  }).join('');
+
+  document.body.appendChild(projectMenu);
+
+  // Attach click handlers
+  Array.from(projectMenu.children).forEach((child, i) => {
+    if (child.dataset.action) {
+      child.onclick = async () => {
+        projectMenu.remove();
+        projectMenu = null;
+        await items[i].action?.();
+        renderRailProjects(); // refresh
+      };
+      child.onmouseenter = () => child.style.background = 'rgba(255,255,255,.08)';
+      child.onmouseleave = () => child.style.background = '';
+    }
+  });
+
+  // Close on outside click
+  const closeHandler = (e) => {
+    if (!projectMenu.contains(e.target)) {
+      projectMenu?.remove();
+      document.removeEventListener('click', closeHandler, true);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeHandler, true), 10);
+}
+
+/* ===== Full Projects View (Rich) ===== */
+let allProjectsCache = [];
+let projectsSort = { column: 'updated', dir: 'desc' }; // column + dir
+let selectedProjects = new Set();
+let projectsAgeFilter = 'all'; // all | 24h | 7d | older
+
+// Restore sort from localStorage
+try {
+  const saved = localStorage.getItem('chinna_projects_sort');
+  if (saved) projectsSort = JSON.parse(saved);
+} catch(e){}
+
+async function loadProjectsView() {
+  const container = $('projects-list');
+  if (!container) return;
+
+  container.innerHTML = '<div class="spin"></div>';
+  selectedProjects.clear();
+
+  try {
+    const res = await api('projects');
+    allProjectsCache = (res.projects || []).map(p => {
+      // Compute human duration since last run
+      const ageSec = p.updated ? Math.floor(Date.now()/1000 - p.updated) : null;
+      p.lastRunAge = ageSec ? formatDuration(ageSec) : '—';
+      return p;
+    });
+    updateAgeFilterButtons();
+    renderProjectsView();
+  } catch(e) {
+    container.innerHTML = '<div class="empty">Failed to load projects</div>';
+  }
+}
+
+function formatDuration(seconds) {
+  if (seconds < 60) return seconds + 's ago';
+  if (seconds < 3600) return Math.floor(seconds/60) + 'm ago';
+  if (seconds < 86400) return Math.floor(seconds/3600) + 'h ago';
+  return Math.floor(seconds/86400) + 'd ago';
+}
+
+function setAgeFilter(filter) {
+  projectsAgeFilter = filter;
+  updateAgeFilterButtons();
+  renderProjectsView();
+}
+
+function updateAgeFilterButtons() {
+  ['all','24h','7d','older'].forEach(f => {
+    const btn = $(`age-${f}`);
+    if (btn) btn.style.background = (f === projectsAgeFilter) ? 'rgba(var(--accr),.2)' : '';
+  });
+}
+
+function renderProjectsView() {
+  const container = $('projects-list');
+  const q = ($('proj-q')?.value || '').toLowerCase();
+
+  if (!container) return;
+
+  const now = Math.floor(Date.now()/1000);
+
+  let filtered = allProjectsCache.filter(p => {
+    if (!q) return true;
+    const hay = (p.path + ' ' + p.stack + ' ' + (p.notes||'') + ' ' + (p.tags||[]).join(' ')).toLowerCase();
+    return hay.includes(q);
+  });
+
+  // Age filtering
+  if (projectsAgeFilter !== 'all') {
+    filtered = filtered.filter(p => {
+      if (!p.updated) return projectsAgeFilter === 'older';
+      const age = now - p.updated;
+      if (projectsAgeFilter === '24h') return age < 86400;
+      if (projectsAgeFilter === '7d') return age < 86400*7;
+      if (projectsAgeFilter === 'older') return age >= 86400*7;
+      return true;
+    });
+  }
+
+  // Sorting
+  const {column, dir} = projectsSort;
+  filtered.sort((a, b) => {
+    let va = a[column], vb = b[column];
+    if (column === 'updated') { va = a.updated || 0; vb = b.updated || 0; }
+    if (va < vb) return dir === 'asc' ? -1 : 1;
+    if (va > vb) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Bulk action bar
+  let html = `
+    <div style="display:flex;gap:8px;align-items:center;padding:8px 12px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:8px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px">
+        <input type="checkbox" id="proj-select-all" onchange="toggleSelectAllProjects(this.checked)">
+        Select all
+      </label>
+      <button class="miniA danger" onclick="bulkDeleteProjects()" style="display:${selectedProjects.size ? 'inline-block' : 'none'}">Delete Selected (${selectedProjects.size})</button>
+      <button class="miniA" onclick="bulkAddTagPrompt()" style="display:${selectedProjects.size ? 'inline-block' : 'none'}">Add Tag to Selected</button>
+      <button class="miniA" onclick="exportProjectsPDF()" style="margin-left:auto">Export PDF</button>
+    </div>
+  `;
+
+  if (!filtered.length) {
+    container.innerHTML = html + '<div class="empty"><div class="big">📁</div>No projects match</div>';
+    return;
+  }
+
+  html += `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead>
+      <tr style="border-bottom:1px solid var(--line)">
+        <th style="width:28px"></th>
+        <th onclick="sortProjectsBy('short_path')" style="cursor:pointer;text-align:left;padding:6px">Path ${projectsSort.column==='short_path' ? (projectsSort.dir==='asc'?'↑':'↓') : ''}</th>
+        <th onclick="sortProjectsBy('stack')" style="cursor:pointer;text-align:left;padding:6px">Stack ${projectsSort.column==='stack' ? (projectsSort.dir==='asc'?'↑':'↓') : ''}</th>
+        <th onclick="sortProjectsBy('port')" style="cursor:pointer;text-align:left;padding:6px">Port</th>
+        <th onclick="sortProjectsBy('status')" style="cursor:pointer;text-align:left;padding:6px">Status</th>
+        <th onclick="sortProjectsBy('updated')" style="cursor:pointer;text-align:left;padding:6px">Last Run ${projectsSort.column==='updated' ? (projectsSort.dir==='asc'?'↑':'↓') : ''}</th>
+        <th style="text-align:left;padding:6px">Notes / Tags</th>
+        <th style="width:160px"></th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  filtered.forEach(p => {
+    const checked = selectedProjects.has(p.path) ? 'checked' : '';
+    const tagsHtml = (p.tags || []).map(t => `<span class="chip" style="font-size:10px;padding:1px 5px;margin-right:3px" onclick="event.stopImmediatePropagation(); editProjectTags('${p.path.replace(/'/g, "\\'")}', event)">${t}</span>`).join('');
+    const notesShort = p.notes ? (p.notes.length > 80 ? p.notes.slice(0,80)+'…' : p.notes) : '';
+    const history = p.history || [];
+    const historyHtml = history.length > 0 ? `
+      <details style="margin-top:4px;font-size:10px">
+        <summary style="cursor:pointer;opacity:.6">History (${history.length})</summary>
+        ${history.map(h => `<div style="padding-left:8px;opacity:.6">${new Date(h.timestamp*1000).toLocaleString().slice(0,16)} — port ${h.port} — ${h.status}</div>`).join('')}
+      </details>` : '';
+
+    html += `
+      <tr style="border-bottom:1px solid rgba(255,255,255,.04)">
+        <td><input type="checkbox" ${checked} onchange="toggleProjectSelection('${p.path.replace(/'/g, "\\'")}', this.checked)"></td>
+        <td style="padding:8px 6px;font-family:monospace;font-size:11px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.path}">${p.short_path}</td>
+        <td style="padding:8px 6px">${p.stack}</td>
+        <td style="padding:8px 6px">${p.port || '—'}</td>
+        <td style="padding:8px 6px"><span style="color:${p.status==='running'?'var(--green)':'var(--t3)'}">●</span> ${p.status}</td>
+        <td style="padding:8px 6px;white-space:nowrap">${p.lastRunAge || '—'}</td>
+        <td style="padding:8px 6px">
+          ${notesShort ? `<div style="opacity:.75;font-size:11px;margin-bottom:2px">${notesShort}</div>` : ''}
+          <span onclick="editProjectTags('${p.path.replace(/'/g, "\\'")}', event)" style="cursor:pointer">
+            ${tagsHtml || '<span style="opacity:.4">+ tags</span>'}
+          </span>
+          ${historyHtml}
+        </td>
+        <td style="padding:6px;text-align:right">
+          <button class="miniA" onclick="openProjectActionsFromView('${p.path.replace(/'/g, "\\'")}', '${(p.url||'').replace(/'/g, "\\'")}')">Open</button>
+          <button class="miniA" onclick="editProjectNote('${p.path.replace(/'/g, "\\'")}', '${(p.notes||'').replace(/'/g, "\\'")}')">Note</button>
+          <button class="miniA danger" onclick="deleteProjectFromView('${p.path.replace(/'/g, "\\'")}', this)">×</button>
+        </td>
+      </tr>`;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function sortProjectsBy(column) {
+  if (projectsSort.column === column) {
+    projectsSort.dir = projectsSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    projectsSort.column = column;
+    projectsSort.dir = 'desc';
+  }
+  try {
+    localStorage.setItem('chinna_projects_sort', JSON.stringify(projectsSort));
+  } catch(e){}
+  renderProjectsView();
+}
+
+function toggleProjectSelection(path, checked) {
+  if (checked) selectedProjects.add(path);
+  else selectedProjects.delete(path);
+  // Re-render to update bulk bar visibility
+  renderProjectsView();
+}
+
+function toggleSelectAllProjects(checked) {
+  const q = ($('proj-q')?.value || '').toLowerCase();
+  let visible = allProjectsCache;
+  if (q) visible = visible.filter(p => (p.path + ' ' + p.stack).toLowerCase().includes(q));
+
+  if (checked) {
+    visible.forEach(p => selectedProjects.add(p.path));
+  } else {
+    visible.forEach(p => selectedProjects.delete(p.path));
+  }
+  renderProjectsView();
+}
+
+async function bulkDeleteProjects() {
+  if (!selectedProjects.size) return;
+  if (!confirm(`Delete ${selectedProjects.size} projects from registry?`)) return;
+
+  const alsoClean = confirm('Also run clean_project on all selected folders?');
+
+  for (const path of selectedProjects) {
+    try {
+      await api('project', { method:'POST', body: JSON.stringify({path, action:'delete'}) });
+      if (alsoClean) {
+        await api('clean', {method:'POST', body: JSON.stringify({path})}).catch(()=>{});
+      }
+    } catch(e){}
+  }
+  selectedProjects.clear();
+  toast(`Deleted ${selectedProjects.size} projects`);
+  loadProjectsView();
+  renderRailProjects();
+}
+
+async function bulkAddTagPrompt() {
+  if (!selectedProjects.size) return;
+  const tag = prompt('Tag to add to selected projects:');
+  if (!tag) return;
+
+  for (const path of selectedProjects) {
+    try {
+      const current = allProjectsCache.find(p => p.path === path);
+      const tags = new Set(current?.tags || []);
+      tags.add(tag.trim());
+      await api('project', {
+        method:'POST',
+        body: JSON.stringify({ path, action:'update', tags: Array.from(tags) })
+      });
+    } catch(e){}
+  }
+  toast('Tags added');
+  loadProjectsView();
+  renderRailProjects();
+}
+
+async function addManualProject() {
+  const path = $('manual-path')?.value?.trim();
+  if (!path) { toast('Path is required'); return; }
+
+  const payload = {
+    path,
+    action: 'update',
+    stack: $('manual-stack')?.value?.trim() || 'unknown',
+    port: $('manual-port')?.value?.trim() || null,
+    url: $('manual-url')?.value?.trim() || null
+  };
+
+  try {
+    await api('project', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    toast('Project added to registry');
+    // Clear form
+    ['manual-path','manual-stack','manual-port','manual-url'].forEach(id => { const el = $(id); if(el) el.value=''; });
+    loadProjectsView();
+    renderRailProjects();
+  } catch(e) {
+    toast('Failed to add project');
+  }
+}
+
+function exportProjectsPDF() {
+  const win = window.open('', '_blank');
+  if (!win) { toast('Popup blocked'); return; }
+
+  let content = `<h1>Chinna Projects Export</h1><p>${new Date().toLocaleString()}</p><table border="1" cellpadding="6" style="border-collapse:collapse">`;
+  content += `<tr><th>Path</th><th>Stack</th><th>Port</th><th>Status</th><th>Last Active</th><th>Notes</th><th>Tags</th></tr>`;
+
+  allProjectsCache.forEach(p => {
+    const date = p.updated ? new Date(p.updated*1000).toLocaleString() : '';
+    const tags = (p.tags||[]).join(', ');
+    content += `<tr>
+      <td>${p.short_path}</td>
+      <td>${p.stack}</td>
+      <td>${p.port||''}</td>
+      <td>${p.status}</td>
+      <td>${date}</td>
+      <td>${(p.notes||'').replace(/</g,'&lt;')}</td>
+      <td>${tags}</td>
+    </tr>`;
+  });
+
+  content += `</table><p>Generated by Chinna V5</p>`;
+
+  win.document.write(`
+    <html><head><title>Chinna Projects</title>
+    <style>body{font-family:-apple-system,sans-serif;padding:20px} table{width:100%} th{background:#f0f0f0}</style>
+    </head><body>${content}</body></html>
+  `);
+  win.document.close();
+  setTimeout(() => win.print(), 300);
+}
+
+async function editProjectTags(path, ev) {
+  ev.stopPropagation();
+
+  const current = allProjectsCache.find(p => p.path === path);
+  const currentTags = (current?.tags || []).join(', ');
+
+  const newTagsStr = prompt('Edit tags (comma separated):', currentTags);
+  if (newTagsStr === null) return;
+
+  const tags = newTagsStr.split(',').map(t => t.trim()).filter(Boolean);
+
+  try {
+    await api('project', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ path, action: 'update', tags })
+    });
+    toast('Tags updated');
+    loadProjectsView();
+    renderRailProjects();
+  } catch(e) {
+    toast('Failed to update tags');
+  }
+}
+
+async function openProjectActionsFromView(path, url) {
+  if (path) await api(`project/open-folder?path=${encodeURIComponent(path)}`);
+  if (url && confirm('Open URL in browser too?')) {
+    await api(`project/open-url?url=${encodeURIComponent(url)}`);
+  }
+}
+
+async function editProjectNote(path, currentNote) {
+  const newNote = prompt('Project notes:', currentNote || '');
+  if (newNote === null) return;
+
+  try {
+    await api('project', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ path, action: 'update', notes: newNote })
+    });
+    toast('Note saved');
+    loadProjectsView();
+    renderRailProjects();
+  } catch(e) {
+    toast('Failed to save note');
+  }
+}
+
+async function deleteProjectFromView(path, btnEl) {
+  if (!confirm('Remove this project from registry?')) return;
+
+  const alsoClean = confirm('Also run "clean project" on this folder? (recommended)');
+
+  try {
+    await api('project', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ path, action: 'delete' })
+    });
+
+    if (alsoClean) {
+      // Trigger clean via existing mechanism (best effort)
+      try {
+        await api('clean', { method: 'POST', body: JSON.stringify({ path }) });
+      } catch {}
+    }
+
+    toast('Project removed from registry');
+    loadProjectsView();
+    renderRailProjects();
+  } catch(e) {
+    toast('Delete failed');
+  }
+}
+
+// Note: The main go() function already exists earlier. We just added the hook inside it above (in a previous edit).
+// If the hook is missing, make sure this line exists inside the original go():
+// if (v === 'projects') loadProjectsView();
 
 /* files */
 async function loadFiles(){
@@ -1788,7 +2356,8 @@ function confirmKill(pid,name){
 setVoiceButton();
 loadTelegramStatus().catch(()=>{});
 startStatsPoll();
-setupAttachmentUI(); // in case AI view is default or already open
+setupAttachmentUI();
+renderRailProjects(); // initial load of tracked projects
 </script>
 </body>
 </html>

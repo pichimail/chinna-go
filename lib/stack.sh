@@ -47,6 +47,93 @@ ensure_brew_service() {
     fi
 }
 
+# ═══════════════════════════════════════════════════════════════
+# Godspeed-style Stack Detection (enhanced for Chinna)
+# ═══════════════════════════════════════════════════════════════
+
+detect_stack() {
+    local dir="${1:-.}"
+    pushd "$dir" >/dev/null 2>&1 || return 1
+
+    # 1. Node.js ecosystem (improved Godspeed-style detection)
+    if [ -f package.json ]; then
+        if command -v jq >/dev/null 2>&1; then
+            # Modern frameworks first
+            if jq -e '.dependencies.next // .devDependencies.next' package.json >/dev/null 2>&1; then
+                popd >/dev/null; echo "node-next"; return 0
+            fi
+            if jq -e '.dependencies["@sveltejs/kit"] // .devDependencies["@sveltejs/kit"]' package.json >/dev/null 2>&1; then
+                popd >/dev/null; echo "sveltekit"; return 0
+            fi
+            if jq -e '.dependencies.astro // .devDependencies.astro' package.json >/dev/null 2>&1; then
+                popd >/dev/null; echo "astro"; return 0
+            fi
+            if jq -e '.dependencies["@remix-run/dev"] // .devDependencies["@remix-run/dev"]' package.json >/dev/null 2>&1; then
+                popd >/dev/null; echo "remix"; return 0
+            fi
+            if jq -e '.dependencies.nuxt // .devDependencies.nuxt' package.json >/dev/null 2>&1; then
+                popd >/dev/null; echo "node-nuxt"; return 0
+            fi
+            if jq -e '.dependencies.vite // .devDependencies.vite' package.json >/dev/null 2>&1; then
+                popd >/dev/null; echo "node-vite"; return 0
+            fi
+            if jq -e '.dependencies.express // .devDependencies.express' package.json >/dev/null 2>&1; then
+                popd >/dev/null; echo "node-express"; return 0
+            fi
+            if jq -e '.dependencies.electron // .devDependencies.electron' package.json >/dev/null 2>&1; then
+                popd >/dev/null; echo "electron"; return 0
+            fi
+            if jq -e '.dependencies["@solidjs/start"] // .devDependencies["@solidjs/start"]' package.json >/dev/null 2>&1; then
+                popd >/dev/null; echo "solidstart"; return 0
+            fi
+        fi
+        popd >/dev/null; echo "node"; return 0
+    fi
+
+    # 2. Python
+    if [ -f requirements.txt ] || [ -f pyproject.toml ] || [ -f manage.py ] || [ -f app.py ] || [ -f main.py ]; then
+        if rg -q "from fastapi|import fastapi" . 2>/dev/null; then
+            popd >/dev/null; echo "python-fastapi"; return 0
+        fi
+        if rg -q "from flask|import flask" . 2>/dev/null; then
+            popd >/dev/null; echo "python-flask"; return 0
+        fi
+        if rg -q "import streamlit|from streamlit" . 2>/dev/null; then
+            popd >/dev/null; echo "python-streamlit"; return 0
+        fi
+        if [ -f manage.py ]; then
+            popd >/dev/null; echo "python-django"; return 0
+        fi
+        popd >/dev/null; echo "python"; return 0
+    fi
+
+    # 3. Other stacks
+    [ -f composer.json ] && { popd >/dev/null; echo "php-laravel"; return 0; }
+    [ -f Cargo.toml ]    && { popd >/dev/null; echo "rust"; return 0; }
+    [ -f pubspec.yaml ]  && { popd >/dev/null; echo "flutter"; return 0; }
+    [ -f go.mod ]        && { popd >/dev/null; echo "go"; return 0; }
+
+    popd >/dev/null
+    echo "unknown"
+}
+
+detect_pm() {
+    local dir="${1:-.}"
+    pushd "$dir" >/dev/null 2>&1 || { echo "npm"; return; }
+
+    if [ -f bun.lockb ] || [ -f bun.lock ]; then
+        popd >/dev/null; echo "bun"; return
+    fi
+    if [ -f pnpm-lock.yaml ]; then
+        popd >/dev/null; echo "pnpm"; return
+    fi
+    if [ -f yarn.lock ]; then
+        popd >/dev/null; echo "yarn"; return
+    fi
+    popd >/dev/null
+    echo "npm"
+}
+
 # ─── Generate mock .env from .env.example ─────────────────────
 generate_env() {
     local dir="${1:-.}"
@@ -282,34 +369,167 @@ run_rust() {
 }
 
 # ─── Main stack runner ─────────────────────────────────────────
+# Improved Smart Run with better polling, more stacks, and cleaner UX
 run_project() {
     local dir="${1:-$(pwd)}"
-    local stack
+    local stack pm
     stack=$(detect_stack "$dir")
+    pm=$(detect_pm "$dir")
 
     echo ""
-    echo -e "  ${BOLD}${ORANGE}🚀 CHINNA SANDBOX${RESET}"
-    echo -e "  ${D}Detected stack: ${RESET}${BOLD}$stack${RESET}"
+    echo -e "  ${BOLD}${ORANGE}🚀 CHINNA SMART RUN (plugin-aware)${RESET}"
+    echo -e "  ${D}Detected:${RESET} ${BOLD}$stack${RESET}  |  Package Manager: ${BOLD}$pm${RESET}"
     echo ""
 
+    # === Plugin Loading ===
+    local plugin_name=""
     case "$stack" in
-        nextjs)  run_nextjs "$dir" ;;
-        vite)    run_vite "$dir" ;;
-        expo)    run_expo "$dir" ;;
-        node)    run_node "$dir" ;;
-        flutter) run_flutter "$dir" ;;
-        fastapi) run_fastapi "$dir" ;;
-        django)  run_django "$dir" ;;
-        python)  run_python "$dir" ;;
-        go)      run_go "$dir" ;;
-        rust)    run_rust "$dir" ;;
-        unknown)
-            warn "Could not detect stack in: $dir"
-            echo -ne "  ${Y}Tell me the stack (nextjs/vite/flutter/fastapi/node):${RESET} "
-            read -r manual_stack
-            run_project_by_name "$manual_stack" "$dir"
-            ;;
+        node*|sveltekit|remix|astro|solidstart) plugin_name="node" ;;
+        python*) plugin_name="python" ;;
     esac
+
+    if [ -n "$plugin_name" ]; then
+        load_plugin "$plugin_name" 2>/dev/null || true
+    fi
+
+    # === 1. Smart Setup Phase (prefer plugin) ===
+    if declare -f gs_plugin_prepare >/dev/null; then
+        echo "  → Running plugin prepare hook ($plugin_name)..."
+        gs_plugin_prepare "$dir"
+    else
+        case "$stack" in
+            node-next|node-vite|node-express|node|electron)
+                echo "  → Installing dependencies with $pm..."
+                (cd "$dir" && $pm install --silent 2>/dev/null) &
+                spinner $! "Installing dependencies"
+                ok "Dependencies ready"
+
+                if [ -f "$dir/prisma/schema.prisma" ]; then
+                    echo "  → Running Prisma setup..."
+                    (cd "$dir" && npx prisma generate --silent && npx prisma migrate deploy 2>/dev/null || true) &
+                    spinner $! "Prisma setup"
+                fi
+                ;;
+            python-fastapi|python-flask|python-django|python-streamlit|python)
+                echo "  → Setting up Python virtual environment..."
+                if [ ! -d "$dir/.venv" ]; then
+                    (cd "$dir" && python3 -m venv .venv) &
+                    spinner $! "Creating .venv"
+                fi
+                echo "  → Installing Python dependencies..."
+                (cd "$dir" && source .venv/bin/activate && pip install -q -r requirements.txt 2>/dev/null || pip install -q -e . 2>/dev/null || true) &
+                spinner $! "Installing requirements"
+                ok "Python environment ready"
+                ;;
+            flutter)
+                (cd "$dir" && flutter pub get --suppress-analytics) &
+                spinner $! "flutter pub get"
+                ;;
+            go)
+                (cd "$dir" && go mod tidy -e) &
+                spinner $! "go mod tidy"
+                ;;
+            rust)
+                (cd "$dir" && cargo fetch --quiet) &
+                spinner $! "cargo fetch"
+                ;;
+        esac
+    fi
+
+    # === 2. Intelligent Free Port Selection ===
+    local default_port=3000
+    case "$stack" in
+        python-fastapi|python-flask|python-django) default_port=8000 ;;
+        python-streamlit) default_port=8501 ;;
+        go) default_port=8080 ;;
+        rust) default_port=8080 ;;
+    esac
+
+    local port
+    port=$(python3 - "$default_port" <<'PY'
+import socket, sys
+start = int(sys.argv[1])
+for p in range(start, start + 200):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.1)
+        if s.connect_ex(('127.0.0.1', p)) != 0:
+            print(p)
+            sys.exit(0)
+print(start + 200)
+PY
+)
+    echo -e "  ${G}→ Using port:${RESET} $port"
+
+    # === 3. Start Dev Server (strongly prefer plugin) ===
+    local log_file="/tmp/chinna-run-$$.log"
+    local pid
+
+    if declare -f gs_plugin_run >/dev/null; then
+        echo "  → Running via plugin hook (gs_plugin_run)..."
+        (cd "$dir" && gs_plugin_run "$dir" "$port" > "$log_file" 2>&1) &
+        pid=$!
+    else
+        local cmd=""
+        case "$stack" in
+            node-next)          cmd="$pm run dev -- --port $port" ;;
+            node-vite|sveltekit|remix|astro) cmd="$pm run dev -- --port $port --host" ;;
+            node-express|node)  cmd="$pm run dev" ;;
+            python-fastapi)     cmd=".venv/bin/uvicorn main:app --reload --port $port --host 0.0.0.0" ;;
+            python-flask)       cmd=".venv/bin/flask --app app run --port $port --reload" ;;
+            python-streamlit)   cmd=".venv/bin/streamlit run app.py --server.port $port --server.headless true" ;;
+            python-django)      cmd=".venv/bin/python manage.py runserver 0.0.0.0:$port" ;;
+            flutter)            cmd="flutter run -d chrome --web-port=$port" ;;
+            go)                 cmd="go run . --port $port" ;;
+            rust)               cmd="cargo run -- --port $port" ;;
+            *)                  cmd="echo 'Unknown stack'" ;;
+        esac
+
+        echo "  → Starting: $cmd"
+        (cd "$dir" && eval "$cmd" > "$log_file" 2>&1) &
+        pid=$!
+    fi
+
+    # === 4. Improved Port Readiness Polling (with visual progress) ===
+    echo -n "  → Waiting for server to become ready "
+    local ready=false
+    for i in {1..60}; do
+        if python3 -c "
+import socket
+try:
+    with socket.create_connection(('127.0.0.1', $port), timeout=0.5):
+        print('READY')
+except:
+    pass
+" 2>/dev/null | grep -q READY; then
+            ready=true
+            break
+        fi
+        printf "."
+        sleep 1
+    done
+    echo ""
+
+    local url="http://localhost:$port"
+
+    if $ready; then
+        echo -e "  ${G}✓ Server is live!${RESET} → $url"
+        
+        # Record in registry
+        chinna_record_project "$dir" "$stack" "$port" "$url" "running" 2>/dev/null || true
+
+        # Open browser
+        open "$url" 2>/dev/null || true
+
+        mac_notify "Chinna: $stack running on port $port"
+        mac_sound
+
+        echo ""
+        echo -e "  ${D}Log file:${RESET} tail -f $log_file"
+        echo -e "  ${D}Stop with:${RESET} kill $pid"
+    else
+        warn "Server did not respond on port $port within 60 seconds."
+        echo "Check logs: tail -f $log_file"
+    fi
 }
 
 run_project_by_name() {

@@ -1124,6 +1124,16 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json({'ok': True, 'message': 'Conversation memory cleared'})
         elif p == '/api/uploaded-file':
             self.serve_uploaded_file(q.get('id'))
+        elif p == '/api/projects':
+            self.serve_projects()
+        elif p == '/api/project/open-folder':
+            self.open_project_folder(q.get('path'))
+        elif p == '/api/project/open-url':
+            self.open_project_url(q.get('url'))
+        elif p == '/api/projects/export':
+            self.export_projects(q.get('format', 'json'))
+        elif p == '/api/project':
+            self.handle_project_action(q, b)
         else:
             self._json({'error': f'unknown {p}'}, 404)
 
@@ -1470,6 +1480,116 @@ class H(http.server.SimpleHTTPRequestHandler):
                 'size': meta['size'],
                 'data_b64': data
             })
+        except Exception as e:
+            self._json({'error': safe_text(str(e))}, 500)
+
+    def serve_projects(self):
+        """Return tracked projects from the registry for the dashboard."""
+        registry_path = os.path.join(CHINNA_HOME, 'state/projects.json')
+        try:
+            if os.path.exists(registry_path):
+                with open(registry_path) as f:
+                    data = json.load(f)
+                projects = data.get('projects', {})
+            else:
+                projects = {}
+
+            # Convert to list and sort by most recently updated
+            project_list = []
+            for path, info in projects.items():
+                project_list.append({
+                    'path': path,
+                    'short_path': path.replace(os.path.expanduser('~'), '~'),
+                    'stack': info.get('stack', 'unknown'),
+                    'port': info.get('port'),
+                    'url': info.get('url'),
+                    'status': info.get('status', 'unknown'),
+                    'updated': info.get('updated', 0),
+                    'notes': info.get('notes', ''),
+                    'tags': info.get('tags', [])
+                })
+
+            project_list.sort(key=lambda x: -x.get('updated', 0))
+            self._json({'projects': project_list[:15]})  # Limit to recent 15
+        except Exception as e:
+            self._json({'projects': [], 'error': safe_text(str(e))})
+
+    def open_project_folder(self, path):
+        if not path:
+            self._json({'error': 'path required'}, 400)
+            return
+        expanded = os.path.expanduser(path)
+        if os.path.exists(expanded):
+            sh(f"open -R '{expanded}'")
+            self._json({'ok': True, 'action': 'open-folder', 'path': expanded})
+        else:
+            self._json({'error': 'Path not found'}, 404)
+
+    def open_project_url(self, url):
+        if not url:
+            self._json({'error': 'url required'}, 400)
+            return
+        sh(f"open '{url}'")
+        self._json({'ok': True, 'action': 'open-url', 'url': url})
+
+    def handle_project_action(self, q, b):
+        """Unified handler for project CRUD + notes/tags (supports both GET and POST)."""
+        registry_path = os.path.join(CHINNA_HOME, 'state/projects.json')
+        method = self.command
+
+        try:
+            if os.path.exists(registry_path):
+                with open(registry_path) as f:
+                    data = json.load(f)
+            else:
+                data = {"projects": {}}
+
+            if method == 'POST':
+                body = b or {}
+                path = body.get('path')
+                action = body.get('action')
+
+                if not path:
+                    self._json({'error': 'path required'}, 400)
+                    return
+
+                abs_path = os.path.abspath(os.path.expanduser(path))
+                proj = data.setdefault('projects', {}).setdefault(abs_path, {})
+
+                if action == 'delete':
+                    if abs_path in data.get('projects', {}):
+                        del data['projects'][abs_path]
+                        with open(registry_path, 'w') as f:
+                            json.dump(data, f, indent=2)
+                        self._json({'ok': True})
+                    else:
+                        self._json({'error': 'Not found'}, 404)
+                    return
+
+                if 'notes' in body:
+                    proj['notes'] = safe_text(body['notes'])[:3000]
+
+                if 'tags' in body:
+                    tags = body['tags']
+                    if isinstance(tags, str):
+                        tags = [t.strip() for t in tags.split(',') if t.strip()]
+                    proj['tags'] = [safe_text(t)[:40] for t in (tags or [])][:8]
+
+                with open(registry_path, 'w') as f:
+                    json.dump(data, f, indent=2)
+
+                self._json({'ok': True, 'project': proj})
+                return
+
+            # GET single project
+            path = q.get('path')
+            if path:
+                abs_path = os.path.abspath(os.path.expanduser(path))
+                proj = data.get('projects', {}).get(abs_path, {})
+                self._json({'path': abs_path, 'project': proj})
+            else:
+                self._json({'error': 'path required for GET'})
+
         except Exception as e:
             self._json({'error': safe_text(str(e))}, 500)
 
