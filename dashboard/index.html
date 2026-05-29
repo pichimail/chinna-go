@@ -53,6 +53,8 @@ body::before{content:"";position:fixed;inset:0;z-index:0;background:
 .dots{display:flex;gap:7px}.dots i{width:12px;height:12px;border-radius:50%;display:block}
 .dots i:nth-child(1){background:#ff5f57}.dots i:nth-child(2){background:#febc2e}.dots i:nth-child(3){background:#28c840}
 .brand{font-weight:800;letter-spacing:3px;font-size:14px;color:var(--acc);text-shadow:0 0 24px rgba(var(--accr),.4)}
+body.offline .brand{opacity:.6}
+body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;opacity:.6}
 .vitals{display:flex;gap:18px;margin-left:8px}
 .vital{display:flex;align-items:baseline;gap:5px;font-size:12px;color:var(--t2)}
 .vital b{font-size:13px;color:var(--t1);font-variant-numeric:tabular-nums;min-width:30px;text-align:right}
@@ -943,11 +945,14 @@ $('themes').addEventListener('click',e=>{
   }
 });
 
-/* stats poll */
-async function poll(){
+/* stats poll — resilient to backend restarts / downtime */
+let pollTimer=null, pollDelay=2500, fails=0, lastWarn=0, wasOffline=false;
+function scheduleNextPoll(){ if(pollTimer) clearTimeout(pollTimer); pollTimer=setTimeout(doPoll, pollDelay); }
+async function doPoll(){
   try{
     const s=await api('stats');
-    if(!s.cpu)return;
+    fails=0; pollDelay=2500;
+    if(!s||!s.cpu){ scheduleNextPoll(); return; }
     HOME_PATH = s.home || HOME_PATH;
     $('v-cpu').textContent=(s.cpu.pct||0)+'%';
     $('v-ram').textContent=(s.memory?.pct||0)+'%';
@@ -955,8 +960,25 @@ async function poll(){
     $('v-batt').textContent=(s.battery?.pct||0)+'%';
     $('ov-host').textContent=`${s.os?.hostname||'Mac'} · macOS ${s.os?.version||''} · ${s.os?.arch||''}`;
     renderGauges(s); renderOvInfo(s); renderProc(s); renderRailProc(s); renderRailDisk(s);
-  }catch(e){}
+    if(wasOffline){ document.body.classList.remove('offline'); wasOffline=false; }
+  }catch(e){
+    fails++;
+    if(fails===1 || Date.now()-lastWarn>30000){
+      console.warn('[chinna] dashboard backend unreachable on :7777 — run `chinna dashboard`');
+      lastWarn=Date.now();
+    }
+    // exponential backoff up to 30s so we don't spam connection errors
+    pollDelay = Math.min(30000, 2500 * Math.pow(2, Math.min(fails-1,5)));
+    if(!wasOffline && fails>1){ document.body.classList.add('offline'); wasOffline=true; }
+    // show placeholder in vitals after a few failures
+    if(fails>2){
+      $('v-cpu').textContent='—'; $('v-ram').textContent='—';
+      $('v-disk').textContent='—'; $('v-batt').textContent='—';
+    }
+  }
+  scheduleNextPoll();
 }
+function startStatsPoll(){ doPoll(); }
 function gaugeSVG(pct,c){const r=36,C=2*Math.PI*r,off=C*(1-pct/100);
   return `<svg width="84" height="84"><circle cx="42" cy="42" r="${r}" stroke="rgba(255,255,255,.08)" stroke-width="7" fill="none"/><circle cx="42" cy="42" r="${r}" stroke="${c}" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}"/></svg>`;}
 function renderGauges(s){
@@ -1213,7 +1235,7 @@ function confirmKill(pid,name){
 
 setVoiceButton();
 loadTelegramStatus().catch(()=>{});
-poll();setInterval(poll,2500);
+startStatsPoll();
 </script>
 </body>
 </html>
