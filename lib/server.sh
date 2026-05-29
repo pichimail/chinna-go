@@ -4,6 +4,7 @@
 DASHBOARD_PORT="${CHINNA_DASHBOARD_PORT:-7777}"
 DASHBOARD_PID_FILE="$CHINNA_HOME/dashboard.pid"
 DASHBOARD_SERVER="$CHINNA_HOME/dashboard_server.py"
+DASHBOARD_LOG_FILE="$CHINNA_HOME/dashboard_server.log"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 start_dashboard() {
@@ -24,10 +25,20 @@ start_dashboard() {
         cp "$SCRIPT_DIR/../dashboard/index.html" "$CHINNA_HOME/dashboard/index.html" 2>/dev/null || true
     fi
 
-    python3 "$DASHBOARD_SERVER" "$port" &
+    if command -v setsid >/dev/null 2>&1; then
+        setsid python3 "$DASHBOARD_SERVER" "$port" >>"$DASHBOARD_LOG_FILE" 2>&1 < /dev/null &
+    else
+        nohup python3 "$DASHBOARD_SERVER" "$port" >>"$DASHBOARD_LOG_FILE" 2>&1 < /dev/null &
+    fi
     local pid=$!
     echo "$pid" > "$DASHBOARD_PID_FILE"
-    sleep 2
+    sleep 1
+    if ! kill -0 "$pid" 2>/dev/null; then
+        echo "Dashboard failed to start. Check: $DASHBOARD_LOG_FILE" >&2
+        rm -f "$DASHBOARD_PID_FILE"
+        return 1
+    fi
+    sleep 1
     open "http://localhost:$port" 2>/dev/null || true
     echo "$pid"
 }

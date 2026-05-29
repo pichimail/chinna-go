@@ -73,6 +73,18 @@ refresh_installed_code() {
 
     mkdir -p "$CHINNA_HOME"
 
+    # Stop any running dashboard/daemon so stale in-memory code is replaced
+    # on next launch and does not keep serving outdated API routes.
+    if [ -f "$CHINNA_HOME/dashboard.pid" ]; then
+        kill "$(cat "$CHINNA_HOME/dashboard.pid")" 2>/dev/null || true
+        rm -f "$CHINNA_HOME/dashboard.pid"
+    fi
+    if [ -f "$CHINNA_HOME/chinna.pid" ]; then
+        kill "$(cat "$CHINNA_HOME/chinna.pid")" 2>/dev/null || true
+        rm -f "$CHINNA_HOME/chinna.pid"
+    fi
+    pkill -f "dashboard_server.py" 2>/dev/null || true
+
     # Remove stale code so old files do not linger between upgrades.
     rm -rf "$CHINNA_HOME/bin" "$CHINNA_HOME/lib" "$CHINNA_HOME/dashboard" "$CHINNA_HOME/install"
     rm -f "$CHINNA_HOME/dashboard_server.py"

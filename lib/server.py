@@ -414,6 +414,11 @@ class H(http.server.SimpleHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         p = parsed.path
         q = dict(urllib.parse.parse_qsl(parsed.query))
+        if p == '/favicon.ico':
+            self.send_response(204)
+            self.send_header('Cache-Control', 'public, max-age=86400')
+            self.end_headers()
+            return
         if p == '/api/stats':
             with cache_lock:
                 self._json(stats_cache)
@@ -450,6 +455,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json(telegram_status())
         elif p in ('/',''):
             self.path = '/index.html'; super().do_GET()
+        elif p.startswith('/api/'):
+            self._json({'error': f'unknown {p}'}, 404)
         else:
             super().do_GET()
 
