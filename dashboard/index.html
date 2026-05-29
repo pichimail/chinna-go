@@ -541,11 +541,11 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
     </div>
     <div class="spacer"></div>
     <div class="themes" id="themes">
-      <button data-t="dark" class="on">Dark</button>
-      <button data-t="oled">OLED</button>
-      <button data-t="light">Light</button>
+      <button type="button" data-t="dark" class="on">Dark</button>
+      <button type="button" data-t="oled">OLED</button>
+      <button type="button" data-t="light">Light</button>
     </div>
-    <button class="iconbtn" onclick="go('settings')" title="Settings">⚙</button>
+    <button type="button" class="iconbtn" onclick="go('settings')" title="Settings">⚙</button>
   </div>
 
   <!-- BODY -->
@@ -568,7 +568,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
       <div class="navlabel">Tools</div>
       <div class="navitem" data-v="whatsapp" onclick="go('whatsapp')"><span class="ic">💬</span> WhatsApp</div>
       <div class="navitem" data-v="macos" onclick="go('macos')"><span class="ic">🍎</span> macOS Tools</div>
-      <div class="navitem" data-v="models" onclick="go('models')"><span class="ic">🤖</span> Models & AI</div>
+      <div class="navitem" data-v="models" onclick="go('models')"><span class="ic">🤖</span> Models &amp; AI</div>
       <div class="navitem" data-v="ai" onclick="go('ai')"><span class="ic">✦</span> Chinna AI</div>
       <div class="navitem" data-v="projects" onclick="go('projects')"><span class="ic">📁</span> Projects</div>
     </div>
@@ -598,17 +598,17 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 
       <!-- NETWORK -->
       <div class="view" id="view-network">
-        <div class="vhead"><h2>Network</h2><span class="sub">Listening ports & connection</span></div>
+        <div class="vhead"><h2>Network</h2><span class="sub">Listening ports &amp; connection</span></div>
         <div class="vbody"><div class="outbox" id="net-out">Loading…</div></div>
       </div>
 
       <!-- FILE MANAGER -->
       <div class="view" id="view-files">
-        <div class="vhead"><h2>File Manager</h2><span class="sub">Find & manage large files</span></div>
+        <div class="vhead"><h2>File Manager</h2><span class="sub">Find &amp; manage large files</span></div>
         <div class="toolbar">
           <div class="tabs" id="file-tabs">
-            <button class="on" data-tab="large" onclick="filesTab('large',this)">Large Files</button>
-            <button data-tab="downloads" onclick="filesTab('downloads',this)">Downloads</button>
+            <button type="button" class="on" data-tab="large" onclick="filesTab('large',this)">Large Files</button>
+            <button type="button" data-tab="downloads" onclick="filesTab('downloads',this)">Downloads</button>
           </div>
           <div class="search">🔍<input id="file-q" placeholder="Filter by name…" oninput="renderFiles()"></div>
           <select class="sortsel" id="file-sort" onchange="loadFiles()">
@@ -623,10 +623,10 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
       <div class="view" id="view-dupes">
         <div class="vhead"><h2>Duplicates</h2><span class="sub">Byte-identical files (size + hash)</span></div>
         <div class="toolbar">
-          <button class="bigbtn" onclick="loadDupes()">↻ Scan now</button>
+          <button type="button" class="bigbtn" onclick="loadDupes()">↻ Scan now</button>
           <span class="count" id="dupe-count"></span>
           <div class="spacer" style="margin-left:auto"></div>
-          <button class="bigbtn" id="dupe-del" style="display:none" onclick="confirmDeleteDupes()">Delete selected</button>
+          <button type="button" class="bigbtn" id="dupe-del" style="display:none" onclick="confirmDeleteDupes()">Delete selected</button>
         </div>
         <div class="vbody"><div class="list" id="dupe-list"><div class="empty"><div class="big">⧉</div>Click "Scan now" to find duplicates</div></div></div>
       </div>
@@ -635,11 +635,11 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
       <div class="view" id="view-storage">
         <div class="vhead"><h2>Disk Explorer</h2><span class="sub" id="stor-path">~</span></div>
         <div class="toolbar">
-          <button class="bigbtn" onclick="storUp()">↑ Up</button>
-          <button class="bigbtn" onclick="loadStorage(HOME_PATH)">⌂ Home</button>
+          <button type="button" class="bigbtn" onclick="storUp()">↑ Up</button>
+          <button type="button" class="bigbtn" onclick="loadStorage(HOME_PATH)">⌂ Home</button>
           <span class="count" id="stor-count"></span>
           <div class="spacer"></div>
-          <button class="bigbtn ghost smallbtn" id="stor-more" style="display:none" onclick="loadMoreStorage()">Load more</button>
+          <button type="button" class="bigbtn ghost smallbtn" id="stor-more" style="display:none" onclick="loadMoreStorage()">Load more</button>
         </div>
         <div class="vbody"><div class="list" id="stor-list"></div></div>
       </div>
@@ -656,16 +656,16 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 
       <!-- BATTERY -->
       <div class="view" id="view-battery">
-        <div class="vhead"><h2>Battery Health</h2><span class="sub">Cycle count & condition</span></div>
+        <div class="vhead"><h2>Battery Health</h2><span class="sub">Cycle count &amp; condition</span></div>
         <div class="vbody"><div class="infogrid" id="batt-info"></div></div>
       </div>
 
       <!-- DOCTOR -->
       <div class="view" id="view-doctor">
-        <div class="vhead"><h2>Doctor</h2><span class="sub">Dev toolchain & system report</span></div>
+        <div class="vhead"><h2>Doctor</h2><span class="sub">Dev toolchain &amp; system report</span></div>
         <div class="toolbar">
-          <button class="bigbtn" onclick="loadDoctor()">↻ Re-check</button>
-          <button class="bigbtn" onclick="genReport()">📄 Export system report</button>
+          <button type="button" class="bigbtn" onclick="loadDoctor()">↻ Re-check</button>
+          <button type="button" class="bigbtn" onclick="genReport()">📄 Export system report</button>
         </div>
         <div class="vbody"><div class="outbox" id="doc-out">Loading…</div></div>
       </div>
@@ -675,18 +675,18 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
         <div class="vhead">
           <h2>Chinna AI</h2>
           <span class="sub" id="ai-status">—</span>
-          <button class="bigbtn" onclick="clearAIHistory()" style="margin-left:auto;padding:6px 11px;font-size:11px">🧹 Clear memory</button>
-          <button class="bigbtn" style="padding:8px 12px" id="voice-btn" onclick="toggleVoiceMode()">🎙 Voice Off</button>
+          <button type="button" class="bigbtn" onclick="clearAIHistory()" style="margin-left:auto;padding:6px 11px;font-size:11px">🧹 Clear memory</button>
+          <button type="button" class="bigbtn" style="padding:8px 12px" id="voice-btn" onclick="toggleVoiceMode()">🎙 Voice Off</button>
         </div>
         <div class="vbody" style="display:flex;flex-direction:column">
           <div class="list" id="ai-msgs" style="flex:1;min-height:120px"></div>
         </div>
         <div class="toolbar" style="position:relative">
-          <button class="bigbtn" id="ai-attach-btn" title="Attach file (text, code, image, PDF, log...)">📎</button>
-          <button class="bigbtn" onclick="showPreviousUploads()" title="Browse files you uploaded before" style="padding:6px 9px">🗂</button>
+          <button type="button" class="bigbtn" id="ai-attach-btn" title="Attach file (text, code, image, PDF, log...)">📎</button>
+          <button type="button" class="bigbtn" onclick="showPreviousUploads()" title="Browse files you uploaded before" style="padding:6px 9px">🗂</button>
           <input type="file" id="ai-file-input" multiple style="display:none" />
           <div class="search" style="flex:1"><input id="ai-in" autocomplete="off" spellcheck="false" placeholder="Ask Chinna anything… or attach files" onkeydown="if(event.key==='Enter')sendAI()"></div>
-          <button class="bigbtn solid" onclick="sendAI()">Send</button>
+          <button type="button" class="bigbtn solid" onclick="sendAI()">Send</button>
         </div>
         <div class="attachment-chips" id="ai-attachments"></div>
       </div>
@@ -696,8 +696,8 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
         <div class="vhead">
           <h2>Tracked Projects</h2>
           <span class="sub">From chinna run + registry</span>
-          <button class="bigbtn" style="margin-left:auto" onclick="loadProjectsView()">↻ Refresh</button>
-          <button class="bigbtn" onclick="go('projects')">Full View →</button>
+          <button type="button" class="bigbtn" style="margin-left:auto" onclick="loadProjectsView()">↻ Refresh</button>
+          <button type="button" class="bigbtn" onclick="go('projects')">Full View →</button>
         </div>
         <div class="vbody">
           <!-- Add Manual Project Form -->
@@ -709,7 +709,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
                 <input id="manual-stack" class="field" style="width:140px" placeholder="Stack (node-next)">
                 <input id="manual-port" class="field" style="width:80px" placeholder="Port">
                 <input id="manual-url" class="field" style="flex:1;min-width:160px" placeholder="URL (optional)">
-                <button class="bigbtn solid" style="padding:8px 16px" onclick="addManualProject()">Add</button>
+                <button type="button" class="bigbtn solid" style="padding:8px 16px" onclick="addManualProject()">Add</button>
               </div>
             </details>
           </div>
@@ -718,10 +718,10 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
             <div class="search">🔍<input id="proj-q" placeholder="Filter projects..." oninput="renderProjectsView()"></div>
             <div style="display:flex;gap:4px;align-items:center;font-size:11px">
               <span style="opacity:.6">Age:</span>
-              <button class="miniA" onclick="setAgeFilter('all')" id="age-all">All</button>
-              <button class="miniA" onclick="setAgeFilter('24h')" id="age-24h">&lt;24h</button>
-              <button class="miniA" onclick="setAgeFilter('7d')" id="age-7d">&lt;7d</button>
-              <button class="miniA" onclick="setAgeFilter('older')" id="age-older">Older</button>
+              <button type="button" class="miniA" onclick="setAgeFilter('all')" id="age-all">All</button>
+              <button type="button" class="miniA" onclick="setAgeFilter('24h')" id="age-24h">&lt;24h</button>
+              <button type="button" class="miniA" onclick="setAgeFilter('7d')" id="age-7d">&lt;7d</button>
+              <button type="button" class="miniA" onclick="setAgeFilter('older')" id="age-older">Older</button>
             </div>
           </div>
           <div id="projects-list" class="list" style="padding:0 18px"></div>
@@ -736,14 +736,14 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
           <input class="field" id="set-or" type="password" autocomplete="new-password" placeholder="sk-or-v1-…">
           <div class="navlabel" style="margin-left:0">OpenAI key — optional (Whisper/GPT)</div>
           <input class="field" id="set-oa" type="password" autocomplete="new-password" placeholder="sk-…">
-          <button class="bigbtn solid" style="margin-top:16px" onclick="saveKeys()">Save Keys</button>
+          <button type="button" class="bigbtn solid" style="margin-top:16px" onclick="saveKeys()">Save Keys</button>
           <div class="panelgrid">
             <div class="paircard">
               <h4>Telegram Pairing</h4>
               <div class="stack">
                 <input class="field" id="tg-token" type="password" autocomplete="off" placeholder="Telegram bot token">
-                <button class="bigbtn" onclick="saveTelegramToken()">Save Telegram Token</button>
-                <button class="bigbtn solid" onclick="createTelegramPair()">Generate Pair Code</button>
+                <button type="button" class="bigbtn" onclick="saveTelegramToken()">Save Telegram Token</button>
+                <button type="button" class="bigbtn solid" onclick="createTelegramPair()">Generate Pair Code</button>
               </div>
               <div class="chiprow">
                 <span class="chip" id="tg-bot">Bot: —</span>
@@ -753,9 +753,9 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
             </div>
             <div class="statuscard">
               <h4>Pair Card</h4>
-              <div class="pairqr"><img id="tg-qr" alt="Telegram pair QR" src=""></div>
+              <div class="pairqr"><img id="tg-qr" alt="Telegram pair QR"></div>
               <div class="pairhint">Scan the QR or open the link on your phone, then tap Start in Telegram. The dashboard will bind that chat automatically.</div>
-              <button class="bigbtn ghost smallbtn" style="margin-top:10px" onclick="testTelegram()">Send test</button>
+              <button type="button" class="bigbtn ghost smallbtn" style="margin-top:10px" onclick="testTelegram()">Send test</button>
             </div>
           </div>
         </div>
@@ -768,14 +768,14 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
         <div class="vbody">
           <div class="navlabel">Quick Open</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
-            <button class="bigbtn" onclick="waOpen()">💬 Open WhatsApp</button>
-            <button class="bigbtn" onclick="waOpenWeb()">🌐 WhatsApp Web</button>
+            <button type="button" class="bigbtn" onclick="waOpen()">💬 Open WhatsApp</button>
+            <button type="button" class="bigbtn" onclick="waOpenWeb()">🌐 WhatsApp Web</button>
           </div>
           <div class="navlabel">Send Message via Link</div>
           <div style="display:flex;flex-direction:column;gap:8px;max-width:520px;margin-bottom:18px">
             <input class="field" id="wa-num" placeholder="Phone number e.g. 919876543210" style="margin:0">
             <textarea class="field" id="wa-msg" placeholder="Message to send..." rows="3" style="margin:0;resize:vertical"></textarea>
-            <button class="bigbtn solid" onclick="waSend()">Send via WhatsApp</button>
+            <button type="button" class="bigbtn solid" onclick="waSend()">Send via WhatsApp</button>
           </div>
           <div class="outbox" id="wa-out" style="display:none"></div>
           <div class="navlabel" style="margin-top:14px">Webhook Log</div>
@@ -788,41 +788,41 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
         <div class="vbody">
           <div class="navlabel">Apple Music</div>
           <div class="panelgrid" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
-            <button class="bigbtn" onclick="music('play')">▶ Play</button>
-            <button class="bigbtn" onclick="music('pause')">⏸ Pause</button>
-            <button class="bigbtn" onclick="music('next')">⏭ Next</button>
-            <button class="bigbtn" onclick="music('prev')">⏮ Prev</button>
-            <button class="bigbtn" onclick="music('info')">ℹ Now Playing</button>
+            <button type="button" class="bigbtn" onclick="music('play')">▶ Play</button>
+            <button type="button" class="bigbtn" onclick="music('pause')">⏸ Pause</button>
+            <button type="button" class="bigbtn" onclick="music('next')">⏭ Next</button>
+            <button type="button" class="bigbtn" onclick="music('prev')">⏮ Prev</button>
+            <button type="button" class="bigbtn" onclick="music('info')">ℹ Now Playing</button>
           </div>
           <div class="outbox" id="music-out" style="margin-bottom:18px">—</div>
 
           <div class="navlabel">System</div>
           <div class="panelgrid" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
-            <button class="bigbtn" onclick="confirmMac('lock','Lock Screen','Lock your Mac display?','lock')">🔒 Lock Screen</button>
-            <button class="bigbtn" onclick="confirmMac('sleep','Sleep Mac','Put Mac to sleep?','sleep')">💤 Sleep</button>
-            <button class="bigbtn" onclick="screenShare()">📡 Screen Share Info</button>
-            <button class="bigbtn" onclick="macOpenApp('Finder')">📁 Open Finder</button>
+            <button type="button" class="bigbtn" onclick="confirmMac('lock','Lock Screen','Lock your Mac display?','lock')">🔒 Lock Screen</button>
+            <button type="button" class="bigbtn" onclick="confirmMac('sleep','Sleep Mac','Put Mac to sleep?','sleep')">💤 Sleep</button>
+            <button type="button" class="bigbtn" onclick="screenShare()">📡 Screen Share Info</button>
+            <button type="button" class="bigbtn" onclick="macOpenApp('Finder')">📁 Open Finder</button>
           </div>
           <div class="outbox" id="mac-out" style="margin-bottom:18px">—</div>
 
           <div class="navlabel">Kill Port</div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
             <input class="field" id="kill-port-in" placeholder="Port number e.g. 3000" style="max-width:220px;margin:0">
-            <button class="bigbtn" onclick="killPort()">Kill Port</button>
+            <button type="button" class="bigbtn" onclick="killPort()">Kill Port</button>
           </div>
 
           <div class="navlabel">Project Audit</div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
             <input class="field" id="audit-path-in" placeholder="Project path e.g. ~/myapp" style="flex:1;margin:0">
-            <button class="bigbtn" onclick="runAudit()">Run Audit</button>
+            <button type="button" class="bigbtn" onclick="runAudit()">Run Audit</button>
           </div>
           <div class="outbox" id="audit-out" style="display:none"></div>
         </div>
       </div>
 
-      <!-- MODELS & AI CONFIG -->
+      <!-- MODELS AND AI CONFIG -->
       <div class="view" id="view-models">
-        <div class="vhead"><h2>Models & AI</h2><span class="sub">Switch AI model · Automation mode</span></div>
+        <div class="vhead"><h2>Models &amp; AI</h2><span class="sub">Switch AI model · Automation mode</span></div>
         <div class="vbody">
           <div class="navlabel">Active Model</div>
           <div class="infocard" style="margin-bottom:14px">
@@ -836,7 +836,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
           <div class="navlabel">Custom model</div>
           <div style="display:flex;gap:8px;margin-bottom:18px">
             <input class="field" id="model-custom" placeholder="e.g. anthropic/claude-3-haiku" style="flex:1;margin:0">
-            <button class="bigbtn" onclick="setCustomModel()">Set</button>
+            <button type="button" class="bigbtn" onclick="setCustomModel()">Set</button>
           </div>
 
           <div class="navlabel">Automation Mode</div>
@@ -845,7 +845,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
               <div class="k">APPAUTOMATIONMODE</div>
               <div class="v" id="auto-val">—</div>
             </div>
-            <button class="bigbtn" id="auto-btn" onclick="toggleAutomation()">Toggle</button>
+            <button type="button" class="bigbtn" id="auto-btn" onclick="toggleAutomation()">Toggle</button>
           </div>
           <div style="font-size:11px;color:var(--t3);line-height:1.6">When ON, AI commands run without confirmation prompts.</div>
         </div>
@@ -875,7 +875,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
     <div class="dapp" onclick="toggleVoiceMode()"><span>🎙</span><span class="tip">Voice</span></div>
     <div class="dapp" onclick="go('whatsapp')" title="WhatsApp"><span>💬</span><span class="tip">WhatsApp</span></div>
     <div class="dapp" onclick="go('macos')" title="macOS Tools"><span>🍎</span><span class="tip">macOS Tools</span></div>
-    <div class="dapp" onclick="go('models')" title="Models"><span>🤖</span><span class="tip">Models & AI</span></div>
+    <div class="dapp" onclick="go('models')" title="Models"><span>🤖</span><span class="tip">Models &amp; AI</span></div>
     <div class="dapp" onclick="go('ai')"><span>✦</span><span class="tip">Chinna AI</span></div>
   </div>
 </div>
@@ -889,8 +889,8 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
       <div id="m-prog" style="display:none"><div class="proglog" id="m-log"></div></div>
     </div>
     <div class="mf" id="m-foot">
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-go" id="m-go">Confirm</button>
+      <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button type="button" class="btn-go" id="m-go">Confirm</button>
     </div>
   </div>
 </div>
@@ -916,7 +916,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
       🧬 Godspeed features — stack runner, plugin system, config sync<br>
     </div>
     <div style="padding:14px 24px 20px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--line)">
-      <button class="bigbtn" onclick="dismissV6()">Got it, let's go!</button>
+      <button type="button" class="bigbtn" onclick="dismissV6()">Got it, let's go!</button>
     </div>
   </div>
 </div>
@@ -968,6 +968,21 @@ function setVoiceButton(){
   }
 }
 
+function toggleVoiceMode(force){
+  voiceEnabled = force === undefined ? !voiceEnabled : !!force;
+  if (!voiceEnabled) {
+    speechSynthesis.cancel();
+    stopVoiceCaptureAdvanced(false);
+    setVoiceState('idle');
+    destroyVoiceUI();
+    setVoiceButton();
+    return;
+  }
+  ensureVoiceUI();
+  setVoiceState('idle');
+  setVoiceButton();
+}
+
 function ensureVoiceUI(){
   let ui = $('voice-ui');
   if (ui) return ui;
@@ -981,9 +996,9 @@ function ensureVoiceUI(){
     <div class="voice-wave" id="voice-wave"></div>
     <div class="voice-state" id="voice-state">IDLE</div>
     <div class="voice-controls">
-      <button class="bigbtn" id="voice-ptt" style="padding:8px 16px">Hold to Talk</button>
-      <button class="bigbtn solid" id="voice-continuous">Continuous: Off</button>
-      <button class="bigbtn danger" id="voice-interrupt" style="display:none">⏹ Interrupt</button>
+      <button type="button" class="bigbtn" id="voice-ptt" style="padding:8px 16px">Hold to Talk</button>
+      <button type="button" class="bigbtn solid" id="voice-continuous">Continuous: Off</button>
+      <button type="button" class="bigbtn danger" id="voice-interrupt" style="display:none">⏹ Interrupt</button>
     </div>
   `;
   vbody.insertBefore(ui, vbody.firstChild);
@@ -1431,7 +1446,7 @@ function renderOvInfo(s){
   $('ov-info').innerHTML=i.map(([k,v])=>`<div class="infocard"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
 }
 function renderProc(s){
-  $('proc-list').innerHTML=(s.processes||[]).map(p=>`<div class="row"><div class="fic">⚙</div><div class="info"><div class="nm">${(p.name.split('/').pop())}</div><div class="mt">PID ${p.pid} · CPU ${p.cpu.toFixed(1)}%</div></div><div class="sz" style="color:${color(p.mem)}">${p.mem.toFixed(1)}%</div><div class="acts"><button class="miniA danger" onclick="confirmKill(${p.pid},'${(p.name.split('/').pop()).replace(/'/g,'')}')">Kill</button></div></div>`).join('');
+  $('proc-list').innerHTML=(s.processes||[]).map(p=>`<div class="row"><div class="fic">⚙</div><div class="info"><div class="nm">${(p.name.split('/').pop())}</div><div class="mt">PID ${p.pid} · CPU ${p.cpu.toFixed(1)}%</div></div><div class="sz" style="color:${color(p.mem)}">${p.mem.toFixed(1)}%</div><div class="acts"><button type="button" class="miniA danger" onclick="confirmKill(${p.pid},'${(p.name.split('/').pop()).replace(/'/g,'')}')">Kill</button></div></div>`).join('');
 }
 function renderRailProc(s){
   $('rail-proc').innerHTML=(s.processes||[]).slice(0,5).map(p=>`<div class="proc"><div class="pn">${p.name.split('/').pop()}</div><div class="pm" style="color:${color(p.mem)}">${p.mem.toFixed(1)}%</div></div>`).join('');
@@ -1584,6 +1599,16 @@ async function openProjectActions(path, url, ev) {
   setTimeout(() => document.addEventListener('click', closeHandler, true), 10);
 }
 
+async function openProjectFolder(path) {
+  if (!path) return;
+  await api(`project/open-folder?path=${encodeURIComponent(path)}`);
+}
+
+async function openProjectUrl(url) {
+  if (!url) return;
+  await api(`project/open-url?url=${encodeURIComponent(url)}`);
+}
+
 /* ===== Full Projects View (Rich) ===== */
 let allProjectsCache = [];
 let projectsSort = { column: 'updated', dir: 'desc' }; // column + dir
@@ -1681,9 +1706,9 @@ function renderProjectsView() {
         <input type="checkbox" id="proj-select-all" onchange="toggleSelectAllProjects(this.checked)">
         Select all
       </label>
-      <button class="miniA danger" onclick="bulkDeleteProjects()" style="display:${selectedProjects.size ? 'inline-block' : 'none'}">Delete Selected (${selectedProjects.size})</button>
-      <button class="miniA" onclick="bulkAddTagPrompt()" style="display:${selectedProjects.size ? 'inline-block' : 'none'}">Add Tag to Selected</button>
-      <button class="miniA" onclick="exportProjectsPDF()" style="margin-left:auto">Export PDF</button>
+      <button type="button" class="miniA danger" onclick="bulkDeleteProjects()" style="display:${selectedProjects.size ? 'inline-block' : 'none'}">Delete Selected (${selectedProjects.size})</button>
+      <button type="button" class="miniA" onclick="bulkAddTagPrompt()" style="display:${selectedProjects.size ? 'inline-block' : 'none'}">Add Tag to Selected</button>
+      <button type="button" class="miniA" onclick="exportProjectsPDF()" style="margin-left:auto">Export PDF</button>
     </div>
   `;
 
@@ -1734,9 +1759,9 @@ function renderProjectsView() {
           ${historyHtml}
         </td>
         <td style="padding:6px;text-align:right">
-          <button class="miniA" onclick="openProjectActionsFromView('${p.path.replace(/'/g, "\\'")}', '${(p.url||'').replace(/'/g, "\\'")}')">Open</button>
-          <button class="miniA" onclick="editProjectNote('${p.path.replace(/'/g, "\\'")}', '${(p.notes||'').replace(/'/g, "\\'")}')">Note</button>
-          <button class="miniA danger" onclick="deleteProjectFromView('${p.path.replace(/'/g, "\\'")}', this)">×</button>
+          <button type="button" class="miniA" onclick="openProjectActionsFromView('${p.path.replace(/'/g, "\\'")}', '${(p.url||'').replace(/'/g, "\\'")}')">Open</button>
+          <button type="button" class="miniA" onclick="editProjectNote('${p.path.replace(/'/g, "\\'")}', '${(p.notes||'').replace(/'/g, "\\'")}')">Note</button>
+          <button type="button" class="miniA danger" onclick="deleteProjectFromView('${p.path.replace(/'/g, "\\'")}', this)">×</button>
         </td>
       </tr>`;
   });
@@ -1780,6 +1805,7 @@ function toggleSelectAllProjects(checked) {
 
 async function bulkDeleteProjects() {
   if (!selectedProjects.size) return;
+  const deleteCount = selectedProjects.size;
   if (!confirm(`Delete ${selectedProjects.size} projects from registry?`)) return;
 
   const alsoClean = confirm('Also run clean_project on all selected folders?');
@@ -1793,7 +1819,7 @@ async function bulkDeleteProjects() {
     } catch(e){}
   }
   selectedProjects.clear();
-  toast(`Deleted ${selectedProjects.size} projects`);
+  toast(`Deleted ${deleteCount} projects`);
   loadProjectsView();
   renderRailProjects();
 }
@@ -1979,7 +2005,7 @@ function renderFiles(){
   L.innerHTML=f.map(x=>fileRow(x)).join('');
 }
 function fileRow(x){
-  return `<div class="row"><div class="fic">${ficon(x.kind)}</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><span class="kindtag">${x.kind}</span><div class="sz">${x.size}</div><div class="acts"><button class="miniA" onclick="reveal('${esc(x.path)}')">Reveal</button><button class="miniA danger" onclick="confirmTrash('${esc(x.path)}','${esc(x.name)}')">Trash</button></div></div>`;
+  return `<div class="row"><div class="fic">${ficon(x.kind)}</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><span class="kindtag">${x.kind}</span><div class="sz">${x.size}</div><div class="acts"><button type="button" class="miniA" onclick="reveal('${esc(x.path)}')">Reveal</button><button type="button" class="miniA danger" onclick="confirmTrash('${esc(x.path)}','${esc(x.name)}')">Trash</button></div></div>`;
 }
 function esc(s){return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 
@@ -1996,7 +2022,7 @@ async function loadDupes(){
   let html='',lastG='';
   allDupes.forEach((x,i)=>{
     if(x.dupe_group!==lastG){lastG=x.dupe_group;html+=`<div class="rlabel" style="margin-top:8px">Group · ${x.size}</div>`;}
-    html+=`<div class="row"><input type="checkbox" onchange="toggleDupe('${esc(x.path)}',this.checked)" style="width:18px;height:18px;accent-color:var(--acc)"><div class="fic">${ficon(x.kind)}</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><div class="sz">${x.size}</div><div class="acts"><button class="miniA" onclick="reveal('${esc(x.path)}')">Reveal</button></div></div>`;
+    html+=`<div class="row"><input type="checkbox" onchange="toggleDupe('${esc(x.path)}',this.checked)" style="width:18px;height:18px;accent-color:var(--acc)"><div class="fic">${ficon(x.kind)}</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><div class="sz">${x.size}</div><div class="acts"><button type="button" class="miniA" onclick="reveal('${esc(x.path)}')">Reveal</button></div></div>`;
   });
   L.innerHTML=html;
 }
@@ -2012,7 +2038,7 @@ function renderApps(){
   const a=allApps.filter(x=>!q||x.name.toLowerCase().includes(q));
   const L=$('app-list');
   if(!a.length){L.innerHTML='<div class="empty"><div class="big">📦</div>No apps</div>';return;}
-  L.innerHTML=a.map(x=>`<div class="row"><div class="fic">📦</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><div class="sz">${x.size}</div><div class="acts"><button class="miniA danger" onclick="confirmUninstall('${esc(x.path)}','${esc(x.name)}')">Uninstall</button></div></div>`).join('');
+  L.innerHTML=a.map(x=>`<div class="row"><div class="fic">📦</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><div class="sz">${x.size}</div><div class="acts"><button type="button" class="miniA danger" onclick="confirmUninstall('${esc(x.path)}','${esc(x.name)}')">Uninstall</button></div></div>`).join('');
 }
 
 /* battery / doctor / network */
@@ -2253,8 +2279,8 @@ function showUploadRequestBanner(message){
   uploadBanner.style.cssText = 'margin:8px 14px;padding:10px 14px;background:rgba(var(--accr),.12);border:1px solid rgba(var(--accr),.35);border-radius:10px;font-size:12px;display:flex;align-items:center;gap:10px';
   uploadBanner.innerHTML = `
     <span style="flex:1">${message}</span>
-    <button class="bigbtn solid" style="padding:6px 14px;font-size:11px" onclick="triggerAttachmentFromBanner()">📎 Attach File</button>
-    <button class="bigbtn" style="padding:6px 10px;font-size:11px" onclick="dismissUploadBanner()">✕</button>
+    <button type="button" class="bigbtn solid" style="padding:6px 14px;font-size:11px" onclick="triggerAttachmentFromBanner()">📎 Attach File</button>
+    <button type="button" class="bigbtn" style="padding:6px 10px;font-size:11px" onclick="dismissUploadBanner()">✕</button>
   `;
   const vbody = aiView.querySelector('.vbody');
   vbody.insertBefore(uploadBanner, vbody.firstChild);
@@ -2434,13 +2460,13 @@ async function runJob(startPromise, doneLabel, friendlyMessages = {}){
       clearInterval(poll);
       $('m-foot').style.display='';
       $('m-go').style.display='none';
-      $('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModalRefresh()">Done</button>';
+      $('m-foot').innerHTML='<button type="button" class="btn-cancel" onclick="closeModalRefresh()">Done</button>';
       toast(doneLabel || 'Finished');
       setGlobalWorking(false);
     }
   }, 650);
 }
-function closeModalRefresh(){closeModal();$('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-go" id="m-go">Confirm</button>';$('m-go').onclick=()=>{if(pendingGo)pendingGo();};
+function closeModalRefresh(){closeModal();$('m-foot').innerHTML='<button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button><button type="button" class="btn-go" id="m-go">Confirm</button>';$('m-go').onclick=()=>{if(pendingGo)pendingGo();};
   const cur=document.querySelector('.navitem.on')?.dataset.v;if(cur)go(cur);}
 
 /* confirm flows */
@@ -2459,7 +2485,7 @@ function confirmUninstall(path,name){
 function confirmTrash(path,name){
   openModal('Move to Trash','Send this file to Trash? You can restore it from Trash later.',
     `• ${path}`,()=>{showProgress('Moving to Trash');
-      api('trash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path})}).then(()=>{$('m-log').innerHTML='<div class="done">Moved to Trash.</div>';$('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModalRefresh()">Done</button>';toast('Moved to Trash');});
+      api('trash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path})}).then(()=>{$('m-log').innerHTML='<div class="done">Moved to Trash.</div>';$('m-foot').innerHTML='<button type="button" class="btn-cancel" onclick="closeModalRefresh()">Done</button>';toast('Moved to Trash');});
     },'Move to Trash');
 }
 function confirmDeleteDupes(){
@@ -2472,7 +2498,7 @@ function confirmDeleteDupes(){
 }
 function confirmKill(pid,name){
   openModal('Kill process','Force-quit this process? Unsaved work in it will be lost.',`• ${name} (PID ${pid})`,
-    ()=>{showProgress('Killing '+name);api('kill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pid})}).then(()=>{$('m-log').innerHTML='<div class="done">Killed '+name+'.</div>';$('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModalRefresh()">Done</button>';toast('Killed '+name);});},'Kill');
+    ()=>{showProgress('Killing '+name);api('kill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pid})}).then(()=>{$('m-log').innerHTML='<div class="done">Killed '+name+'.</div>';$('m-foot').innerHTML='<button type="button" class="btn-cancel" onclick="closeModalRefresh()">Done</button>';toast('Killed '+name);});},'Kill');
 }
 
 setVoiceButton();
@@ -2531,7 +2557,7 @@ async function macActionDo(action, extra){
   return d;
 }
 function confirmMac(action,title,desc,key){
-  openModal(title,desc,'',async ()=>{showProgress(title);const d=await macActionDo(action);document.getElementById('m-log').innerHTML='<div class="done">'+d.result||d.action+' done</div>';document.getElementById('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModal()">Done</button>';},key);
+  openModal(title,desc,'',async ()=>{showProgress(title);const d=await macActionDo(action);document.getElementById('m-log').innerHTML='<div class="done">'+(d.result||d.action+' done')+'</div>';document.getElementById('m-foot').innerHTML='<button type="button" class="btn-cancel" onclick="closeModal()">Done</button>';},key);
 }
 async function screenShare(){
   const d=await macActionDo('screen-share');
@@ -2569,12 +2595,11 @@ async function loadModels(){
   const pres=document.getElementById('model-presets');
   if(pres && d.presets){
     pres.innerHTML=Object.entries(d.presets).map(([k,v])=>
-      `<button class="bigbtn" style="font-size:11px" onclick="setModelPreset('${k}')">${k}</button>`
+      `<button type="button" class="bigbtn" style="font-size:11px" onclick="setModelPreset('${k}')">${k}</button>`
     ).join('');
   }
   // Also load automation
   try{
-    const env=await api('models'); // reuse models call
     const auto=document.getElementById('auto-val');
     if(auto) auto.textContent=d.auto_mode||'—';
   }catch(e){}
@@ -2607,13 +2632,7 @@ async function toggleAutomation(){
   }
 }
 
-// Override poll() to call initV6 on first load
-const _origPoll=poll;
-let _v6inited=false;
-poll=async function(){
-  await _origPoll();
-  if(!_v6inited){_v6inited=true;initV6();}
-}
+initV6();
 
 </script>
 </body>
