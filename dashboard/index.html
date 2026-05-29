@@ -537,6 +537,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
       <span class="vital">RAM <b id="v-ram">—</b></span>
       <span class="vital">DISK <b id="v-disk">—</b></span>
       <span class="vital">BATT <b id="v-batt">—</b></span>
+      <span id="global-working" style="display:none;margin-left:8px;font-size:10px;background:rgba(var(--accr),.15);color:var(--acc);padding:2px 8px;border-radius:999px;letter-spacing:0.5px">Working…</span>
     </div>
     <div class="spacer"></div>
     <div class="themes" id="themes">
@@ -670,6 +671,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
         </div>
         <div class="toolbar" style="position:relative">
           <button class="bigbtn" id="ai-attach-btn" title="Attach file (text, code, image, PDF, log...)">📎</button>
+          <button class="bigbtn" onclick="showPreviousUploads()" title="Browse files you uploaded before" style="padding:6px 9px">🗂</button>
           <input type="file" id="ai-file-input" multiple style="display:none" />
           <div class="search" style="flex:1"><input id="ai-in" autocomplete="off" spellcheck="false" placeholder="Ask Chinna anything… or attach files" onkeydown="if(event.key==='Enter')sendAI()"></div>
           <button class="bigbtn solid" onclick="sendAI()">Send</button>
@@ -1270,10 +1272,13 @@ function renderRailDisk(s){
 
 /* files */
 async function loadFiles(){
-  const L=$('file-list');L.innerHTML='<div class="spin"></div>';
+  const L=$('file-list');
+  showProgressMessage(L, 'Scanning files…', curTab === 'large' ? 'Looking for files larger than 10MB' : 'Loading recent downloads');
   const sort=$('file-sort').value;
   const d=await api(`files?tab=${curTab}&sort=${sort}`);
-  allFiles=d.files||[];$('file-count').textContent=`${d.count} files`;renderFiles();
+  allFiles=d.files||[];$('file-count').textContent=`${d.count} files`;
+  clearProgressMessage(L);
+  renderFiles();
 }
 function filesTab(t,el){curTab=t;document.querySelectorAll('#file-tabs button').forEach(b=>b.classList.toggle('on',b===el));loadFiles();}
 function renderFiles(){
@@ -1290,9 +1295,12 @@ function esc(s){return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 
 /* dupes */
 async function loadDupes(){
-  const L=$('dupe-list');L.innerHTML='<div class="spin"></div>';dupeSel.clear();
+  const L=$('dupe-list'); 
+  showProgressMessage(L, 'Finding duplicates…', 'Scanning by size then hashing content — this can take a while');
+  dupeSel.clear();
   const d=await api('files?tab=dupes');allDupes=d.files||[];
   $('dupe-count').textContent=`${allDupes.length} duplicate files`;
+  clearProgressMessage(L);
   if(!allDupes.length){L.innerHTML='<div class="empty"><div class="big">✓</div>No duplicates found</div>';$('dupe-del').style.display='none';return;}
   $('dupe-del').style.display='';
   let html='',lastG='';
@@ -1329,7 +1337,7 @@ async function loadNet(){$('net-out').textContent='Loading…';const d=await api
 /* storage explorer */
 async function loadStorage(path,push=true,offset=0,append=false){
   const L=$('stor-list');
-  if(!append) L.innerHTML='<div class="spin"></div>';
+  if(!append) showProgressMessage(L, 'Exploring folder…', 'Reading directory contents');
   const target=path||HOME_PATH;
   const d=await api(`storage?path=${encodeURIComponent(target)}&limit=${storState.limit||40}&offset=${offset||0}`);
   const nextPath=d.path||target||HOME_PATH;
@@ -1343,6 +1351,7 @@ async function loadStorage(path,push=true,offset=0,append=false){
   $('stor-path').textContent=nextPath;
   $('stor-count').textContent=`${d.count||storState.items.length} items`;
   $('stor-more').style.display=storState.hasMore?'':'none';
+  clearProgressMessage(L);
   renderStorageList();
 }
 function renderStorageList(){
@@ -1471,6 +1480,43 @@ async function sendAI(forcedMsg,fromVoice=false){
   if (jobIds.length) {
     jobIds.forEach(jid => startInlineJobStream(jid, M));
   }
+
+  // === AI is explicitly asking for file upload ===
+  if (d.needs_upload) {
+    showUploadRequestBanner(d.upload_request || "Please attach the relevant file so I can analyze it.");
+  }
+}
+
+/* ========== Subtle & Clear Progress Helpers ========== */
+function showProgressMessage(el, text, subtext = '') {
+  if (!el) return;
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;opacity:.9">
+      <div class="spin" style="width:18px;height:18px;border-width:2px"></div>
+      <div>
+        <div style="font-size:12px;font-weight:600">${text}</div>
+        ${subtext ? `<div style="font-size:10px;opacity:.6;margin-top:1px">${subtext}</div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function clearProgressMessage(el, fallback = '') {
+  if (el) el.innerHTML = fallback;
+}
+
+let globalWorkingTimer = null;
+function setGlobalWorking(show, label = 'Working…') {
+  const el = $('global-working');
+  if (!el) return;
+  if (show) {
+    el.textContent = label;
+    el.style.display = 'inline-block';
+    if (globalWorkingTimer) clearTimeout(globalWorkingTimer);
+    globalWorkingTimer = setTimeout(() => { if (el) el.style.display = 'none'; }, 1000 * 60 * 4); // auto hide after 4 min max
+  } else {
+    el.style.display = 'none';
+  }
 }
 
 function startInlineJobStream(jobId, container){
@@ -1503,6 +1549,118 @@ function startInlineJobStream(jobId, container){
       clearInterval(iv);
     }
   }, 1200);
+}
+
+/* Banner when AI asks user to upload something */
+let uploadBanner = null;
+function showUploadRequestBanner(message){
+  const aiView = $('view-ai');
+  if (!aiView) return;
+
+  if (uploadBanner) uploadBanner.remove();
+
+  uploadBanner = document.createElement('div');
+  uploadBanner.style.cssText = 'margin:8px 14px;padding:10px 14px;background:rgba(var(--accr),.12);border:1px solid rgba(var(--accr),.35);border-radius:10px;font-size:12px;display:flex;align-items:center;gap:10px';
+  uploadBanner.innerHTML = `
+    <span style="flex:1">${message}</span>
+    <button class="bigbtn solid" style="padding:6px 14px;font-size:11px" onclick="triggerAttachmentFromBanner()">📎 Attach File</button>
+    <button class="bigbtn" style="padding:6px 10px;font-size:11px" onclick="dismissUploadBanner()">✕</button>
+  `;
+  const vbody = aiView.querySelector('.vbody');
+  vbody.insertBefore(uploadBanner, vbody.firstChild);
+}
+
+function triggerAttachmentFromBanner(){
+  const input = $('ai-file-input');
+  if (input) input.click();
+  dismissUploadBanner();
+}
+
+function dismissUploadBanner(){
+  if (uploadBanner) {
+    uploadBanner.remove();
+    uploadBanner = null;
+  }
+}
+
+async function showPreviousUploads(){
+  const container = $('ai-attachments');
+  if (!container) return;
+
+  // Create a temporary nice picker below the input
+  let picker = $('previous-uploads-picker');
+  if (picker) picker.remove();
+
+  picker = document.createElement('div');
+  picker.id = 'previous-uploads-picker';
+  picker.style.cssText = 'margin:8px 12px;padding:12px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;max-height:260px;overflow:auto';
+  picker.innerHTML = `<div style="font-size:12px;font-weight:600;margin-bottom:8px">Previous uploads — click to re-attach</div><div id="prev-uploads-list">Loading...</div>`;
+
+  container.parentNode.insertBefore(picker, container.nextSibling);
+
+  try {
+    const res = await api('chat', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({message: 'list my previous uploads', history: chatHistory})
+    });
+
+    let files = [];
+    if (res.tool_calls) {
+      for (const t of res.tool_calls) {
+        if (t.tool === 'list_uploaded_files') {
+          try { files = JSON.parse(t.result) || []; } catch {}
+        }
+      }
+    }
+
+    const listEl = picker.querySelector('#prev-uploads-list');
+    if (!files.length) {
+      listEl.innerHTML = '<div style="opacity:.6;font-size:11px">No previous uploads yet. Attach something first!</div>';
+      return;
+    }
+
+    listEl.innerHTML = files.map(f => `
+      <div class="row" style="padding:6px 8px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06)" 
+           onclick="reAttachPreviousFile('${f.id}', '${f.name.replace(/'/g, "\\'")}', '${f.mime}')">
+        <div style="flex:1">
+          <div style="font-size:12px">${f.name}</div>
+          <div style="font-size:10px;opacity:.55">${(f.size/1024/1024).toFixed(1)} MB · ${new Date(f.uploaded_at*1000).toLocaleDateString()}</div>
+        </div>
+        <div style="font-size:10px;opacity:.6;align-self:center">Re-attach</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    picker.querySelector('#prev-uploads-list').innerHTML = '<div style="color:var(--red);font-size:11px">Failed to load previous uploads</div>';
+  }
+
+  // Auto remove picker after 25s or on click outside
+  setTimeout(() => { if (picker && picker.parentNode) picker.parentNode.removeChild(picker); }, 25000);
+}
+
+async function reAttachPreviousFile(fileId, fileName, mime){
+  // Remove the picker
+  const picker = $('previous-uploads-picker');
+  if (picker) picker.remove();
+
+  try {
+    const data = await api(`uploaded-file?id=${fileId}`);
+    if (data.error) {
+      toast(data.error);
+      return;
+    }
+    // Add to current attachments
+    aiAttachments.push({
+      name: data.name || fileName,
+      mime: data.mime || mime,
+      size: data.size,
+      data_b64: data.data_b64
+    });
+    renderAttachments();
+    toast(`Re-attached: ${fileName}`);
+  } catch(e) {
+    toast('Failed to load the file for re-attachment');
+  }
 }
 
 /* keys */
@@ -1547,34 +1705,66 @@ function openModal(title,desc,confirmHTML,onGo,goLabel){
 function closeModal(){$('scrim').classList.remove('on');pendingGo=null;}
 $('m-go').onclick=()=>{if(pendingGo)pendingGo();};
 
-function showProgress(title){
-  $('m-title').textContent=title;$('m-desc').textContent='Working… live progress below';
-  $('m-confirm').style.display='none';$('m-prog').style.display='';$('m-go').style.display='none';
+function showProgress(title, desc = 'This may take a moment. Live updates below.'){
+  $('m-title').textContent=title;
+  $('m-desc').textContent=desc;
+  $('m-confirm').style.display='none';
+  $('m-prog').style.display='';
+  $('m-go').style.display='none';
 }
-async function runJob(startPromise,doneLabel){
+
+async function runJob(startPromise, doneLabel, friendlyMessages = {}){
+  setGlobalWorking(true, doneLabel || 'Processing…');
+
   const {job}=await startPromise;
   const log=$('m-log');
   const poll=setInterval(async()=>{
     const j=await api('job?id='+job);
-    log.innerHTML=j.lines.map(l=>l.toLowerCase().includes('complete')||l.toLowerCase().includes('uninstalled')||l.toLowerCase().includes('removed ')||l.toLowerCase().includes('purged')?`<div class="done">${l}</div>`:`<div>${l}</div>`).join('');
+    log.innerHTML = (j.lines || []).map(line => {
+      const lower = line.toLowerCase();
+      let nice = line;
+
+      // Make progress messages more understandable
+      if (lower.includes('cleaning user caches')) nice = '🧹 Clearing user caches…';
+      else if (lower.includes('npm cache')) nice = '📦 Cleaning npm cache…';
+      else if (lower.includes('homebrew')) nice = '🍺 Running Homebrew cleanup…';
+      else if (lower.includes('trash')) nice = '🗑 Emptying Trash…';
+      else if (lower.includes('purg')) nice = '🧠 Purging inactive RAM memory…';
+      else if (lower.includes('uninstalling')) nice = '🗑 Uninstalling app and leftovers…';
+      else if (lower.includes('removing')) nice = '🗑 Removing leftover files…';
+      else if (lower.includes('complete') || lower.includes('done')) nice = '✅ ' + line;
+
+      const isDone = lower.includes('complete') || lower.includes('uninstalled') || lower.includes('removed') || lower.includes('purged') || lower.includes('done');
+      return isDone ? `<div class="done">${nice}</div>` : `<div>${nice}</div>`;
+    }).join('');
+
     log.scrollTop=log.scrollHeight;
-    if(j.done){clearInterval(poll);$('m-foot').style.display='';$('m-go').style.display='none';
-      $('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModalRefresh()">Done</button>';toast(doneLabel||'Done');}
-  },500);
+
+    if(j.done){
+      clearInterval(poll);
+      $('m-foot').style.display='';
+      $('m-go').style.display='none';
+      $('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModalRefresh()">Done</button>';
+      toast(doneLabel || 'Finished');
+      setGlobalWorking(false);
+    }
+  }, 650);
 }
 function closeModalRefresh(){closeModal();$('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-go" id="m-go">Confirm</button>';$('m-go').onclick=()=>{if(pendingGo)pendingGo();};
   const cur=document.querySelector('.navitem.on')?.dataset.v;if(cur)go(cur);}
 
 /* confirm flows */
 function confirmAction(kind){
-  const meta={purge:['Purge RAM','Free inactive memory. Safe, may briefly slow apps.','sudo purge — may prompt for your password in the terminal where the server runs','Purge'],
-              clean:['Deep Clean','Clears user caches, npm cache, Homebrew cache and empties Trash.','Targets: ~/Library/Caches, npm cache, brew cleanup, ~/.Trash','Clean']}[kind];
-  openModal(meta[0],meta[1],meta[2],()=>{showProgress(meta[0]);runJob(api(kind,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}),meta[0]+' complete');},meta[3]);
+  const meta={
+    purge:['Purge RAM','Freeing inactive memory. Safe operation that can help when RAM feels full.','Running macOS memory purge (may ask for sudo password in terminal)','Purge'],
+    clean:['Deep Clean','Clearing system caches, npm, Homebrew, and emptying Trash. This can take 30–90 seconds.','Scanning and removing temporary files across multiple locations','Clean']
+  }[kind];
+  openModal(meta[0],meta[1],meta[2],()=>{showProgress(meta[0], 'Live progress will appear below…');runJob(api(kind,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}),meta[0]+' complete');},meta[3]);
 }
 function confirmUninstall(path,name){
   openModal('Uninstall '+name,'This removes the app and its leftover support files. This cannot be undone.',
     `Will remove:\n• ${path}\n• ~/Library/Application Support/${name}\n• ~/Library/Caches/${name}\n• ~/Library/Preferences/*${name}*\n• Logs & saved state`.replace(/\n/g,'<br>'),
-    ()=>{showProgress('Uninstalling '+name);runJob(api('uninstall',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path,name})}),name+' uninstalled');},'Uninstall');
+    ()=>{showProgress('Uninstalling '+name, 'Removing app bundle + support files, caches, and preferences.');runJob(api('uninstall',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path,name})}),name+' uninstalled');},'Uninstall');
 }
 function confirmTrash(path,name){
   openModal('Move to Trash','Send this file to Trash? You can restore it from Trash later.',
@@ -1587,7 +1777,7 @@ function confirmDeleteDupes(){
   const paths=[...dupeSel];
   openModal('Delete '+paths.length+' duplicates','Permanently remove the selected duplicate files. This cannot be undone.',
     paths.map(p=>'• '+p).join('<br>'),
-    ()=>{showProgress('Deleting duplicates');runJob(api('delete-dupes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paths})}),'Duplicates deleted').then(()=>{dupeSel.clear();});},
+    ()=>{showProgress('Deleting duplicates', 'Permanently removing selected duplicate files…');runJob(api('delete-dupes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paths})}),'Duplicates deleted').then(()=>{dupeSel.clear();});},
     'Delete '+paths.length+' files');
 }
 function confirmKill(pid,name){

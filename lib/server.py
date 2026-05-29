@@ -558,6 +558,31 @@ TOOLS = [
     }
 ]
 
+# ─── Vision Model Recommendations (OpenRouter) ───────────────────
+VISION_MODELS = [
+    "openai/gpt-4o",
+    "openai/gpt-4o-mini",
+    "anthropic/claude-3.5-sonnet",
+    "anthropic/claude-3-opus",
+    "google/gemini-flash-1.5",
+    "qwen/qwen-2-vl-72b-instruct",
+    "meta-llama/llama-3.2-90b-vision-instruct",
+    "meta-llama/llama-3.2-11b-vision-instruct",
+]
+
+def select_best_vision_model(preferred_model, has_images):
+    """Auto-select a strong vision model when images are attached."""
+    if not has_images:
+        return preferred_model
+
+    pref = preferred_model or ""
+    # If already a known good vision model, keep it
+    if any(v in pref.lower() for v in ["gpt-4o", "claude-3", "gemini", "qwen-2-vl", "llama-3.2", "vision"]):
+        return preferred_model
+
+    # Default to a reliable vision model (gpt-4o is excellent on OpenRouter)
+    return "openai/gpt-4o"
+
 # ─── Long-term Memory (persisted) ─────────────────────────────────
 AI_MEMORY_FILE = os.path.join(CHINNA_HOME, 'ai_memory.json')
 
@@ -621,15 +646,48 @@ def delete_memory(mem_id):
 
 # ─── File Attachments Processing ──────────────────────────────────
 UPLOADS_DIR = os.path.join(CHINNA_HOME, 'uploads')
+UPLOADED_FILES_INDEX = os.path.join(CHINNA_HOME, 'uploaded_files.json')
 os.makedirs(UPLOADS_DIR, exist_ok=True)
+
+def load_uploaded_files_index():
+    try:
+        if os.path.exists(UPLOADED_FILES_INDEX):
+            with open(UPLOADED_FILES_INDEX) as f:
+                data = json.load(f)
+                return data if isinstance(data, dict) else {}
+    except Exception:
+        pass
+    return {}
+
+def save_uploaded_files_index(index):
+    os.makedirs(os.path.dirname(UPLOADED_FILES_INDEX), exist_ok=True)
+    with open(UPLOADED_FILES_INDEX, 'w') as f:
+        json.dump(index, f, indent=2, ensure_ascii=False)
+
+def register_uploaded_file(name, mime, size, saved_path):
+    """Persistently register an uploaded file so AI can reference it later."""
+    index = load_uploaded_files_index()
+    file_id = hashlib.md5(f"{name}{saved_path}{time.time()}".encode()).hexdigest()[:12]
+    index[file_id] = {
+        "id": file_id,
+        "name": name,
+        "mime": mime,
+        "size": size,
+        "path": saved_path,
+        "uploaded_at": int(time.time())
+    }
+    save_uploaded_files_index(index)
+    return file_id
 
 def process_attachments(attachments):
     """
     attachments: list of {name, mime, size, data_b64}
     Returns list of rich context blocks + vision images ready for model.
+    Also registers files persistently.
     """
     results = []
     vision_images = []   # for multi-modal messages
+    index = load_uploaded_files_index()
 
     for att in attachments or []:
         name = safe_text(att.get('name', 'file'))
@@ -648,14 +706,23 @@ def process_attachments(attachments):
         except Exception:
             pass
 
-        entry = {"name": name, "mime": mime, "size": size, "path": saved_path}
+        # Register persistently
+        file_id = register_uploaded_file(name, mime, size, saved_path)
+
+        entry = {
+            "id": file_id,
+            "name": name,
+            "mime": mime,
+            "size": size,
+            "path": saved_path
+        }
 
         # Text / Code / Logs / JSON / Markdown
         if any(x in mime for x in ['text/', 'application/json', 'application/javascript', 'application/xml']) or \
            name.lower().endswith(('.txt', '.md', '.json', '.py', '.js', '.ts', '.tsx', '.go', '.rs', '.sh', '.log', '.yaml', '.yml', '.toml', '.csv')):
             try:
                 with open(saved_path, 'r', encoding='utf-8', errors='replace') as f:
-                    content = f.read(16000)   # generous but safe
+                    content = f.read(16000)
                 entry["type"] = "text"
                 entry["content"] = content
                 results.append(entry)
@@ -666,7 +733,6 @@ def process_attachments(attachments):
         # Images → prepare for vision
         if mime.startswith('image/') or name.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif', '.heic')):
             entry["type"] = "image"
-            # Store base64 for vision models (OpenRouter format)
             if data_b64:
                 entry["image_data"] = f"data:{mime};base64,{data_b64}"
                 vision_images.append({
@@ -676,20 +742,47 @@ def process_attachments(attachments):
             results.append(entry)
             continue
 
-        # PDF (try pdftotext if available)
+        # PDF
         if mime == 'application/pdf' or name.lower().endswith('.pdf'):
             entry["type"] = "pdf"
             txt = sh(f"pdftotext '{saved_path}' - 2>/dev/null | head -200", 12)
-            entry["content"] = txt or "(PDF text extraction failed — pdftotext not installed or file is image-based)"
+            entry["content"] = txt or "(PDF text extraction failed)"
             results.append(entry)
             continue
 
-        # Video / binary — just metadata for now
+        # Everything else
         entry["type"] = "binary"
-        entry["note"] = "Binary file attached. Ask user for specific analysis or extract needed parts."
+        entry["note"] = "Binary/unknown file. Ask for specific analysis if needed."
         results.append(entry)
 
     return results, vision_images
+
+# Tool: list previously uploaded files
+TOOLS.append({
+    "type": "function",
+    "function": {
+        "name": "list_uploaded_files",
+        "description": "List all files the user has previously uploaded to Chinna AI (persistent across sessions).",
+        "parameters": {"type": "object", "properties": {}}
+    }
+})
+
+# Dedicated Error Log Analysis Tool
+TOOLS.append({
+    "type": "function",
+    "function": {
+        "name": "analyze_error_log",
+        "description": "Specialized tool for deeply analyzing crash logs, build errors, stack traces, console output, or any error logs. Returns structured diagnosis + fix suggestions.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "log_content": {"type": "string", "description": "The full or partial error log / stack trace / build output"},
+                "context": {"type": "string", "description": "Extra context (what the user was doing, OS, language, framework, etc.)"}
+            },
+            "required": ["log_content"]
+        }
+    }
+})
 
 # ─── Safe Terminal Allowlist ─────────────────────────────────────
 SAFE_TERMINAL_ALLOWLIST = {
@@ -882,6 +975,42 @@ def execute_tool(name, args):
                 job = jobs.get(jid, {"lines": ["Job not found"], "done": True, "ok": False})
             return json.dumps(job), False
 
+        elif name == "list_uploaded_files":
+            index = load_uploaded_files_index()
+            # Return recent 30 files
+            files = sorted(index.values(), key=lambda x: -x.get("uploaded_at", 0))[:30]
+            return json.dumps(files), False
+
+        elif name == "analyze_error_log":
+            log = args.get("log_content", "")[:12000]
+            ctx = args.get("context", "")
+            if not log:
+                return "No log content provided", False
+
+            # Structured analysis (the model will still reason, but we give it a strong head start)
+            analysis = {
+                "summary": "Error log received. Key patterns detected:",
+                "length": len(log),
+                "likely_type": "unknown",
+                "top_lines": log.splitlines()[:8]
+            }
+            lower = log.lower()
+            if any(x in lower for x in ["exception", "traceback", "error:", "fatal"]):
+                analysis["likely_type"] = "exception / crash"
+            if any(x in lower for x in ["build failed", "compilation error", "syntaxerror", "module not found"]):
+                analysis["likely_type"] = "build / compile error"
+            if "react" in lower or "next" in lower:
+                analysis["framework"] = "React/Next.js likely"
+            if "swift" in lower or "xcode" in lower:
+                analysis["framework"] = "iOS/Swift"
+
+            return json.dumps({
+                "analysis": analysis,
+                "full_log_preview": log[:2500],
+                "user_context": ctx,
+                "instruction": "Now provide a clear diagnosis + step-by-step fix. Be specific."
+            }), False
+
         else:
             return f"Unknown tool: {name}", False
     except Exception as e:
@@ -993,6 +1122,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         elif p == '/api/chat/clear':
             clear_ai_history()
             self._json({'ok': True, 'message': 'Conversation memory cleared'})
+        elif p == '/api/uploaded-file':
+            self.serve_uploaded_file(q.get('id'))
         else:
             self._json({'error': f'unknown {p}'}, 404)
 
@@ -1100,12 +1231,23 @@ class H(http.server.SimpleHTTPRequestHandler):
         incoming_history = b.get('history') or []
         raw_attachments = b.get('attachments') or []
 
+        # Detect images early for auto model selection
+        has_images = any(
+            (a.get('mime','').startswith('image/') or 
+             a.get('name','').lower().endswith(('.png','.jpg','.jpeg','.webp','.gif')))
+            for a in raw_attachments
+        )
+
         if not load_keys().get('OPENROUTER_API_KEY') and not load_keys().get('OPENAI_API_KEY'):
             self._json({'error': 'No API key configured. Add OpenRouter key in Settings.'}, 400)
             return
 
         # Process any attached files (text, code, images, pdf, etc.)
         attachment_context, vision_images = process_attachments(raw_attachments)
+
+        # Auto-select best vision model if images are attached
+        if has_images:
+            model = select_best_vision_model(model, True)
 
         # Merge incoming history
         if incoming_history:
@@ -1144,7 +1286,10 @@ class H(http.server.SimpleHTTPRequestHandler):
             "After using tools, give a short, direct, friendly answer.\n"
             "Never make up file paths or numbers — use the tool results.\n"
             "When you call tools, the results will be fed back to you automatically.\n"
-            "You have long-term memory — use search_memory / save_to_memory when the user mentions preferences, projects, or recurring facts."
+            "You have long-term memory — use search_memory / save_to_memory when the user mentions preferences, projects, or recurring facts.\n\n"
+            "If you need the user to upload a file (screenshot, log, code, config, etc.) to help better, reply with a short message AND include the special marker in your final answer like this:\n"
+            "[NEEDS_UPLOAD: Please attach the screenshot of the error / the build log / the config file]\n"
+            "Only use this when it would genuinely help."
             + memory_context
         )
 
@@ -1164,6 +1309,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         used_model = model
         final_reply = ""
         tool_traces = []
+        needs_upload = False
+        upload_request = None
 
         try:
             # === Dynamic Tool Calling Loop (up to 5 rounds) ===
@@ -1214,6 +1361,19 @@ class H(http.server.SimpleHTTPRequestHandler):
 
                 # No more tool calls — we have the final answer
                 final_reply = assistant_content or "(no response)"
+
+                # Detect if AI is explicitly asking for an upload
+                needs_upload = False
+                upload_request = None
+                if "[NEEDS_UPLOAD:" in final_reply:
+                    needs_upload = True
+                    try:
+                        upload_request = final_reply.split("[NEEDS_UPLOAD:", 1)[1].split("]", 1)[0].strip()
+                    except:
+                        upload_request = "Please attach the relevant file (screenshot, log, config, etc.)"
+                    # Clean the marker from the visible reply
+                    final_reply = final_reply.split("[NEEDS_UPLOAD:")[0].strip()
+
                 add_to_history("assistant", final_reply)
                 break
 
@@ -1226,7 +1386,9 @@ class H(http.server.SimpleHTTPRequestHandler):
                 "model": used_model,
                 "history": AI_HISTORY[-AI_HISTORY_LIMIT:],
                 "tool_calls": tool_traces,
-                "attachments_processed": len(attachment_context)
+                "attachments_processed": len(attachment_context),
+                "needs_upload": needs_upload,
+                "upload_request": upload_request
             })
 
         except Exception as e:
@@ -1287,6 +1449,29 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json({'text': safe_text(d.get('text', ''))})
         except Exception as e:
             self._json({'error': safe_text(e), 'text': ''}, 500)
+
+    def serve_uploaded_file(self, file_id):
+        """Return a previously uploaded file so it can be re-attached to AI chat."""
+        if not file_id:
+            self._json({'error': 'file id required'}, 400)
+            return
+        index = load_uploaded_files_index()
+        meta = index.get(file_id)
+        if not meta or not os.path.exists(meta.get('path', '')):
+            self._json({'error': 'File not found or was deleted'}, 404)
+            return
+        try:
+            with open(meta['path'], 'rb') as f:
+                data = base64.b64encode(f.read()).decode()
+            self._json({
+                'id': file_id,
+                'name': meta['name'],
+                'mime': meta['mime'],
+                'size': meta['size'],
+                'data_b64': data
+            })
+        except Exception as e:
+            self._json({'error': safe_text(str(e))}, 500)
 
     def job_purge(self, jid):
         job_log(jid, "Requesting RAM purge (may prompt for sudo in your terminal)...")
