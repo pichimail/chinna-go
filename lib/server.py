@@ -312,43 +312,60 @@ def build_chat_prompt(message, context):
         f"User question:\n{safe_message}"
     )
 
-def openrouter_chat(prompt, model='meta-llama/llama-3.3-70b-instruct:free'):
+def openrouter_chat(messages, model='meta-llama/llama-3.3-70b-instruct:free', tools=None):
+    """Send full messages array (supports history + tool calls). Returns (message_dict or None, model)."""
     key = load_keys().get('OPENROUTER_API_KEY', '')
     if not key:
         return None, 'no_key'
-    payload = json.dumps({'model': model, 'max_tokens': 900, 'messages': [{'role': 'user', 'content': prompt}]}, ensure_ascii=False).encode('utf-8')
-    cmd = [
-        'curl', '-sS', '--max-time', '40',
-        'https://openrouter.ai/api/v1/chat/completions',
-        '-H', f'Authorization: Bearer {key}',
-        '-H', 'Content-Type: application/json; charset=utf-8',
-        '-H', 'HTTP-Referer: https://chinna.local',
-        '-H', 'X-Title: Chinna Dashboard',
-        '--data-binary', '@-'
-    ]
-    proc = subprocess.run(cmd, input=payload, capture_output=True)
-    if proc.returncode != 0 or not proc.stdout:
-        return None, f'curl_failed:{proc.returncode}'
-    data = json.loads(proc.stdout.decode('utf-8', errors='replace'))
-    return safe_text(data.get('choices', [{}])[0].get('message', {}).get('content', '')), model
+    payload = {
+        "model": model,
+        "max_tokens": 1100,
+        "messages": messages,
+    }
+    if tools:
+        payload["tools"] = tools
+        payload["tool_choice"] = "auto"
+    try:
+        proc = subprocess.run([
+            'curl', '-sS', '--max-time', '55',
+            'https://openrouter.ai/api/v1/chat/completions',
+            '-H', f'Authorization: Bearer {key}',
+            '-H', 'Content-Type: application/json; charset=utf-8',
+            '-H', 'HTTP-Referer: https://chinna.local',
+            '-H', 'X-Title: Chinna Dashboard',
+            '--data-binary', '@-'
+        ], input=json.dumps(payload, ensure_ascii=False).encode('utf-8'), capture_output=True)
+        if proc.returncode != 0 or not proc.stdout:
+            return None, f'curl_failed:{proc.returncode}'
+        data = json.loads(proc.stdout.decode('utf-8', errors='replace'))
+        msg = data.get('choices', [{}])[0].get('message', {})
+        return msg, model
+    except Exception as e:
+        return None, f'error:{e}'
 
-def openai_chat(prompt, model='gpt-4o-mini'):
+def openai_chat(messages, model='gpt-4o-mini', tools=None):
     key = load_keys().get('OPENAI_API_KEY', '')
     if not key:
         return None, 'no_key'
-    payload = json.dumps({'model': model, 'max_tokens': 900, 'messages': [{'role': 'user', 'content': prompt}]}, ensure_ascii=False).encode('utf-8')
-    cmd = [
-        'curl', '-sS', '--max-time', '40',
-        'https://api.openai.com/v1/chat/completions',
-        '-H', f'Authorization: Bearer {key}',
-        '-H', 'Content-Type: application/json; charset=utf-8',
-        '--data-binary', '@-'
-    ]
-    proc = subprocess.run(cmd, input=payload, capture_output=True)
-    if proc.returncode != 0 or not proc.stdout:
-        return None, f'curl_failed:{proc.returncode}'
-    data = json.loads(proc.stdout.decode('utf-8', errors='replace'))
-    return safe_text(data.get('choices', [{}])[0].get('message', {}).get('content', '')), model
+    payload = {"model": model, "max_tokens": 900, "messages": messages}
+    if tools:
+        payload["tools"] = tools
+        payload["tool_choice"] = "auto"
+    try:
+        proc = subprocess.run([
+            'curl', '-sS', '--max-time', '50',
+            'https://api.openai.com/v1/chat/completions',
+            '-H', f'Authorization: Bearer {key}',
+            '-H', 'Content-Type: application/json; charset=utf-8',
+            '--data-binary', '@-'
+        ], input=json.dumps(payload, ensure_ascii=False).encode('utf-8'), capture_output=True)
+        if proc.returncode != 0 or not proc.stdout:
+            return None, f'curl_failed:{proc.returncode}'
+        data = json.loads(proc.stdout.decode('utf-8', errors='replace'))
+        msg = data.get('choices', [{}])[0].get('message', {})
+        return msg, model
+    except Exception as e:
+        return None, f'error:{e}'
 
 def telegram_bot_meta():
     token = load_keys().get('TELEGRAM_BOT_TOKEN', '')
@@ -398,6 +415,477 @@ def telegram_status():
         'pair_url': pair.get('pair_url', ''),
         'qr_url': pair.get('qr_url', '')
     }
+
+# ═══════════════════════════════════════════════════════════════
+# CHINNA AI — Conversation History + Real Dynamic Tools
+# ═══════════════════════════════════════════════════════════════
+
+# Rolling conversation history (last N turns). Simple & effective for local single-user tool.
+AI_HISTORY = []
+AI_HISTORY_LIMIT = 18  # ~9 user + assistant turns
+
+def add_to_history(role, content, tool_calls=None, tool_call_id=None, name=None):
+    entry = {"role": role, "content": content or ""}
+    if tool_calls: entry["tool_calls"] = tool_calls
+    if tool_call_id: entry["tool_call_id"] = tool_call_id
+    if name: entry["name"] = name
+    AI_HISTORY.append(entry)
+    # trim
+    while len(AI_HISTORY) > AI_HISTORY_LIMIT:
+        AI_HISTORY.pop(0)
+
+def clear_ai_history():
+    AI_HISTORY.clear()
+
+# Tool definitions (OpenAI / OpenRouter compatible format)
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_system_status",
+            "description": "Get live CPU, RAM, Disk, Battery, uptime and network status of this Mac.",
+            "parameters": {"type": "object", "properties": {}}
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_top_processes",
+            "description": "List top memory and CPU consuming processes currently running.",
+            "parameters": {"type": "object", "properties": {}}
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "kill_process",
+            "description": "Force kill a process by PID. Use with caution.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "pid": {"type": "integer", "description": "Process ID to kill"}
+                },
+                "required": ["pid"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "find_files",
+            "description": "Search for files and folders by name pattern under the user's home.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Search term or glob-like pattern"},
+                    "limit": {"type": "integer", "description": "Max results (default 12)"}
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "reveal_in_finder",
+            "description": "Reveal a file or folder in Finder (equivalent to right-click → Show in Finder).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Absolute path to reveal"}
+                },
+                "required": ["path"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "trash_path",
+            "description": "Move a file or folder to Trash safely.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Absolute path to move to trash"}
+                },
+                "required": ["path"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "purge_ram",
+            "description": "Run macOS RAM purge (frees inactive memory). May require sudo.",
+            "parameters": {"type": "object", "properties": {}}
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "deep_clean",
+            "description": "Trigger deep system clean (user caches, npm, brew, trash, etc.). Returns a job id to track progress.",
+            "parameters": {"type": "object", "properties": {}}
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_disk_usage",
+            "description": "Get detailed storage breakdown for a path (defaults to ~).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Path to analyze (default home)"}
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_file_snippet",
+            "description": "Read the beginning of a text file (safe, limited size).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "max_lines": {"type": "integer", "description": "Max lines to read (default 30)"}
+                },
+                "required": ["path"]
+            }
+        }
+    }
+]
+
+# ─── Long-term Memory (persisted) ─────────────────────────────────
+AI_MEMORY_FILE = os.path.join(CHINNA_HOME, 'ai_memory.json')
+
+def load_memory():
+    try:
+        if os.path.exists(AI_MEMORY_FILE):
+            with open(AI_MEMORY_FILE) as f:
+                data = json.load(f)
+                return data if isinstance(data, list) else []
+    except Exception:
+        pass
+    return []
+
+def save_memory(memories):
+    os.makedirs(os.path.dirname(AI_MEMORY_FILE), exist_ok=True)
+    with open(AI_MEMORY_FILE, 'w') as f:
+        json.dump(memories, f, indent=2, ensure_ascii=False)
+
+def add_memory_fact(fact, category="general", importance=5):
+    mem = load_memory()
+    entry = {
+        "id": hashlib.md5(f"{fact}{time.time()}".encode()).hexdigest()[:10],
+        "fact": safe_text(fact),
+        "category": safe_text(category or "general"),
+        "importance": max(1, min(10, int(importance or 5))),
+        "created": int(time.time()),
+        "last_used": int(time.time())
+    }
+    mem.append(entry)
+    # keep only last 200 facts
+    if len(mem) > 200:
+        mem = sorted(mem, key=lambda x: (x.get('importance',5), x.get('last_used',0)), reverse=True)[:200]
+    save_memory(mem)
+    return entry["id"]
+
+def search_memory(query, limit=8):
+    mem = load_memory()
+    q = safe_text(query).lower()
+    if not q:
+        return sorted(mem, key=lambda x: -x.get('importance', 5))[:limit]
+    scored = []
+    for m in mem:
+        text = (m.get('fact','') + ' ' + m.get('category','')).lower()
+        score = sum(1 for word in q.split() if word in text)
+        if score > 0:
+            scored.append((score + m.get('importance',5)*0.3, m))
+    scored.sort(reverse=True)
+    results = [m for _, m in scored[:limit]]
+    # update last_used
+    now = int(time.time())
+    for m in results:
+        m['last_used'] = now
+    save_memory(mem)
+    return results
+
+def delete_memory(mem_id):
+    mem = load_memory()
+    mem = [m for m in mem if m.get('id') != mem_id]
+    save_memory(mem)
+    return True
+
+# ─── File Attachments Processing ──────────────────────────────────
+UPLOADS_DIR = os.path.join(CHINNA_HOME, 'uploads')
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+
+def process_attachments(attachments):
+    """
+    attachments: list of {name, mime, size, data_b64}
+    Returns list of rich context blocks + vision images ready for model.
+    """
+    results = []
+    vision_images = []   # for multi-modal messages
+
+    for att in attachments or []:
+        name = safe_text(att.get('name', 'file'))
+        mime = att.get('mime', '') or ''
+        size = int(att.get('size', 0))
+        data_b64 = att.get('data_b64', '')
+
+        # Save file
+        safe_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', name)[:80]
+        ts = int(time.time())
+        saved_path = os.path.join(UPLOADS_DIR, f"{ts}_{safe_name}")
+        try:
+            if data_b64:
+                with open(saved_path, 'wb') as f:
+                    f.write(base64.b64decode(data_b64))
+        except Exception:
+            pass
+
+        entry = {"name": name, "mime": mime, "size": size, "path": saved_path}
+
+        # Text / Code / Logs / JSON / Markdown
+        if any(x in mime for x in ['text/', 'application/json', 'application/javascript', 'application/xml']) or \
+           name.lower().endswith(('.txt', '.md', '.json', '.py', '.js', '.ts', '.tsx', '.go', '.rs', '.sh', '.log', '.yaml', '.yml', '.toml', '.csv')):
+            try:
+                with open(saved_path, 'r', encoding='utf-8', errors='replace') as f:
+                    content = f.read(16000)   # generous but safe
+                entry["type"] = "text"
+                entry["content"] = content
+                results.append(entry)
+                continue
+            except Exception:
+                pass
+
+        # Images → prepare for vision
+        if mime.startswith('image/') or name.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif', '.heic')):
+            entry["type"] = "image"
+            # Store base64 for vision models (OpenRouter format)
+            if data_b64:
+                entry["image_data"] = f"data:{mime};base64,{data_b64}"
+                vision_images.append({
+                    "type": "image_url",
+                    "image_url": {"url": entry["image_data"]}
+                })
+            results.append(entry)
+            continue
+
+        # PDF (try pdftotext if available)
+        if mime == 'application/pdf' or name.lower().endswith('.pdf'):
+            entry["type"] = "pdf"
+            txt = sh(f"pdftotext '{saved_path}' - 2>/dev/null | head -200", 12)
+            entry["content"] = txt or "(PDF text extraction failed — pdftotext not installed or file is image-based)"
+            results.append(entry)
+            continue
+
+        # Video / binary — just metadata for now
+        entry["type"] = "binary"
+        entry["note"] = "Binary file attached. Ask user for specific analysis or extract needed parts."
+        results.append(entry)
+
+    return results, vision_images
+
+# ─── Safe Terminal Allowlist ─────────────────────────────────────
+SAFE_TERMINAL_ALLOWLIST = {
+    'ls', 'pwd', 'whoami', 'date', 'uptime', 'df', 'du', 'free', 'top', 'ps',
+    'brew', 'git', 'node', 'npm', 'npx', 'pnpm', 'yarn', 'python3', 'pip3',
+    'sw_vers', 'sysctl', 'vm_stat', 'ioreg', 'system_profiler',
+    'mdfind', 'mdls', 'find', 'head', 'tail', 'wc', 'cat', 'file', 'stat',
+    'ping', 'curl -I', 'dig', 'host', 'scutil'
+}
+
+def is_safe_terminal_command(cmd):
+    cmd = cmd.strip().lower()
+    if any(x in cmd for x in ['rm ', 'sudo ', 'mv ', 'cp ', 'kill ', 'launchctl', 'defaults write', 'chmod', 'chown', '| bash', '| sh', 'curl |', 'wget |', 'eval ', 'exec ', '>', '>>', 'mkfs']):
+        return False
+    first_word = cmd.split()[0] if cmd.split() else ''
+    return first_word in SAFE_TERMINAL_ALLOWLIST or any(cmd.startswith(p) for p in SAFE_TERMINAL_ALLOWLIST)
+
+# ─── Tool Definitions Extension ───────────────────────────────────
+TOOLS.append({
+    "type": "function",
+    "function": {
+        "name": "run_terminal_command",
+        "description": "Run a SAFE read-only terminal command (ls, git status, brew list, du, find, etc.). Destructive commands are blocked.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "command": {"type": "string", "description": "The shell command to run (must be safe/read-only)"}
+            },
+            "required": ["command"]
+        }
+    }
+})
+
+TOOLS.append({
+    "type": "function",
+    "function": {
+        "name": "save_to_memory",
+        "description": "Save an important fact, preference, or note about the user/system for long-term recall (persisted in ~/.chinna/ai_memory.json).",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "fact": {"type": "string"},
+                "category": {"type": "string", "description": "e.g. preference, project, hardware, habit"},
+                "importance": {"type": "integer", "description": "1-10, higher = more important"}
+            },
+            "required": ["fact"]
+        }
+    }
+})
+
+TOOLS.append({
+    "type": "function",
+    "function": {
+        "name": "search_memory",
+        "description": "Search the long-term memory for relevant facts, preferences or past context.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "What to search for"},
+                "limit": {"type": "integer"}
+            },
+            "required": ["query"]
+        }
+    }
+})
+
+TOOLS.append({
+    "type": "function",
+    "function": {
+        "name": "get_job_status",
+        "description": "Check progress of a long-running job (deep clean, uninstall, etc.).",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "job_id": {"type": "string"}
+            },
+            "required": ["job_id"]
+        }
+    }
+})
+
+def execute_tool(name, args):
+    """Execute a tool safely. Returns (result_text, is_long_job)."""
+    try:
+        if name == "get_system_status":
+            with cache_lock:
+                s = dict(stats_cache)
+            return json.dumps({
+                "cpu": s.get("cpu", {}),
+                "memory": s.get("memory", {}),
+                "disk": s.get("disk", {}),
+                "battery": s.get("battery", {}),
+                "uptime": s.get("uptime"),
+                "os": s.get("os"),
+                "network": s.get("network")
+            }), False
+
+        elif name == "list_top_processes":
+            with cache_lock:
+                procs = (dict(stats_cache).get("processes") or [])[:10]
+            return json.dumps(procs), False
+
+        elif name == "kill_process":
+            pid = args.get("pid")
+            if not pid: return "Error: pid required", False
+            sh(f"kill -9 {int(pid)} 2>/dev/null || true")
+            return f"Sent SIGKILL to PID {pid}", False
+
+        elif name == "find_files":
+            q = args.get("query", "").strip()
+            lim = int(args.get("limit", 12))
+            if not q: return "[]", False
+            out = sh(f"find ~ -maxdepth 7 -iname '*{q}*' -not -path '*/.Trash/*' -not -path '*/node_modules/*' 2>/dev/null | head -{lim}", 8)
+            hits = [x for x in out.splitlines() if x.strip()]
+            return json.dumps(hits), False
+
+        elif name == "reveal_in_finder":
+            p = args.get("path", "")
+            if p and os.path.exists(os.path.expanduser(p)):
+                sh(f"open -R '{os.path.expanduser(p)}'")
+                return f"Revealed in Finder: {p}", False
+            return "Path not found", False
+
+        elif name == "trash_path":
+            p = os.path.expanduser(args.get("path", ""))
+            if not p or not os.path.exists(p):
+                return "Path does not exist", False
+            # Use macOS trash via osascript for safety
+            sh(f"osascript -e 'tell app \"Finder\" to delete POSIX file \"{p}\"' 2>/dev/null || rm -rf '{p}'")
+            return f"Moved to Trash: {p}", False
+
+        elif name == "purge_ram":
+            sh("sudo purge 2>/dev/null || purge 2>/dev/null", 25)
+            return "RAM purge completed", False
+
+        elif name == "deep_clean":
+            jid = new_job()
+            # Run the clean steps directly in a thread (avoids class binding issues)
+            def _run_clean(j):
+                try:
+                    job_log(j, "Starting deep clean...")
+                    for label, cmd in [("User caches", "rm -rf ~/Library/Caches/* 2>/dev/null"),
+                                       ("npm cache", "npm cache clean --force 2>/dev/null"),
+                                       ("Homebrew cleanup", "brew cleanup -s 2>/dev/null"),
+                                       ("Trash", "rm -rf ~/.Trash/* 2>/dev/null")]:
+                        job_log(j, f"Cleaning {label} ...")
+                        sh(cmd, 35)
+                        job_log(j, f"  done: {label}")
+                    job_log(j, "Deep clean complete."); job_done(j)
+                except Exception as ex:
+                    job_log(j, f"Error: {ex}"); job_done(j, False)
+            threading.Thread(target=_run_clean, args=(jid,), daemon=True).start()
+            return json.dumps({"job_id": jid, "status": "started"}), False
+
+        elif name == "get_disk_usage":
+            target = os.path.expanduser(args.get("path") or HOME)
+            data = storage_breakdown(target, limit=10, offset=0)
+            return json.dumps(data), False
+
+        elif name == "read_file_snippet":
+            p = os.path.expanduser(args.get("path", ""))
+            maxl = int(args.get("max_lines", 30))
+            if not os.path.exists(p): return "File not found", False
+            return file_snippet(p, max_lines=maxl) or "(empty or binary)", False
+
+        elif name == "run_terminal_command":
+            cmd = (args.get("command") or "").strip()
+            if not cmd:
+                return "No command provided", False
+            if not is_safe_terminal_command(cmd):
+                return "Command blocked for safety. Only read-only / informational commands are allowed.", False
+            out = sh(cmd, timeout=18)
+            return out[:1800] or "(no output)", False
+
+        elif name == "save_to_memory":
+            fact = args.get("fact", "")
+            if not fact: return "Nothing to remember", False
+            mid = add_memory_fact(fact, args.get("category"), args.get("importance"))
+            return f"Remembered (id:{mid})", False
+
+        elif name == "search_memory":
+            results = search_memory(args.get("query", ""), int(args.get("limit", 8)))
+            return json.dumps(results), False
+
+        elif name == "get_job_status":
+            jid = args.get("job_id")
+            if not jid:
+                return "job_id required", False
+            with jobs_lock:
+                job = jobs.get(jid, {"lines": ["Job not found"], "done": True, "ok": False})
+            return json.dumps(job), False
+
+        else:
+            return f"Unknown tool: {name}", False
+    except Exception as e:
+        return f"Tool error: {safe_text(str(e))}", False
 
 class H(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k): super().__init__(*a, directory=DASHBOARD_DIR, **k)
@@ -502,6 +990,9 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json({'ok': ok, 'result': msg}, 200 if ok else 400)
         elif p == '/api/voice/transcribe':
             self.voice_transcribe(b)
+        elif p == '/api/chat/clear':
+            clear_ai_history()
+            self._json({'ok': True, 'message': 'Conversation memory cleared'})
         else:
             self._json({'error': f'unknown {p}'}, 404)
 
@@ -603,39 +1094,148 @@ class H(http.server.SimpleHTTPRequestHandler):
             return {'result': rpt, 'saved': None}
 
     def chat(self, b):
-        msg = safe_text(b.get('message',''), keep_newlines=True)
-        model = safe_text(b.get('model','meta-llama/llama-3.3-70b-instruct:free'))
-        key = load_keys().get('OPENROUTER_API_KEY','')
-        if not key:
-            self._json({'error':'No API key. Open Settings and add your OpenRouter key.'}, 400)
+        """New dynamic Chinna AI with full conversation history + real tool calling loop + attachments."""
+        user_msg = safe_text(b.get('message', ''), keep_newlines=True)
+        model = safe_text(b.get('model', 'meta-llama/llama-3.3-70b-instruct:free'))
+        incoming_history = b.get('history') or []
+        raw_attachments = b.get('attachments') or []
+
+        if not load_keys().get('OPENROUTER_API_KEY') and not load_keys().get('OPENAI_API_KEY'):
+            self._json({'error': 'No API key configured. Add OpenRouter key in Settings.'}, 400)
             return
+
+        # Process any attached files (text, code, images, pdf, etc.)
+        attachment_context, vision_images = process_attachments(raw_attachments)
+
+        # Merge incoming history
+        if incoming_history:
+            AI_HISTORY.clear()
+            for h in incoming_history[-AI_HISTORY_LIMIT:]:
+                AI_HISTORY.append(h)
+
+        # Build rich user message that includes attachment summaries
+        full_user_content = user_msg
+        if attachment_context:
+            full_user_content += "\n\n[Attached files:]\n"
+            for a in attachment_context:
+                if a.get("type") == "text":
+                    full_user_content += f"\n--- {a['name']} ---\n{a.get('content','')[:6000]}\n"
+                elif a.get("type") == "image":
+                    full_user_content += f"\n[Image attached: {a['name']}]\n"
+                elif a.get("type") == "pdf":
+                    full_user_content += f"\n--- PDF: {a['name']} ---\n{a.get('content','')[:3000]}\n"
+                else:
+                    full_user_content += f"\n[File: {a['name']} ({a.get('mime','binary')})]\n"
+
+        add_to_history("user", full_user_content)
+
+        # Build the messages array we will send (system + history)
+        # Inject long-term memory context
+        memory_facts = load_memory()
+        memory_context = ""
+        if memory_facts:
+            top = sorted(memory_facts, key=lambda x: -x.get('importance', 5))[:6]
+            memory_context = "\n\nKnown facts about this user / setup:\n" + "\n".join(f"- {m.get('fact')}" for m in top)
+
+        system_prompt = (
+            "You are Chinna, a concise, witty, and extremely capable Mac assistant.\n"
+            "You have access to real tools to inspect and control the user's Mac.\n"
+            "Use tools proactively when the user asks to do something (clean, kill, find, open, purge, run commands, etc).\n"
+            "After using tools, give a short, direct, friendly answer.\n"
+            "Never make up file paths or numbers — use the tool results.\n"
+            "When you call tools, the results will be fed back to you automatically.\n"
+            "You have long-term memory — use search_memory / save_to_memory when the user mentions preferences, projects, or recurring facts."
+            + memory_context
+        )
+
+        messages = [{"role": "system", "content": system_prompt}]
+
+        # Inject history (with special handling for the very last user message if it has vision)
+        history_to_send = AI_HISTORY[-12:]
+        if vision_images and history_to_send and history_to_send[-1]["role"] == "user":
+            last = history_to_send[-1]
+            # Convert last user message into multi-modal format for vision models
+            content_parts = [{"type": "text", "text": last.get("content", "")}]
+            content_parts.extend(vision_images)
+            history_to_send[-1] = {"role": "user", "content": content_parts}
+
+        messages.extend(history_to_send)
+
+        used_model = model
+        final_reply = ""
+        tool_traces = []
+
         try:
-            with open(os.path.join(CHINNA_HOME, 'dashboard.log'), 'a') as log:
-                log.write(f"chat:start msg_len={len(msg)}\n")
-            context = local_context_for(msg, b.get('path'))
-            with open(os.path.join(CHINNA_HOME, 'dashboard.log'), 'a') as log:
-                log.write(f"chat:context count={len(context)}\n")
-            prompt = build_chat_prompt(msg, context)
-            with open(os.path.join(CHINNA_HOME, 'dashboard.log'), 'a') as log:
-                log.write(f"chat:prompt len={len(prompt)}\n")
-            reply, used_model = openrouter_chat(prompt, model=model or 'meta-llama/llama-3.3-70b-instruct:free')
-            if not reply and load_keys().get('OPENAI_API_KEY'):
-                with open(os.path.join(CHINNA_HOME, 'dashboard.log'), 'a') as log:
-                    log.write("chat:fallback=openai\n")
-                reply, used_model = openai_chat(prompt, model='gpt-4o-mini')
-            with open(os.path.join(CHINNA_HOME, 'dashboard.log'), 'a') as log:
-                log.write(f"chat:reply type={type(reply).__name__} len={len(reply or '')}\n")
-            if reply is None:
-                self._json({'error':'AI request failed — try again'}, 502)
-                return
-            self._json({'reply': reply, 'model': used_model, 'sources': context})
+            # === Dynamic Tool Calling Loop (up to 5 rounds) ===
+            for round_num in range(5):
+                # Try OpenRouter first (usually better tool calling)
+                msg, used_model = openrouter_chat(messages, model=model, tools=TOOLS)
+                if not msg and load_keys().get('OPENAI_API_KEY'):
+                    msg, used_model = openai_chat(messages, model='gpt-4o-mini', tools=TOOLS)
+
+                if not msg:
+                    final_reply = "AI request failed. Check your API key or try again."
+                    break
+
+                # If the model wants to call tools
+                tool_calls = msg.get("tool_calls") or []
+                assistant_content = msg.get("content") or ""
+
+                if tool_calls:
+                    # Record the assistant's tool call decision
+                    add_to_history("assistant", assistant_content, tool_calls=tool_calls)
+                    messages.append({"role": "assistant", "content": assistant_content, "tool_calls": tool_calls})
+
+                    # Execute every tool the model asked for
+                    for tc in tool_calls:
+                        fn = tc.get("function", {})
+                        name = fn.get("name")
+                        args = {}
+                        try:
+                            args = json.loads(fn.get("arguments") or "{}")
+                        except:
+                            args = {}
+
+                        result_text, is_long = execute_tool(name, args)
+                        tool_traces.append({"tool": name, "args": args, "result": result_text[:800]})
+
+                        # Feed result back as a tool message
+                        tool_msg = {
+                            "role": "tool",
+                            "tool_call_id": tc.get("id"),
+                            "name": name,
+                            "content": result_text
+                        }
+                        add_to_history("tool", result_text, tool_call_id=tc.get("id"), name=name)
+                        messages.append(tool_msg)
+
+                    # Continue the loop so the model can reason over tool results
+                    continue
+
+                # No more tool calls — we have the final answer
+                final_reply = assistant_content or "(no response)"
+                add_to_history("assistant", final_reply)
+                break
+
+            # Fallback if loop exhausted without reply
+            if not final_reply:
+                final_reply = "I processed your request but didn't get a clean final answer. Try rephrasing."
+
+            self._json({
+                "reply": final_reply,
+                "model": used_model,
+                "history": AI_HISTORY[-AI_HISTORY_LIMIT:],
+                "tool_calls": tool_traces,
+                "attachments_processed": len(attachment_context)
+            })
+
         except Exception as e:
             try:
                 with open(os.path.join(CHINNA_HOME, 'dashboard.log'), 'a') as log:
-                    log.write(traceback.format_exc() + '\n')
-            except Exception:
+                    log.write("CHAT ERROR:\n" + traceback.format_exc() + "\n")
+            except:
                 pass
-            self._json({'error': safe_text(e)}, 500)
+            self._json({"error": safe_text(str(e))}, 500)
 
     def telegram_pair(self, b):
         keys = load_keys()
