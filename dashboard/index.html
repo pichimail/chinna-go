@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chinna V5</title>
+<title>Chinna V6</title>
 <style>
 :root{
   --bg:#0b0c0e; --panel:rgba(22,24,28,.72); --panel2:rgba(32,35,40,.6);
@@ -531,7 +531,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
   <!-- TOP BAR -->
   <div class="topbar glass">
     <div class="dots"><i></i><i></i><i></i></div>
-    <div class="brand">CHINNA&nbsp;V5</div>
+    <div class="brand">CHINNA&nbsp;V6</div>
     <div class="vitals">
       <span class="vital">CPU <b id="v-cpu">—</b></span>
       <span class="vital">RAM <b id="v-ram">—</b></span>
@@ -564,6 +564,11 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
       <div class="navitem" data-v="apps" onclick="go('apps')"><span class="ic">🗑</span> App Uninstaller</div>
       <div class="navitem" data-v="battery" onclick="go('battery')"><span class="ic">🔋</span> Battery Health</div>
       <div class="navitem" data-v="doctor" onclick="go('doctor')"><span class="ic">🩺</span> Doctor</div>
+
+      <div class="navlabel">Tools</div>
+      <div class="navitem" data-v="whatsapp" onclick="go('whatsapp')"><span class="ic">💬</span> WhatsApp</div>
+      <div class="navitem" data-v="macos" onclick="go('macos')"><span class="ic">🍎</span> macOS Tools</div>
+      <div class="navitem" data-v="models" onclick="go('models')"><span class="ic">🤖</span> Models & AI</div>
       <div class="navitem" data-v="ai" onclick="go('ai')"><span class="ic">✦</span> Chinna AI</div>
       <div class="navitem" data-v="projects" onclick="go('projects')"><span class="ic">📁</span> Projects</div>
     </div>
@@ -755,6 +760,96 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
           </div>
         </div>
       </div>
+
+
+      <!-- WHATSAPP -->
+      <div class="view" id="view-whatsapp">
+        <div class="vhead"><h2>WhatsApp</h2><span class="sub">Open app · Send message via wa.me link</span></div>
+        <div class="vbody">
+          <div class="navlabel">Quick Open</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+            <button class="bigbtn" onclick="waOpen()">💬 Open WhatsApp</button>
+            <button class="bigbtn" onclick="waOpenWeb()">🌐 WhatsApp Web</button>
+          </div>
+          <div class="navlabel">Send Message via Link</div>
+          <div style="display:flex;flex-direction:column;gap:8px;max-width:520px;margin-bottom:18px">
+            <input class="field" id="wa-num" placeholder="Phone number e.g. 919876543210" style="margin:0">
+            <textarea class="field" id="wa-msg" placeholder="Message to send..." rows="3" style="margin:0;resize:vertical"></textarea>
+            <button class="bigbtn solid" onclick="waSend()">Send via WhatsApp</button>
+          </div>
+          <div class="outbox" id="wa-out" style="display:none"></div>
+          <div class="navlabel" style="margin-top:14px">Webhook Log</div>
+          <div style="font-size:11px;color:var(--t3);line-height:1.6;margin-bottom:8px">Incoming webhooks are logged to <code style="color:var(--acc)">~/.chinna/logs/whatsapp-webhook.log</code></div>
+        </div>
+      </div>
+      <!-- MACOS TOOLS -->
+      <div class="view" id="view-macos">
+        <div class="vhead"><h2>macOS Tools</h2><span class="sub">Apple Music · System controls · Screen sharing</span></div>
+        <div class="vbody">
+          <div class="navlabel">Apple Music</div>
+          <div class="panelgrid" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+            <button class="bigbtn" onclick="music('play')">▶ Play</button>
+            <button class="bigbtn" onclick="music('pause')">⏸ Pause</button>
+            <button class="bigbtn" onclick="music('next')">⏭ Next</button>
+            <button class="bigbtn" onclick="music('prev')">⏮ Prev</button>
+            <button class="bigbtn" onclick="music('info')">ℹ Now Playing</button>
+          </div>
+          <div class="outbox" id="music-out" style="margin-bottom:18px">—</div>
+
+          <div class="navlabel">System</div>
+          <div class="panelgrid" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+            <button class="bigbtn" onclick="confirmMac('lock','Lock Screen','Lock your Mac display?','lock')">🔒 Lock Screen</button>
+            <button class="bigbtn" onclick="confirmMac('sleep','Sleep Mac','Put Mac to sleep?','sleep')">💤 Sleep</button>
+            <button class="bigbtn" onclick="screenShare()">📡 Screen Share Info</button>
+            <button class="bigbtn" onclick="macOpenApp('Finder')">📁 Open Finder</button>
+          </div>
+          <div class="outbox" id="mac-out" style="margin-bottom:18px">—</div>
+
+          <div class="navlabel">Kill Port</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+            <input class="field" id="kill-port-in" placeholder="Port number e.g. 3000" style="max-width:220px;margin:0">
+            <button class="bigbtn" onclick="killPort()">Kill Port</button>
+          </div>
+
+          <div class="navlabel">Project Audit</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+            <input class="field" id="audit-path-in" placeholder="Project path e.g. ~/myapp" style="flex:1;margin:0">
+            <button class="bigbtn" onclick="runAudit()">Run Audit</button>
+          </div>
+          <div class="outbox" id="audit-out" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- MODELS & AI CONFIG -->
+      <div class="view" id="view-models">
+        <div class="vhead"><h2>Models & AI</h2><span class="sub">Switch AI model · Automation mode</span></div>
+        <div class="vbody">
+          <div class="navlabel">Active Model</div>
+          <div class="infocard" style="margin-bottom:14px">
+            <div class="k">Currently using</div>
+            <div class="v" id="model-active">—</div>
+          </div>
+
+          <div class="navlabel">Presets</div>
+          <div id="model-presets" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px"></div>
+
+          <div class="navlabel">Custom model</div>
+          <div style="display:flex;gap:8px;margin-bottom:18px">
+            <input class="field" id="model-custom" placeholder="e.g. anthropic/claude-3-haiku" style="flex:1;margin:0">
+            <button class="bigbtn" onclick="setCustomModel()">Set</button>
+          </div>
+
+          <div class="navlabel">Automation Mode</div>
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px">
+            <div id="auto-status" class="infocard" style="flex:1;padding:10px 14px">
+              <div class="k">APPAUTOMATIONMODE</div>
+              <div class="v" id="auto-val">—</div>
+            </div>
+            <button class="bigbtn" id="auto-btn" onclick="toggleAutomation()">Toggle</button>
+          </div>
+          <div style="font-size:11px;color:var(--t3);line-height:1.6">When ON, AI commands run without confirmation prompts.</div>
+        </div>
+      </div>
     </div>
 
     <!-- RIGHT RAIL -->
@@ -778,6 +873,9 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
     <div class="dapp" onclick="go('apps')"><span>🗑</span><span class="tip">Uninstaller</span></div>
     <div class="dapp" onclick="go('storage')"><span>▦</span><span class="tip">Disk</span></div>
     <div class="dapp" onclick="toggleVoiceMode()"><span>🎙</span><span class="tip">Voice</span></div>
+    <div class="dapp" onclick="go('whatsapp')" title="WhatsApp"><span>💬</span><span class="tip">WhatsApp</span></div>
+    <div class="dapp" onclick="go('macos')" title="macOS Tools"><span>🍎</span><span class="tip">macOS Tools</span></div>
+    <div class="dapp" onclick="go('models')" title="Models"><span>🤖</span><span class="tip">Models & AI</span></div>
     <div class="dapp" onclick="go('ai')"><span>✦</span><span class="tip">Chinna AI</span></div>
   </div>
 </div>
@@ -798,6 +896,30 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 </div>
 
 <div id="toasts"></div>
+
+<!-- V6 WELCOME / UPDATE OVERLAY -->
+<div id="v6overlay" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.72);backdrop-filter:blur(16px);align-items:center;justify-content:center;padding:20px">
+  <div class="glass" style="max-width:500px;width:100%;border-radius:20px;overflow:hidden">
+    <div style="padding:24px 24px 16px;border-bottom:1px solid var(--line)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+        <span style="font-size:32px">🚀</span>
+        <div><div style="font-weight:800;font-size:18px;color:var(--acc)">Chinna V6 is here!</div><div style="font-size:12px;color:var(--t3);margin-top:3px">A major upgrade from V5</div></div>
+      </div>
+    </div>
+    <div style="padding:16px 24px;font-size:12px;line-height:1.9;color:var(--t2)">
+      <b style="color:var(--t1)">What's new in V6:</b><br>
+      🤖 Model switcher — change AI model from the dashboard<br>
+      🍎 macOS Tools — Apple Music, lock screen, screen share, kill ports<br>
+      🔍 Project Audit — full project report saved to Desktop<br>
+      ⚡ Automation mode — toggle AI command prompts<br>
+      📋 Smarter Projects registry with history<br>
+      🧬 Godspeed features — stack runner, plugin system, config sync<br>
+    </div>
+    <div style="padding:14px 24px 20px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--line)">
+      <button class="bigbtn" onclick="dismissV6()">Got it, let's go!</button>
+    </div>
+  </div>
+</div>
 
 <script>
 "use strict";
@@ -2358,6 +2480,141 @@ loadTelegramStatus().catch(()=>{});
 startStatsPoll();
 setupAttachmentUI();
 renderRailProjects(); // initial load of tracked projects
+
+
+// ── WHATSAPP ─────────────────────────────────────────────────
+async function waOpen(){
+  await api('whatsapp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'open'})});
+  toast('Opening WhatsApp...');
+}
+function waOpenWeb(){ window.open('https://web.whatsapp.com','_blank'); }
+async function waSend(){
+  const num=document.getElementById('wa-num')?.value?.trim();
+  const msg=document.getElementById('wa-msg')?.value?.trim();
+  if(!num){toast('Enter a phone number');return;}
+  if(!msg){toast('Enter a message');return;}
+  const d=await api('whatsapp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'send',number:num,message:msg})});
+  const out=document.getElementById('wa-out');
+  if(out){out.style.display='';out.textContent=d.ok?'Link opened: '+d.url:(d.error||'error');}
+  if(d.ok) toast('WhatsApp link opened!');
+  else toast('Error: '+d.error);
+}
+// ── V6 INIT ──────────────────────────────────────────────────
+function initV6(){
+  if(!localStorage.getItem('chinna_v6_welcomed')){
+    document.getElementById('v6overlay').style.display='flex';
+  }
+  loadModels();
+}
+function dismissV6(){
+  localStorage.setItem('chinna_v6_welcomed','1');
+  document.getElementById('v6overlay').style.display='none';
+}
+
+// ── MUSIC ────────────────────────────────────────────────────
+async function music(action){
+  const d=await api('music',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action})});
+  const out=document.getElementById('music-out');
+  if(out) out.textContent=(d.result||d.error||'done');
+}
+
+// ── MAC ACTIONS ──────────────────────────────────────────────
+async function macActionDo(action, extra){
+  const body=Object.assign({action},extra||{});
+  const d=await api('mac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const out=document.getElementById('mac-out');
+  if(d.error && out){ out.textContent='Error: '+d.error; return d; }
+  if(out){
+    if(action==='screen-share') out.textContent='IP: '+d.ip+'  VNC: '+d.vnc+'  (copied to clipboard)';
+    else out.textContent=d.result||d.action+' done';
+  }
+  return d;
+}
+function confirmMac(action,title,desc,key){
+  openModal(title,desc,'',async ()=>{showProgress(title);const d=await macActionDo(action);document.getElementById('m-log').innerHTML='<div class="done">'+d.result||d.action+' done</div>';document.getElementById('m-foot').innerHTML='<button class="btn-cancel" onclick="closeModal()">Done</button>';},key);
+}
+async function screenShare(){
+  const d=await macActionDo('screen-share');
+  toast('Screen share info: '+d.ip+' (VNC URL copied)');
+}
+async function killPort(){
+  const port=document.getElementById('kill-port-in')?.value?.trim();
+  if(!port){toast('Enter a port number');return;}
+  const d=await api('mac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'kill-port',port})});
+  const out=document.getElementById('mac-out');
+  if(out) out.textContent=d.result||d.error||'done';
+  toast(d.result||d.error||'done');
+}
+function macOpenApp(app){macActionDo('open-app',{app});}
+
+// ── AUDIT ────────────────────────────────────────────────────
+async function runAudit(){
+  const path=document.getElementById('audit-path-in')?.value?.trim()||'~';
+  const out=document.getElementById('audit-out');
+  if(out){out.style.display='';out.textContent='Starting audit...';}
+  const d=await api('audit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path})});
+  if(!d.job){if(out)out.textContent='Error: '+JSON.stringify(d);return;}
+  const poll=setInterval(async()=>{
+    const j=await api('job?id='+d.job);
+    if(out) out.textContent=j.lines.join('\n');
+    if(j.done){clearInterval(poll);toast('Audit done');}
+  },600);
+}
+
+// ── MODELS ───────────────────────────────────────────────────
+async function loadModels(){
+  const d=await api('models');
+  const act=document.getElementById('model-active');
+  if(act) act.textContent=d.active||'—';
+  const pres=document.getElementById('model-presets');
+  if(pres && d.presets){
+    pres.innerHTML=Object.entries(d.presets).map(([k,v])=>
+      `<button class="bigbtn" style="font-size:11px" onclick="setModelPreset('${k}')">${k}</button>`
+    ).join('');
+  }
+  // Also load automation
+  try{
+    const env=await api('models'); // reuse models call
+    const auto=document.getElementById('auto-val');
+    if(auto) auto.textContent=d.auto_mode||'—';
+  }catch(e){}
+}
+async function setModelPreset(preset){
+  const d=await api('model-set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preset})});
+  if(d.ok){
+    const act=document.getElementById('model-active');
+    if(act) act.textContent=d.active;
+    toast('Model: '+d.active);
+  } else {
+    toast('Error: '+d.error);
+  }
+}
+async function setCustomModel(){
+  const m=document.getElementById('model-custom')?.value?.trim();
+  if(!m){toast('Enter a model string');return;}
+  const d=await api('model-set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({custom:m})});
+  if(d.ok){const act=document.getElementById('model-active');if(act)act.textContent=d.active;toast('Model set: '+d.active);}
+  else toast('Error: '+d.error);
+}
+async function toggleAutomation(){
+  const d=await api('automation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+  if(d.ok){
+    const el=document.getElementById('auto-val');
+    if(el) el.textContent=d.mode;
+    const btn=document.getElementById('auto-btn');
+    if(btn) btn.style.color=d.mode==='on'?'var(--acc)':'var(--t2)';
+    toast('Automation: '+d.mode);
+  }
+}
+
+// Override poll() to call initV6 on first load
+const _origPoll=poll;
+let _v6inited=false;
+poll=async function(){
+  await _origPoll();
+  if(!_v6inited){_v6inited=true;initV6();}
+}
+
 </script>
 </body>
 </html>

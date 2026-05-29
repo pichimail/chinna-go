@@ -1,137 +1,222 @@
 #!/usr/bin/env bash
-# Chinna installer / updater
-# Keeps user data and API keys intact while refreshing code files.
+# ╔══════════════════════════════════════════════════════════╗
+# ║  CHINNA V6 — One-line installer (Resumable)             ║
+# ║  curl -fsSL https://raw.githubusercontent.com/          ║
+# ║    pichimail/chinna-go/main/install/install.sh | bash   ║
+# ╚══════════════════════════════════════════════════════════╝
+set -e
+REPO="pichimail/chinna-go"
+BRANCH="main"
+RAW="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
+CHINNA="${CHINNA_HOME:-$HOME/.chinna}"
+PORT="${CHINNA_DASHBOARD_PORT:-7777}"
+STATE_FILE="${CHINNA}/.installstate"
 
-set -euo pipefail
+echo ""
+echo "  ╔══════════════════════════════════════════════════╗"
+echo "  ║   C H I N N A   V 6   —  Mac Sidekick           ║"
+echo "  ║   Resumable · Models · Music · WhatsApp · More   ║"
+echo "  ╚══════════════════════════════════════════════════╝"
+echo ""
 
-CHINNA_REPO="${CHINNA_REPO:-pichimail/chinna-go}"
-CHINNA_HOME="${CHINNA_HOME:-$HOME/.chinna}"
-INSTALL_MODE="${1:-install}"
-REMOTE_VERSION="${2:-}"
-REPO_ROOT=""
-if [ -f "./bin/chinna" ] && [ -f "./lib/server.py" ]; then
-    REPO_ROOT="$(pwd)"
-fi
+mkdir -p "${CHINNA}" "${CHINNA}/lib" "${CHINNA}/dashboard" "${CHINNA}/logs"
 
-log() { printf '%s\n' "$*"; }
-warn() { printf 'WARN: %s\n' "$*" >&2; }
-fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
-
-fetch_remote_tree() {
-    local tmp root archive_url repo_name
-    if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/bin/chinna" ] && [ -f "$REPO_ROOT/lib/server.py" ]; then
-        printf '%s\n' "$REPO_ROOT"
-        return 0
-    fi
-
-    repo_name="${CHINNA_REPO##*/}"
-    tmp="$(mktemp -d)"
-    archive_url="https://codeload.github.com/${CHINNA_REPO}/tar.gz/refs/heads/main"
-
-    curl -fsSL "$archive_url" | tar -xz -C "$tmp" || fail "Could not fetch ${CHINNA_REPO}"
-    root="$tmp/${repo_name}-main"
-    [ -d "$root" ] || fail "Unexpected archive layout"
-    printf '%s\n' "$root"
-}
-
-copy_file() {
-    local src="$1" dst="$2"
-    mkdir -p "$(dirname "$dst")"
-    cp "$src" "$dst"
-}
-
-install_command_binary() {
-    local src="$1" target="$2"
-    local target_dir
-    target_dir="$(dirname "$target")"
-
-    mkdir -p "$target_dir" 2>/dev/null || true
-
-    if [ -L "$target" ] && [ "$(readlink "$target" 2>/dev/null)" = "$src" ]; then
-        return 0
-    fi
-
-    if [ -w "$target_dir" ]; then
-        ln -sfn "$src" "$target"
+# ── Resumable step system (Prompt 14) ──────────────────────
+is_done()   { grep -qxF "$1" "$STATE_FILE" 2>/dev/null; }
+mark_done() { echo "$1" >> "$STATE_FILE"; }
+run_step()  {
+    local name="$1"; shift
+    if is_done "$name"; then
+        echo "  ↷ Skipping (already done): $name"
     else
-        if ! sudo ln -sfn "$src" "$target" 2>/dev/null; then
-            return 1
+        echo "  → Running: $name"
+        "$@" && mark_done "$name"
+    fi
+}
+
+# ── Step implementations ───────────────────────────────────
+step_backup_zshrc() {
+    if [ -f "$HOME/.zshrc" ]; then
+        cp "$HOME/.zshrc" "$HOME/.zshrc.backup.$(date +%Y%m%d%H%M%S)"
+        echo "    ✓ ~/.zshrc backed up"
+    fi
+}
+
+step_check_python() {
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo "  ✗ python3 is required."
+        echo "    Install via: xcode-select --install  (or brew install python)"
+        exit 1
+    fi
+    echo "    ✓ python3 $(python3 --version 2>&1 | cut -d' ' -f2)"
+}
+
+step_install_homebrew() {
+    if command -v brew >/dev/null 2>&1; then
+        echo "    ✓ Homebrew already installed"
+        return 0
+    fi
+    echo "    Installing Homebrew..."
+    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" 2>&1 | tail -3
+}
+
+step_brew_shellenv() {
+    local brew_path=""
+    [ -f "/opt/homebrew/bin/brew" ] && brew_path="/opt/homebrew/bin/brew"
+    [ -f "/usr/local/bin/brew"    ] && brew_path="/usr/local/bin/brew"
+    if [ -n "$brew_path" ]; then
+        eval "$("$brew_path" shellenv)"
+        if ! grep -q 'brew shellenv' "$HOME/.zshrc" 2>/dev/null; then
+            echo "eval \"\$(${brew_path} shellenv)\"" >> "$HOME/.zshrc"
+            echo "    ✓ brew shellenv added to .zshrc"
         fi
     fi
 }
 
-refresh_installed_code() {
-    local root="$1"
-    local src_bin="$root/bin/chinna"
-    local src_lib="$root/lib"
-    local src_dashboard="$root/dashboard/index.html"
-    local src_install="$root/install/install.sh"
+step_install_clis() {
+    command -v brew >/dev/null 2>&1 || { echo "    ⚠ brew not found, skipping CLI installs"; return 0; }
+    local tools=(git jq gh ripgrep fd fzf tmux watchman tree htop)
+    echo "    Installing CLI tools: ${tools[*]}"
+    brew install "${tools[@]}" 2>/dev/null | grep -E "✓|already|Pouring" | head -6 || true
+}
 
-    [ -f "$src_bin" ] || fail "Missing bin/chinna in source tree"
-    [ -d "$src_lib" ] || fail "Missing lib directory in source tree"
-    [ -f "$src_dashboard" ] || fail "Missing dashboard/index.html in source tree"
+step_install_node_tools() {
+    command -v brew >/dev/null 2>&1 || return 0
+    local tools=(pnpm yarn bun)
+    echo "    Installing node tools: ${tools[*]}"
+    brew install "${tools[@]}" 2>/dev/null | grep -E "✓|already|Pouring" | head -4 || true
+}
 
-    mkdir -p "$CHINNA_HOME"
+step_write_server() {
+    echo "    Downloading server (1891 lines)..."
+    curl -fsSL "${RAW}/lib/server.py" -o "${CHINNA}/dashboard_server.py"
+    echo "    ✓ server.py written"
+}
 
-    # Stop any running dashboard/daemon so stale in-memory code is replaced
-    # on next launch and does not keep serving outdated API routes.
-    if [ -f "$CHINNA_HOME/dashboard.pid" ]; then
-        kill "$(cat "$CHINNA_HOME/dashboard.pid")" 2>/dev/null || true
-        rm -f "$CHINNA_HOME/dashboard.pid"
-    fi
-    if [ -f "$CHINNA_HOME/chinna.pid" ]; then
-        kill "$(cat "$CHINNA_HOME/chinna.pid")" 2>/dev/null || true
-        rm -f "$CHINNA_HOME/chinna.pid"
-    fi
-    pkill -f "dashboard_server.py" 2>/dev/null || true
+step_write_dashboard() {
+    echo "    Downloading dashboard (115KB)..."
+    curl -fsSL "${RAW}/dashboard/index.html" -o "${CHINNA}/dashboard/index.html"
+    echo "    ✓ index.html written"
+}
 
-    # Remove stale code so old files do not linger between upgrades.
-    rm -rf "$CHINNA_HOME/bin" "$CHINNA_HOME/lib" "$CHINNA_HOME/dashboard" "$CHINNA_HOME/install"
-    rm -f "$CHINNA_HOME/dashboard_server.py"
-
-    mkdir -p "$CHINNA_HOME/bin" "$CHINNA_HOME/lib" "$CHINNA_HOME/dashboard"
-
-    copy_file "$src_bin" "$CHINNA_HOME/bin/chinna"
-    chmod +x "$CHINNA_HOME/bin/chinna"
-
-    for lib in "$src_lib"/*.sh; do
-        [ -f "$lib" ] || continue
-        copy_file "$lib" "$CHINNA_HOME/lib/$(basename "$lib")"
-        chmod +x "$CHINNA_HOME/lib/$(basename "$lib")" 2>/dev/null || true
+step_write_libs() {
+    echo "    Downloading lib files..."
+    for lib in config clean stack registry notify daemon server plugins voice lang; do
+        curl -fsSL "${RAW}/lib/${lib}.sh" -o "${CHINNA}/lib/${lib}.sh" 2>/dev/null && \
+            echo "      ✓ lib/${lib}.sh" || \
+            echo "      ⚠ lib/${lib}.sh (skipped)"
     done
+}
 
-    copy_file "$root/lib/server.py" "$CHINNA_HOME/lib/server.py"
-    copy_file "$src_dashboard" "$CHINNA_HOME/dashboard/index.html"
-    copy_file "$root/VERSION" "$CHINNA_HOME/VERSION"
+step_write_bin() {
+    echo "    Installing chinna CLI..."
+    mkdir -p "$HOME/.local/bin"
+    curl -fsSL "${RAW}/bin/chinna" -o "$HOME/.local/bin/chinna"
+    chmod +x "$HOME/.local/bin/chinna"
+    echo "    ✓ chinna installed to ~/.local/bin/chinna"
+}
 
-    if [ -f "$src_install" ]; then
-        mkdir -p "$CHINNA_HOME/install"
-        copy_file "$src_install" "$CHINNA_HOME/install/install.sh"
-        chmod +x "$CHINNA_HOME/install/install.sh" 2>/dev/null || true
+step_write_defaults() {
+    echo "6.0.0" > "${CHINNA}/VERSION"
+    if [ ! -f "${CHINNA}/env" ]; then
+        cat > "${CHINNA}/env" << 'ENV'
+# Chinna V6 Environment (chmod 600 — never share this file)
+# OPENROUTER_API_KEY=
+# ANTHROPIC_API_KEY=
+# OPENAI_API_KEY=
+APPAUTOMATIONMODE=off
+APPNOTIFYSOUND=/System/Library/Sounds/Glass.aiff
+APPNOTIFYSPEAK=off
+CHINNA_DASHBOARD_PORT=7777
+ENV
+        chmod 600 "${CHINNA}/env"
+        echo "    ✓ env file created"
     fi
-
-    # Refresh the public command location(s).
-    local installed=0
-    if install_command_binary "$CHINNA_HOME/bin/chinna" /opt/homebrew/bin/chinna; then
-        installed=1
-    fi
-    if install_command_binary "$CHINNA_HOME/bin/chinna" /usr/local/bin/chinna; then
-        installed=1
-    fi
-
-    if [ "$installed" -eq 0 ]; then
-        warn "Could not place chinna on your PATH. Add $CHINNA_HOME/bin to PATH or rerun the installer."
+    if [ ! -f "${CHINNA}/models" ]; then
+        cat > "${CHINNA}/models" << 'MODELS'
+ACTIVE_MODEL="meta-llama/llama-3.3-70b-instruct:free"
+MODEL_coder="openai/gpt-4o"
+MODEL_reasoning="anthropic/claude-3.5-sonnet"
+MODEL_small="openai/gpt-4o-mini"
+MODEL_gemma="google/gemma-2-9b-it:free"
+MODEL_llama70="meta-llama/llama-3.3-70b-instruct:free"
+MODEL_free="meta-llama/llama-3.3-70b-instruct:free"
+MODEL_sonnet4="anthropic/claude-3.5-sonnet"
+MODEL_opus4="anthropic/claude-3-opus"
+MODEL_haiku4="anthropic/claude-3-haiku"
+MODELS
+        chmod 600 "${CHINNA}/models"
+        echo "    ✓ models file created"
     fi
 }
 
-main() {
-    local root
-    root="$(fetch_remote_tree)"
-
-    log "Installing Chinna ${REMOTE_VERSION:-latest}..."
-    refresh_installed_code "$root"
-    log "Chinna is installed at $CHINNA_HOME"
-    log "User data and API keys were preserved."
+step_zshrc_block() {
+    local BLOCK='# ── Chinna V6 ──────────────────────────────────────────
+export PATH="$HOME/.local/bin:$PATH"
+export CHINNA_HOME="$HOME/.chinna"
+[ -f "$CHINNA_HOME/env" ]    && source "$CHINNA_HOME/env"
+[ -f "$CHINNA_HOME/models" ] && source "$CHINNA_HOME/models"
+alias chinna="$HOME/.local/bin/chinna"'
+    if ! grep -q 'Chinna V6' "$HOME/.zshrc" 2>/dev/null; then
+        echo "" >> "$HOME/.zshrc"
+        echo "$BLOCK" >> "$HOME/.zshrc"
+        echo "    ✓ Chinna block added to ~/.zshrc"
+    else
+        echo "    ✓ .zshrc block already present"
+    fi
 }
 
-main "$@"
+step_start_server() {
+    pkill -9 -f dashboard_server 2>/dev/null || true
+    sleep 2
+    nohup python3 "${CHINNA}/dashboard_server.py" "${PORT}" \
+        > "${CHINNA}/dashboard.log" 2>&1 &
+    sleep 3
+    if curl -sf "http://localhost:${PORT}/api/version" >/dev/null 2>&1; then
+        VER=$(curl -sf "http://localhost:${PORT}/api/version" | \
+              python3 -c "import json,sys;print(json.load(sys.stdin).get('name','Chinna V6'))" 2>/dev/null || echo "Chinna V6")
+        echo "    ✓ ${VER} running on port ${PORT}"
+    else
+        echo "    ⚠ Server warming up — check: curl http://localhost:${PORT}/api/version"
+    fi
+}
+
+# ── Run all steps (resumable) ──────────────────────────────
+run_step "backup_zshrc"       step_backup_zshrc
+run_step "check_python"       step_check_python
+run_step "install_homebrew"   step_install_homebrew
+run_step "brew_shellenv"      step_brew_shellenv
+run_step "install_clis"       step_install_clis
+run_step "install_node_tools" step_install_node_tools
+run_step "write_server"       step_write_server
+run_step "write_dashboard"    step_write_dashboard
+run_step "write_libs"         step_write_libs
+run_step "write_bin"          step_write_bin
+run_step "write_defaults"     step_write_defaults
+run_step "zshrc_block"        step_zshrc_block
+run_step "start_server"       step_start_server
+
+# ── macOS notification ─────────────────────────────────────
+osascript -e 'display notification "Models, Music, WhatsApp & 15 Godspeed features ready!" with title "🟢 Chinna V6 installed"' 2>/dev/null || true
+
+echo ""
+echo "  ══════════════════════════════════════════════════════"
+echo "  ✅  CHINNA V6 READY!"
+echo "  ══════════════════════════════════════════════════════"
+echo ""
+echo "  🌐  Dashboard   →  http://localhost:${PORT}"
+echo "  📦  Share URL   →  curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash"
+echo ""
+echo "  Quick commands (in a new terminal tab):"
+echo "    chinna doctor         → full system health check"
+echo "    chinna run            → smart project runner"
+echo "    chinna ai <prompt>    → AI chat"
+echo "    chinna dashboard      → open dashboard"
+echo "    chinna model-set free → switch AI model"
+echo "    chinna clean          → deep Mac clean"
+echo "    chinna audit          → project audit"
+echo ""
+echo "  Re-run installer anytime — completed steps are skipped."
+echo ""
+
+open "http://localhost:${PORT}" 2>/dev/null || true

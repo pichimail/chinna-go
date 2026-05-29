@@ -2,6 +2,7 @@
 """Chinna V5 — Dashboard Server (Python stdlib only, zero deps)."""
 import base64, hashlib, http.server, json, os, re, subprocess, sys, threading, time, traceback, unicodedata, urllib.parse, urllib.request
 
+CHINNA_VERSION = "6.0.0"
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 7777
 CHINNA_HOME = os.environ.get('CHINNA_HOME', os.path.expanduser('~/.chinna'))
 DASHBOARD_DIR = os.path.join(CHINNA_HOME, 'dashboard')
@@ -1068,6 +1069,16 @@ class H(http.server.SimpleHTTPRequestHandler):
                 'telegram_bot': telegram_status().get('bot_username', ''),
                 'pair_code': telegram_status().get('pair_code', '')
             })
+        elif p == '/api/version':
+            self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6'})
+        elif p == '/api/check-update':
+            self._json(self.check_update())
+        elif p == '/api/models':
+            self._json(self.list_models())
+        elif p == '/api/projects':
+            self.serve_projects()
+        elif p == '/api/whatsapp/status':
+            self._json({'ok': True, 'app': 'WhatsApp', 'web': 'https://web.whatsapp.com'})
         elif p == '/api/telegram/status':
             self._json(telegram_status())
         elif p in ('/',''):
@@ -1134,6 +1145,22 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.export_projects(q.get('format', 'json'))
         elif p == '/api/project':
             self.handle_project_action(q, b)
+        elif p == '/api/whatsapp':
+            self.whatsapp_action(b)
+        elif p == '/api/whatsapp-webhook':
+            self.whatsapp_webhook(b)
+        elif p == '/api/model-set':
+            self._json(self.model_set_cmd(b.get('preset',''), b.get('custom','')))
+        elif p == '/api/automation':
+            self._json(self.toggle_automation(b.get('mode','')))
+        elif p == '/api/music':
+            self._json(self.music_control(b.get('action','play')))
+        elif p == '/api/mac':
+            self._json(self.mac_action(b))
+        elif p == '/api/audit':
+            jid = new_job()
+            threading.Thread(target=self.job_audit, args=(jid, b.get('path', HOME)), daemon=True).start()
+            self._json({'job': jid})
         else:
             self._json({'error': f'unknown {p}'}, 404)
 
@@ -1593,6 +1620,224 @@ class H(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self._json({'error': safe_text(str(e))}, 500)
 
+
+    def check_update(self):
+        try:
+            import urllib.request
+            url = "https://raw.githubusercontent.com/pichimail/chinna-go/main/VERSION"
+            latest = urllib.request.urlopen(url, timeout=5).read().decode().strip()
+            return {"current": CHINNA_VERSION, "latest": latest, "update_available": latest != CHINNA_VERSION}
+        except:
+            return {"current": CHINNA_VERSION, "latest": CHINNA_VERSION, "update_available": False, "error": "offline"}
+
+    def list_models(self):
+        models_file = os.path.join(CHINNA_HOME, "models")
+        presets = {}
+        active = ""
+        try:
+            if os.path.exists(models_file):
+                for line in open(models_file):
+                    line = line.strip()
+                    if line.startswith("ACTIVE_MODEL="):
+                        active = line.split("=",1)[1].strip().strip('"')
+                    elif line.startswith("MODEL_"):
+                        k, v = line.split("=",1)
+                        presets[k.replace("MODEL_","")] = v.strip().strip('"')
+        except:
+            pass
+        return {"active": active, "presets": presets}
+
+    def model_set_cmd(self, preset, custom=''):
+        models_file = os.path.join(CHINNA_HOME, "models")
+        try:
+            presets = self.list_models()["presets"]
+            if custom:
+                new_model = custom.strip()
+            elif preset in presets:
+                new_model = presets[preset]
+            else:
+                return {"error": f"Unknown preset: {preset}. Use: {', '.join(presets.keys())}"}
+            # Update ACTIVE_MODEL in models file
+            lines = []
+            replaced = False
+            if os.path.exists(models_file):
+                for line in open(models_file):
+                    if line.strip().startswith("ACTIVE_MODEL="):
+                        lines.append(f'ACTIVE_MODEL="{new_model}"\n')
+                        replaced = True
+                    else:
+                        lines.append(line)
+            if not replaced:
+                lines.append(f'ACTIVE_MODEL="{new_model}"\n')
+            with open(models_file, "w") as f:
+                f.writelines(lines)
+            return {"ok": True, "active": new_model, "preset": preset or "custom"}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def toggle_automation(self, mode):
+        env_file = os.path.join(CHINNA_HOME, "env")
+        try:
+            new_mode = mode if mode in ("on","off") else None
+            lines = []
+            found = False
+            if os.path.exists(env_file):
+                for line in open(env_file):
+                    if line.strip().startswith("APPAUTOMATIONMODE="):
+                        if new_mode is None:
+                            cur = line.split("=",1)[1].strip().strip('"')
+                            new_mode = "off" if cur == "on" else "on"
+                        lines.append(f"APPAUTOMATIONMODE={new_mode}\n")
+                        found = True
+                    else:
+                        lines.append(line)
+            if not found:
+                if new_mode is None: new_mode = "on"
+                lines.append(f"APPAUTOMATIONMODE={new_mode}\n")
+            with open(env_file, "w") as f:
+                f.writelines(lines)
+            return {"ok": True, "mode": new_mode}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def music_control(self, action):
+        scripts = {
+            "play":  'tell application "Music" to play',
+            "pause": 'tell application "Music" to pause',
+            "next":  'tell application "Music" to next track',
+            "prev":  'tell application "Music" to previous track',
+            "info":  'tell application "Music" to return (name of current track) & " — " & (artist of current track)',
+        }
+        script = scripts.get(action)
+        if not script:
+            return {"error": f"unknown action: {action}"}
+        result = sh(f"osascript -e '{script}' 2>/dev/null")
+        return {"ok": True, "action": action, "result": result or "done"}
+
+    def mac_action(self, b):
+        action = b.get("action","")
+        if action == "lock":
+            sh("osascript -e 'tell application \"System Events\" to keystroke \"q\" using {command down, control down}' 2>/dev/null || open -a ScreenSaverEngine 2>/dev/null")
+            return {"ok": True, "action": "lock"}
+        elif action == "sleep":
+            sh("osascript -e 'tell application \"System Events\" to sleep' 2>/dev/null")
+            return {"ok": True, "action": "sleep"}
+        elif action == "kill-port":
+            port = b.get("port","")
+            if not port: return {"error": "port required"}
+            pids = sh(f"lsof -ti TCP:{port} 2>/dev/null")
+            if pids:
+                sh(f"kill -9 {pids.replace(chr(10),' ')} 2>/dev/null")
+                return {"ok": True, "killed": pids.split(), "port": port}
+            return {"ok": True, "result": f"No process on port {port}"}
+        elif action == "open-app":
+            app = b.get("app","")
+            if not app: return {"error": "app required"}
+            sh(f"open -a '{app}' 2>/dev/null")
+            return {"ok": True, "action": "open-app", "app": app}
+        elif action == "screen-share":
+            ip = sh("ipconfig getifaddr en0 2>/dev/null") or sh("ipconfig getifaddr en1 2>/dev/null") or "?"
+            host = sh("scutil --get LocalHostName 2>/dev/null") or sh("hostname -s 2>/dev/null") or "mac"
+            vnc = f"vnc://{ip}"
+            sh(f"echo '{vnc}' | pbcopy 2>/dev/null")
+            sh("open 'x-apple.systempreferences:com.apple.preferences.sharing?ScreenSharing' 2>/dev/null")
+            return {"ok": True, "ip": ip, "host": host, "vnc": vnc, "copied": True}
+        elif action == "open-finder":
+            path = b.get("path", HOME)
+            sh(f"open -a Finder '{path}' 2>/dev/null")
+            return {"ok": True, "action": "open-finder", "path": path}
+        return {"error": f"unknown mac action: {action}"}
+
+    def job_audit(self, jid, path):
+        path = os.path.expanduser(path)
+        job_log(jid, f"Auditing: {path}")
+        if not os.path.exists(path):
+            job_log(jid, "Path not found."); job_done(jid, False); return
+        job_log(jid, "Detecting stack...")
+        pkg = "package.json" if os.path.exists(os.path.join(path,"package.json")) else ""
+        req = "requirements.txt" if os.path.exists(os.path.join(path,"requirements.txt")) else ""
+        cargo = "Cargo.toml" if os.path.exists(os.path.join(path,"Cargo.toml")) else ""
+        stack = "node" if pkg else ("python" if req else ("rust" if cargo else "unknown"))
+        job_log(jid, f"Stack: {stack}")
+        job_log(jid, "Top directories by size...")
+        sizes = sh(f"du -sh '{path}'/*/ 2>/dev/null | sort -hr | head -10", 20)
+        for ln in (sizes or "").split("\n")[:8]:
+            if ln.strip(): job_log(jid, f"  {ln.strip()}")
+        job_log(jid, "Git status...")
+        git_s = sh(f"cd '{path}' && git status --short 2>/dev/null | head -10")
+        if git_s:
+            for ln in git_s.split("\n")[:8]:
+                if ln.strip(): job_log(jid, f"  {ln.strip()}")
+        else:
+            job_log(jid, "  (not a git repo or clean)")
+        job_log(jid, "Large files (>5MB)...")
+        big = sh(f"find '{path}' -maxdepth 5 -type f -size +5M -not -path '*/node_modules/*' -not -path '*/.git/*' 2>/dev/null | head -8", 15)
+        for ln in (big or "").split("\n")[:8]:
+            if ln.strip(): job_log(jid, f"  {os.path.basename(ln.strip())}")
+        job_log(jid, "TODOs / FIXMEs...")
+        todos = sh(f"grep -rn 'TODO' '{path}' --include='*.js' --include='*.py' --include='*.ts' 2>/dev/null | head -4", 15)
+        for ln in (todos or "").split("\n")[:6]:
+            if ln.strip(): job_log(jid, f"  {ln.strip()[:80]}")
+        if stack == 'node':
+            job_log(jid, "npm audit...")
+            npm_out = sh(f"cd '{path}' && npm audit --audit-level=high 2>/dev/null | tail -5", 30)
+            if npm_out:
+                for ln in npm_out.split("\n")[:4]:
+                    if ln.strip(): job_log(jid, f"  {ln.strip()}")
+            else:
+                job_log(jid, "  (npm audit clean or npm not found)")
+        if stack == 'python':
+            job_log(jid, "Python compile check...")
+            py_out = sh(f"cd '{path}' && python3 -m py_compile $(find . -name '*.py' -not -path './.venv/*' | head -20) 2>&1", 20)
+            job_log(jid, "  " + (py_out.strip() or "✅ No syntax errors"))
+        # Save audit report
+        out = os.path.join(HOME, "Desktop", f"chinna-audit-{int(time.time())}.txt")
+        try:
+            with open(out, "w") as f:
+                f.write(f"Chinna V6 Audit\n{'='*40}\nPath: {path}\nStack: {stack}\n\n")
+                f.write(f"--- Top Directories ---\n{sizes}\n\n")
+                f.write(f"--- Git Status ---\n{git_s or 'clean'}\n\n")
+                f.write(f"--- Large Files ---\n{big or 'none'}\n\n")
+                f.write(f"--- TODOs ---\n{todos or 'none'}\n")
+            job_log(jid, f"Report saved: {out}")
+        except:
+            pass
+        job_log(jid, "Audit complete."); job_done(jid)
+
+
+    def whatsapp_action(self, b):
+        action = b.get('action', 'open')
+        number = b.get('number', '')
+        message = b.get('message', '')
+        if action == 'open':
+            sh("open -a WhatsApp 2>/dev/null || open 'https://web.whatsapp.com' 2>/dev/null")
+            self._json({'ok': True, 'action': 'opened WhatsApp'})
+        elif action == 'send':
+            import urllib.parse
+            # Normalize number: strip non-digits
+            clean = ''.join(c for c in number if c.isdigit())
+            if not clean:
+                self._json({'error': 'valid number required'}); return
+            encoded = urllib.parse.quote(message)
+            url = f"https://wa.me/{clean}?text={encoded}"
+            sh(f"open '{url}' 2>/dev/null")
+            self._json({'ok': True, 'url': url, 'number': clean})
+        else:
+            self._json({'error': f'unknown action: {action}'})
+
+    def whatsapp_webhook(self, b):
+        import json as _json
+        log_dir = os.path.join(CHINNA_HOME, 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, 'whatsapp-webhook.log')
+        try:
+            entry = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {_json.dumps(b)}\n"
+            with open(log_file, 'a') as f:
+                f.write(entry)
+        except:
+            pass
+        self._json({'ok': True, 'logged': True})
+
     def job_purge(self, jid):
         job_log(jid, "Requesting RAM purge (may prompt for sudo in your terminal)...")
         sh("sudo purge 2>/dev/null", 30)
@@ -1637,7 +1882,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         job_log(jid, f"Removed {n} file(s)."); job_done(jid)
 
 if __name__ == '__main__':
-    print(f"Chinna V5 -> http://localhost:{PORT}")
+    print(f"Chinna V6 -> http://localhost:{PORT}")
     print(f"serving {DASHBOARD_DIR}")
     threading.Thread(target=stats_loop, daemon=True).start()
     try:

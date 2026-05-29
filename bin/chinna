@@ -1384,6 +1384,8 @@ main() {
         dupes|duplicates)           shift; cmd_dupes "$@" ;;
         kill)                       cmd_kill ;;
         ports)                      cmd_ports ;;
+        whatsapp)
+            shift; chinna_whatsapp "$@" ;;
         wifi|internet|network)      cmd_wifi ;;
         brew|devsetup)              cmd_brew ;;
         run|start_project)          shift; run_project "${1:-.}" ;;

@@ -180,3 +180,42 @@ chinna_config_status() {
     echo "  Active Model: ${ACTIVE_MODEL:-<not set>}"
     echo "  Automation:   ${APPAUTOMATIONMODE:-off}"
 }
+# ── Prompt 9 + 15: WhatsApp CLI helper ──────────────────────
+chinna_whatsapp() {
+    local number="${1:-}"
+    local message="${2:-}"
+
+    if [ -z "$number" ]; then
+        # Interactive mode
+        echo -n "  Phone number (with country code, digits only): "
+        read -r number
+        echo -n "  Message: "
+        read -r message
+    fi
+
+    # Normalize: strip all non-digits
+    local clean
+    clean=$(echo "$number" | tr -cd '[:digit:]')
+
+    if [ -z "$clean" ]; then
+        fail "Invalid phone number"
+        return 1
+    fi
+
+    if [ -z "$message" ]; then
+        local url="https://wa.me/${clean}"
+    else
+        local encoded
+        encoded=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$message" 2>/dev/null || echo "$message")
+        local url="https://wa.me/${clean}?text=${encoded}"
+    fi
+
+    open "$url" 2>/dev/null || open "https://web.whatsapp.com" 2>/dev/null
+    ok "Opening WhatsApp link: $url"
+    mac_notify "WhatsApp" "Opening chat with +${clean}"
+}
+
+chinna_open_whatsapp() {
+    open -a WhatsApp 2>/dev/null || open "https://web.whatsapp.com" 2>/dev/null
+    ok "WhatsApp opened"
+}

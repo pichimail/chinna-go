@@ -53,3 +53,34 @@ chinna_warn_toast()  { chinna_notify "⚠️ $1" "$2" "Basso"; }
 chinna_error_toast() { chinna_notify "❌ $1" "$2" "Sosumi"; }
 chinna_ai_toast()    { chinna_notify "🤖 $1" "$2" "Ping"; }
 chinna_tg_toast()    { chinna_notify "📡 Telegram" "$1" "Ping"; }
+
+# ── Prompt 11 additions ──────────────────────────────────────
+mac_sound() {
+    local sound="${APPNOTIFYSOUND:-/System/Library/Sounds/Glass.aiff}"
+    [ -f "$sound" ] && afplay "$sound" 2>/dev/null &
+}
+
+mac_speak() {
+    local msg="$1"
+    [ "${APPNOTIFYSPEAK:-off}" = "on" ] && say "$msg" 2>/dev/null &
+}
+
+done_task() {
+    local msg="$1"
+    echo "  ✓ $msg"
+    chinna_notify "Chinna" "$msg"
+    mac_sound
+    mac_speak "$msg"
+}
+
+notify_test() {
+    local msg="${1:-Chinna notification test}"
+    echo "  Testing notifications..."
+    chinna_notify "Chinna Test" "$msg"
+    mac_sound
+    mac_speak "$msg"
+    echo "  ✓ notification + sound + speak triggered"
+}
+
+automation_on()  { chinna_setenv "$CHINNA_ENV_FILE" "APPAUTOMATIONMODE" "on";  echo "  ✓ Automation ON";  }
+automation_off() { chinna_setenv "$CHINNA_ENV_FILE" "APPAUTOMATIONMODE" "off"; echo "  ✓ Automation OFF"; }
