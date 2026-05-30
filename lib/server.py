@@ -226,7 +226,7 @@ def deep_clean_catalog(include_unused_apps=True):
     now = int(time.time())
     targets = []
 
-    def add_target(tid, label, size_bytes, commands, kind='cache', scope='system', path='', default_selected=True, extra=None):
+    def add_target(tid, label, size_bytes, commands, kind='cache', scope='system', path='', default_selected=True, extra=None, requires_force=False):
         targets.append({
             'id': tid,
             'label': label,
@@ -237,6 +237,7 @@ def deep_clean_catalog(include_unused_apps=True):
             'scope': scope,
             'path': path,
             'default_selected': bool(default_selected),
+            'requires_force': bool(requires_force),
             'extra': extra or {}
         })
 
@@ -248,10 +249,11 @@ def deep_clean_catalog(include_unused_apps=True):
             "sudo rm -rf /private/var/folders/*/T/* 2>/dev/null || true",
             "sudo rm -rf /private/var/folders/*/C/* 2>/dev/null || true"
         ],
-        kind='system_temp', scope='system', path='/private/var/folders', default_selected=True
+        kind='system_temp', scope='system', path='/private/var/folders', default_selected=False, requires_force=True,
+        extra={'risk': 'System-level temp cleanup; force recommended only when disk pressure is severe.'}
     )
     add_target('user_caches', 'User caches', path_size_bytes('~/Library/Caches', 8), ["rm -rf ~/Library/Caches/* 2>/dev/null || true"], path='~/Library/Caches')
-    add_target('system_caches', 'System caches', path_size_bytes('/Library/Caches', 8), ["sudo rm -rf /Library/Caches/* 2>/dev/null || true"], scope='system', path='/Library/Caches')
+    add_target('system_caches', 'System caches', path_size_bytes('/Library/Caches', 8), ["sudo rm -rf /Library/Caches/* 2>/dev/null || true"], scope='system', path='/Library/Caches', default_selected=False, requires_force=True, extra={'risk': 'May remove caches used by installed tools until rebuilt.'})
     add_target('trash', 'Trash', path_size_bytes('~/.Trash', 8), ["rm -rf ~/.Trash/* 2>/dev/null || true", "osascript -e 'tell application \"Finder\" to empty trash' 2>/dev/null || true"], kind='trash', path='~/.Trash')
 
     add_target('xcode_derived', 'Xcode DerivedData', path_size_bytes('~/Library/Developer/Xcode/DerivedData', 8), ["rm -rf ~/Library/Developer/Xcode/DerivedData/* 2>/dev/null || true"], kind='dev', path='~/Library/Developer/Xcode/DerivedData')
@@ -269,14 +271,14 @@ def deep_clean_catalog(include_unused_apps=True):
     add_target('brew_cache', 'Homebrew cache', path_size_bytes(brew_cache_dir, 7) if brew_cache_dir else 0, ["brew cleanup -s --prune=all 2>/dev/null || true"], kind='package', path=brew_cache_dir or 'brew cache')
 
     docker_est = path_size_bytes('~/Library/Containers/com.docker.docker', 8) + path_size_bytes('~/Library/Group Containers/group.com.docker', 8)
-    add_target('docker_data', 'Docker data (images/volumes/cache)', docker_est, ["docker system prune -af --volumes 2>/dev/null || true", "rm -rf ~/Library/Containers/com.docker.docker/Data/vms/* 2>/dev/null || true"], kind='docker', path='~/Library/Containers/com.docker.docker')
+    add_target('docker_data', 'Docker data (images/volumes/cache)', docker_est, ["docker system prune -af --volumes 2>/dev/null || true", "rm -rf ~/Library/Containers/com.docker.docker/Data/vms/* 2>/dev/null || true"], kind='docker', path='~/Library/Containers/com.docker.docker', default_selected=False, requires_force=True, extra={'risk': 'Removes images/volumes and can disrupt running containers.'})
 
     add_target('logs_crash', 'Logs and crash reports', path_size_bytes('~/Library/Logs', 8) + path_size_bytes('~/Library/Logs/DiagnosticReports', 8), ["rm -rf ~/Library/Logs/* 2>/dev/null || true", "rm -rf ~/Library/Logs/DiagnosticReports/* 2>/dev/null || true", "sudo rm -rf /Library/Logs/DiagnosticReports/* 2>/dev/null || true"], kind='logs', path='~/Library/Logs')
 
     add_target('python_cache', 'Python caches (__pycache__, .pytest, .mypy)', 0, ["find ~ -maxdepth 7 -type d \\( -name '__pycache__' -o -name '.pytest_cache' -o -name '.mypy_cache' \\) -prune -exec rm -rf {} + 2>/dev/null || true"], kind='dev', path='~', default_selected=True)
     add_target('old_node_modules', 'Old node_modules (unchanged > 7 days)', 0, ["find ~/Documents ~/Desktop ~/Developer ~/repos ~/code ~/projects ~/Sites ~/dev -maxdepth 6 -type d -name node_modules -print0 2>/dev/null | xargs -0 -I{} sh -c 'p=$(dirname \"{}\"); lm=$(stat -f %m \"$p\" 2>/dev/null || echo 0); cutoff=$(($(date +%s)-604800)); [ \"$lm\" -lt \"$cutoff\" ] && rm -rf \"{}\" 2>/dev/null || true'"], kind='dev', path='~/Documents', default_selected=False)
 
-    add_target('apfs_snapshots', 'APFS local snapshots', 0, ["for snap in $(tmutil listlocalsnapshotdates / 2>/dev/null | grep -E '^[0-9]{4}-'); do sudo tmutil deletelocalsnapshots \"$snap\" >/dev/null 2>&1; done", "sudo diskutil apfs deleteAllSnapshots / >/dev/null 2>&1 || true"], kind='system', scope='system', path='APFS snapshots', default_selected=False)
+    add_target('apfs_snapshots', 'APFS local snapshots', 0, ["for snap in $(tmutil listlocalsnapshotdates / 2>/dev/null | grep -E '^[0-9]{4}-'); do sudo tmutil deletelocalsnapshots \"$snap\" >/dev/null 2>&1; done", "sudo diskutil apfs deleteAllSnapshots / >/dev/null 2>&1 || true"], kind='system', scope='system', path='APFS snapshots', default_selected=False, requires_force=True, extra={'risk': 'Removes local restore snapshots.'})
     add_target('purge_ram', 'Purge inactive RAM', 0, ["sudo purge 2>/dev/null || purge 2>/dev/null || true"], kind='memory', scope='system', path='RAM', default_selected=True)
 
     # Add top heavy cache children for per-folder custom targeting.
@@ -344,7 +346,7 @@ def deep_clean_catalog(include_unused_apps=True):
     targets.sort(key=lambda x: x.get('size_bytes', 0), reverse=True)
     return targets
 
-def run_deep_clean_job(jid, selected_ids=None, strict=True):
+def run_deep_clean_job(jid, selected_ids=None, strict=True, allow_force=False):
     selected_set = set(selected_ids or [])
     catalog = deep_clean_catalog(include_unused_apps=True)
     if selected_set:
@@ -352,10 +354,18 @@ def run_deep_clean_job(jid, selected_ids=None, strict=True):
     else:
         tasks = [x for x in catalog if x.get('default_selected')]
 
+    if not allow_force:
+        blocked = [x for x in tasks if x.get('requires_force')]
+        if blocked:
+            for item in blocked:
+                job_log(jid, f"Skipped (force required): {item.get('label')}")
+        tasks = [x for x in tasks if not x.get('requires_force')]
+
     before_total, before_used, before_free = disk_df_bytes()
     est = sum(int(x.get('size_bytes') or 0) for x in tasks)
 
-    job_log(jid, f"Starting strict deep clean with {len(tasks)} selected target(s)...")
+    mode = "ON" if allow_force else "OFF"
+    job_log(jid, f"Starting strict deep clean with {len(tasks)} selected target(s)... (force mode: {mode})")
     job_log(jid, f"Volume before: total {fsize(before_total)} | used {fsize(before_used)} | free {fsize(before_free)}")
     job_log(jid, f"Estimated reclaim from selection: {fsize(est)}")
 
@@ -1135,7 +1145,7 @@ def execute_tool(name, args):
 
         elif name == "deep_clean":
             jid = new_job()
-            threading.Thread(target=run_deep_clean_job, args=(jid, None, True), daemon=True).start()
+            threading.Thread(target=run_deep_clean_job, args=(jid, None, True, False), daemon=True).start()
             return json.dumps({"job_id": jid, "status": "started"}), False
 
         elif name == "get_disk_usage":
@@ -1316,13 +1326,15 @@ class H(http.server.SimpleHTTPRequestHandler):
                     'free': fsize(free)
                 },
                 'estimated_total_bytes': sum(int(x.get('size_bytes') or 0) for x in items),
+                'force_required_ids': [x.get('id') for x in items if x.get('requires_force')],
                 'recommended_ids': [x.get('id') for x in items if x.get('default_selected')]
             })
         elif p == '/api/clean/custom':
             selected_ids = b.get('selected_ids') or []
             strict = bool(b.get('strict', True))
+            allow_force = bool(b.get('allow_force', False))
             jid = new_job()
-            threading.Thread(target=run_deep_clean_job, args=(jid, selected_ids, strict), daemon=True).start()
+            threading.Thread(target=run_deep_clean_job, args=(jid, selected_ids, strict, allow_force), daemon=True).start()
             self._json({'job': jid})
         elif p == '/api/uninstall':
             jid = new_job(); threading.Thread(target=self.job_uninstall, args=(jid, b.get('path',''), b.get('name','')), daemon=True).start(); self._json({'job': jid})
@@ -2054,7 +2066,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         job_log(jid, "RAM purged."); job_done(jid)
 
     def job_clean(self, jid):
-        run_deep_clean_job(jid, selected_ids=None, strict=True)
+        run_deep_clean_job(jid, selected_ids=None, strict=True, allow_force=False)
 
     def job_uninstall(self, jid, app_path, name):
         if not app_path or not os.path.exists(app_path):

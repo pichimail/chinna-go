@@ -930,6 +930,8 @@ let aiAttachments = []; // current files staged for next message {name, mime, si
 let deepCleanItems = [];
 let deepCleanSelected = new Set();
 let deepCleanVolume = null;
+let deepCleanForce = false;
+let deepCleanForceRequired = new Set();
 
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;$('toasts').appendChild(t);setTimeout(()=>t.remove(),3500);}
 function ficon(k){return {PDF:'📕',Video:'🎬',Audio:'🎵',Archive:'🗜',App:'📦','Disk Image':'💿',Installer:'📦',Code:'⌨',Data:'🗃',Image:'🖼',Doc:'📄',Sheet:'📊',Slides:'📽',Text:'📝'}[k]||'📄';}
@@ -2488,6 +2490,8 @@ async function confirmDeepCleanCustom(){
   deepCleanItems = [];
   deepCleanSelected = new Set();
   deepCleanVolume = null;
+  deepCleanForce = false;
+  deepCleanForceRequired = new Set();
 
   openModal(
     'Deep Clean · Strict + Custom',
@@ -2506,6 +2510,7 @@ async function confirmDeepCleanCustom(){
     const data = await api('clean/scan', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
     deepCleanItems = data.items || [];
     deepCleanVolume = data.volume || null;
+    deepCleanForceRequired = new Set((data.force_required_ids || []).filter(Boolean));
     deepCleanSelected = new Set((data.recommended_ids || []).filter(Boolean));
     renderDeepCleanSelection();
     goBtn.disabled = false;
@@ -2537,18 +2542,28 @@ function renderDeepCleanSelection(){
         <button type="button" class="bigbtn ghost smallbtn" onclick="setDeepCleanSelection('recommended')">Recommended</button>
         <button type="button" class="bigbtn ghost smallbtn" onclick="setDeepCleanSelection('all')">Select all</button>
         <button type="button" class="bigbtn ghost smallbtn" onclick="setDeepCleanSelection('none')">Clear all</button>
+        <button type="button" class="bigbtn smallbtn ${deepCleanForce?'solid':'ghost'}" onclick="toggleDeepCleanForce()">${deepCleanForce?'Force Modules: ON':'Force Modules: OFF'}</button>
+      </div>
+
+      <div style="font-size:11px;line-height:1.6;padding:8px 10px;border:1px dashed var(--line);border-radius:10px;color:var(--t2)">
+        System-sensitive modules are locked by default to avoid breaking current macOS features. Turn <b>Force Modules</b> on only if you explicitly want those operations.
       </div>
 
       <div style="max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.24)">
         ${(deepCleanItems||[]).map(item => {
+          const forceNeeded = !!item.requires_force;
+          const locked = forceNeeded && !deepCleanForce;
           const checked = deepCleanSelected.has(item.id) ? 'checked' : '';
           const hint = item.path ? escHtml(item.path) : escHtml(item.kind || 'item');
+          const risk = item?.extra?.risk ? `<div style="font-size:10px;color:var(--amber)">⚠ ${escHtml(item.extra.risk)}</div>` : '';
+          const badge = forceNeeded ? `<span style="font-size:10px;padding:1px 6px;border-radius:999px;background:rgba(255,172,64,.15);color:var(--amber);margin-left:6px">FORCE</span>` : '';
           return `
-            <label style="display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.06)">
-              <input type="checkbox" data-dc-id="${escHtml(item.id)}" ${checked} onchange="toggleDeepCleanItem('${esc(item.id)}', this.checked)" style="margin-top:2px;accent-color:var(--acc)">
+            <label style="display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.06);opacity:${locked?'.62':'1'}">
+              <input type="checkbox" data-dc-id="${escHtml(item.id)}" ${checked} ${locked?'disabled':''} onchange="toggleDeepCleanItem('${esc(item.id)}', this.checked)" style="margin-top:2px;accent-color:var(--acc)">
               <div style="flex:1;min-width:0">
-                <div style="font-size:12px">${escHtml(item.label)}</div>
+                <div style="font-size:12px">${escHtml(item.label)} ${badge}</div>
                 <div style="font-size:10px;opacity:.62;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${hint}</div>
+                ${risk}
               </div>
               <div style="font-size:11px;color:var(--acc);white-space:nowrap">${escHtml(item.size || fmtBytes(item.size_bytes||0))}</div>
             </label>
@@ -2571,14 +2586,22 @@ function setDeepCleanSelection(mode){
   if(mode === 'none'){
     deepCleanSelected = new Set();
   }else if(mode === 'all'){
-    deepCleanSelected = new Set((deepCleanItems||[]).map(x=>x.id));
+    deepCleanSelected = new Set((deepCleanItems||[]).filter(x => deepCleanForce || !x.requires_force).map(x=>x.id));
   }else{
-    deepCleanSelected = new Set((deepCleanItems||[]).filter(x=>x.default_selected).map(x=>x.id));
+    deepCleanSelected = new Set((deepCleanItems||[]).filter(x=>x.default_selected && (deepCleanForce || !x.requires_force)).map(x=>x.id));
   }
   document.querySelectorAll('input[data-dc-id]').forEach(el => {
     el.checked = deepCleanSelected.has(el.getAttribute('data-dc-id'));
   });
   updateDeepCleanEstimate();
+}
+
+function toggleDeepCleanForce(){
+  deepCleanForce = !deepCleanForce;
+  if(!deepCleanForce){
+    deepCleanSelected = new Set([...deepCleanSelected].filter(id => !deepCleanForceRequired.has(id)));
+  }
+  renderDeepCleanSelection();
 }
 
 function updateDeepCleanEstimate(){
@@ -2592,7 +2615,7 @@ function updateDeepCleanEstimate(){
 }
 
 function runSelectedDeepClean(){
-  const selected = [...deepCleanSelected];
+  const selected = [...deepCleanSelected].filter(id => deepCleanForce || !deepCleanForceRequired.has(id));
   if(!selected.length){
     toast('Select at least one item to clean');
     return;
@@ -2602,7 +2625,7 @@ function runSelectedDeepClean(){
     api('clean/custom', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({selected_ids: selected, strict: true})
+      body: JSON.stringify({selected_ids: selected, strict: true, allow_force: deepCleanForce})
     }),
     'Deep Clean complete'
   );
