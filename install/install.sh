@@ -11,6 +11,13 @@ RAW="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 CHINNA="${CHINNA_HOME:-$HOME/.chinna}"
 PORT="${CHINNA_DASHBOARD_PORT:-7777}"
 STATE_FILE="${CHINNA}/.installstate"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+LOCAL_SOURCE="off"
+if [ -f "${REPO_ROOT}/lib/server.py" ] && [ -f "${REPO_ROOT}/dashboard/index.html" ] && [ -f "${REPO_ROOT}/bin/chinna" ]; then
+    LOCAL_SOURCE="on"
+fi
 
 echo ""
 echo "  ╔══════════════════════════════════════════════════╗"
@@ -18,8 +25,29 @@ echo "  ║   C H I N N A   V 6   —  Mac Sidekick           ║"
 echo "  ║   Resumable · Models · Music · WhatsApp · More   ║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo ""
+if [ "${LOCAL_SOURCE}" = "on" ]; then
+    echo "  Source: local repo checkout (${REPO_ROOT})"
+else
+    echo "  Source: GitHub raw (${REPO}/${BRANCH})"
+fi
+echo ""
 
 mkdir -p "${CHINNA}" "${CHINNA}/lib" "${CHINNA}/dashboard" "${CHINNA}/logs"
+
+copy_or_fetch() {
+    local rel="$1"
+    local dest="$2"
+    local local_path="${REPO_ROOT}/${rel}"
+
+    mkdir -p "$(dirname "${dest}")"
+
+    if [ "${LOCAL_SOURCE}" = "on" ] && [ -f "${local_path}" ]; then
+        cp "${local_path}" "${dest}"
+        return 0
+    fi
+
+    curl -fsSL "${RAW}/${rel}" -o "${dest}"
+}
 
 # ── Resumable step system (Prompt 14) ──────────────────────
 is_done()   { grep -qxF "$1" "$STATE_FILE" 2>/dev/null; }
@@ -88,21 +116,21 @@ step_install_node_tools() {
 }
 
 step_write_server() {
-    echo "    Downloading server (1891 lines)..."
-    curl -fsSL "${RAW}/lib/server.py" -o "${CHINNA}/dashboard_server.py"
+    echo "    Installing server..."
+    copy_or_fetch "lib/server.py" "${CHINNA}/dashboard_server.py"
     echo "    ✓ server.py written"
 }
 
 step_write_dashboard() {
-    echo "    Downloading dashboard (115KB)..."
-    curl -fsSL "${RAW}/dashboard/index.html" -o "${CHINNA}/dashboard/index.html"
+    echo "    Installing dashboard..."
+    copy_or_fetch "dashboard/index.html" "${CHINNA}/dashboard/index.html"
     echo "    ✓ index.html written"
 }
 
 step_write_libs() {
-    echo "    Downloading lib files..."
+    echo "    Installing lib files..."
     for lib in config clean stack registry notify daemon server plugins voice lang; do
-        curl -fsSL "${RAW}/lib/${lib}.sh" -o "${CHINNA}/lib/${lib}.sh" 2>/dev/null && \
+        copy_or_fetch "lib/${lib}.sh" "${CHINNA}/lib/${lib}.sh" 2>/dev/null && \
             echo "      ✓ lib/${lib}.sh" || \
             echo "      ⚠ lib/${lib}.sh (skipped)"
     done
@@ -111,7 +139,7 @@ step_write_libs() {
 step_write_bin() {
     echo "    Installing chinna CLI..."
     mkdir -p "$HOME/.local/bin"
-    curl -fsSL "${RAW}/bin/chinna" -o "$HOME/.local/bin/chinna"
+    copy_or_fetch "bin/chinna" "$HOME/.local/bin/chinna"
     chmod +x "$HOME/.local/bin/chinna"
     echo "    ✓ chinna installed to ~/.local/bin/chinna"
 }
