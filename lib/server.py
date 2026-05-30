@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Chinna V5 — Dashboard Server (Python stdlib only, zero deps)."""
 import base64, hashlib, http.server, json, os, re, subprocess, sys, threading, time, traceback, unicodedata, urllib.parse, urllib.request
+from datetime import datetime, timezone
 
 CHINNA_VERSION = "6.0.0"
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 7777
@@ -21,6 +22,9 @@ def sh(cmd, timeout=20):
         return subprocess.check_output(cmd, shell=True, stderr=subprocess.DEVNULL, timeout=timeout).decode(errors='replace').strip()
     except Exception:
         return ''
+
+def shq(value):
+    return "'{}'".format(str(value).replace("'", "'\\''"))
 
 def safe_text(value, keep_newlines=False):
     if value is None:
@@ -165,6 +169,216 @@ KIND = {'pdf':'PDF','mp4':'Video','mov':'Video','mkv':'Video','mp3':'Audio','m4a
 
 def fsize(n):
     return f"{n/1073741824:.2f} GB" if n>1073741824 else f"{n/1048576:.1f} MB" if n>1048576 else f"{n/1024:.0f} KB"
+
+def path_size_bytes(path, timeout=10):
+    p = os.path.expanduser(path or '')
+    if not p or not os.path.exists(p):
+        return 0
+    out = sh(f"du -sk {shq(p)} 2>/dev/null | awk '{{print $1}}'", timeout)
+    return int(out) * 1024 if out.strip().isdigit() else 0
+
+def disk_df_bytes():
+    out = sh("df -k /System/Volumes/Data 2>/dev/null | awk 'NR==2{print $2, $3, $4}'")
+    if not out:
+        out = sh("df -k / 2>/dev/null | awk 'NR==2{print $2, $3, $4}'")
+    p = out.split()
+    if len(p) >= 3 and all(x.isdigit() for x in p[:3]):
+        total = int(p[0]) * 1024
+        used = int(p[1]) * 1024
+        free = int(p[2]) * 1024
+        return total, used, free
+    return 0, 0, 0
+
+def parse_last_used_epoch(app_path):
+    raw = sh(f"mdls -name kMDItemLastUsedDate -raw {shq(app_path)} 2>/dev/null")
+    txt = raw.strip()
+    if not txt or txt == '(null)':
+        return 0
+    try:
+        return int(datetime.strptime(txt, '%Y-%m-%d %H:%M:%S %z').timestamp())
+    except Exception:
+        return 0
+
+def list_installed_apps(limit=400):
+    apps = []
+    for base in ['/Applications', os.path.expanduser('~/Applications')]:
+        if not os.path.isdir(base):
+            continue
+        try:
+            for n in sorted(os.listdir(base)):
+                if not n.endswith('.app'):
+                    continue
+                fp = os.path.join(base, n)
+                szb = path_size_bytes(fp, timeout=6)
+                apps.append({
+                    'name': n[:-4],
+                    'path': fp,
+                    'size': fsize(szb),
+                    'size_bytes': szb,
+                    'last_used_epoch': parse_last_used_epoch(fp)
+                })
+        except Exception:
+            pass
+    apps.sort(key=lambda x: x.get('size_bytes', 0), reverse=True)
+    return apps[:max(1, int(limit or 400))]
+
+def deep_clean_catalog(include_unused_apps=True):
+    now = int(time.time())
+    targets = []
+
+    def add_target(tid, label, size_bytes, commands, kind='cache', scope='system', path='', default_selected=True, extra=None):
+        targets.append({
+            'id': tid,
+            'label': label,
+            'size_bytes': max(0, int(size_bytes or 0)),
+            'size': fsize(max(0, int(size_bytes or 0))),
+            'commands': commands or [],
+            'kind': kind,
+            'scope': scope,
+            'path': path,
+            'default_selected': bool(default_selected),
+            'extra': extra or {}
+        })
+
+    add_target(
+        'system_temp',
+        'System temp folders (/private/var/folders)',
+        0,
+        [
+            "sudo rm -rf /private/var/folders/*/T/* 2>/dev/null || true",
+            "sudo rm -rf /private/var/folders/*/C/* 2>/dev/null || true"
+        ],
+        kind='system_temp', scope='system', path='/private/var/folders', default_selected=True
+    )
+    add_target('user_caches', 'User caches', path_size_bytes('~/Library/Caches', 8), ["rm -rf ~/Library/Caches/* 2>/dev/null || true"], path='~/Library/Caches')
+    add_target('system_caches', 'System caches', path_size_bytes('/Library/Caches', 8), ["sudo rm -rf /Library/Caches/* 2>/dev/null || true"], scope='system', path='/Library/Caches')
+    add_target('trash', 'Trash', path_size_bytes('~/.Trash', 8), ["rm -rf ~/.Trash/* 2>/dev/null || true", "osascript -e 'tell application \"Finder\" to empty trash' 2>/dev/null || true"], kind='trash', path='~/.Trash')
+
+    add_target('xcode_derived', 'Xcode DerivedData', path_size_bytes('~/Library/Developer/Xcode/DerivedData', 8), ["rm -rf ~/Library/Developer/Xcode/DerivedData/* 2>/dev/null || true"], kind='dev', path='~/Library/Developer/Xcode/DerivedData')
+    add_target('xcode_archives', 'Xcode Archives', path_size_bytes('~/Library/Developer/Xcode/Archives', 8), ["rm -rf ~/Library/Developer/Xcode/Archives/* 2>/dev/null || true"], kind='dev', path='~/Library/Developer/Xcode/Archives')
+    add_target('xcode_devicesupport', 'Xcode DeviceSupport', path_size_bytes('~/Library/Developer/Xcode/iOS DeviceSupport', 8), ["rm -rf ~/Library/Developer/Xcode/iOS\\ DeviceSupport/* 2>/dev/null || true"], kind='dev', path='~/Library/Developer/Xcode/iOS DeviceSupport')
+    add_target('simulator_caches', 'CoreSimulator caches', path_size_bytes('~/Library/Developer/CoreSimulator/Caches', 8), ["rm -rf ~/Library/Developer/CoreSimulator/Caches/* 2>/dev/null || true", "xcrun simctl delete unavailable 2>/dev/null || true"], kind='dev', path='~/Library/Developer/CoreSimulator/Caches')
+
+    add_target('npm_cache', 'npm cache', path_size_bytes('~/.npm', 7), ["npm cache clean --force 2>/dev/null || true"], kind='package', path='~/.npm')
+    add_target('pnpm_store', 'pnpm store', path_size_bytes('~/Library/pnpm/store', 7), ["pnpm store prune 2>/dev/null || true"], kind='package', path='~/Library/pnpm/store')
+    add_target('yarn_cache', 'yarn cache', path_size_bytes('~/Library/Caches/Yarn', 7), ["yarn cache clean 2>/dev/null || true"], kind='package', path='~/Library/Caches/Yarn')
+    add_target('bun_cache', 'bun cache', path_size_bytes('~/.bun/install/cache', 7), ["rm -rf ~/.bun/install/cache 2>/dev/null || true"], kind='package', path='~/.bun/install/cache')
+    add_target('pip_cache', 'pip cache', path_size_bytes('~/.cache/pip', 7) + path_size_bytes('~/Library/Caches/pip', 7), ["rm -rf ~/.cache/pip ~/Library/Caches/pip 2>/dev/null || true"], kind='package', path='~/.cache/pip')
+    add_target('gradle_cache', 'Gradle cache', path_size_bytes('~/.gradle/caches', 7), ["rm -rf ~/.gradle/caches ~/.gradle/daemon ~/.gradle/wrapper/dists 2>/dev/null || true"], kind='package', path='~/.gradle')
+    brew_cache_dir = sh('brew --cache 2>/dev/null')
+    add_target('brew_cache', 'Homebrew cache', path_size_bytes(brew_cache_dir, 7) if brew_cache_dir else 0, ["brew cleanup -s --prune=all 2>/dev/null || true"], kind='package', path=brew_cache_dir or 'brew cache')
+
+    docker_est = path_size_bytes('~/Library/Containers/com.docker.docker', 8) + path_size_bytes('~/Library/Group Containers/group.com.docker', 8)
+    add_target('docker_data', 'Docker data (images/volumes/cache)', docker_est, ["docker system prune -af --volumes 2>/dev/null || true", "rm -rf ~/Library/Containers/com.docker.docker/Data/vms/* 2>/dev/null || true"], kind='docker', path='~/Library/Containers/com.docker.docker')
+
+    add_target('logs_crash', 'Logs and crash reports', path_size_bytes('~/Library/Logs', 8) + path_size_bytes('~/Library/Logs/DiagnosticReports', 8), ["rm -rf ~/Library/Logs/* 2>/dev/null || true", "rm -rf ~/Library/Logs/DiagnosticReports/* 2>/dev/null || true", "sudo rm -rf /Library/Logs/DiagnosticReports/* 2>/dev/null || true"], kind='logs', path='~/Library/Logs')
+
+    add_target('python_cache', 'Python caches (__pycache__, .pytest, .mypy)', 0, ["find ~ -maxdepth 7 -type d \\( -name '__pycache__' -o -name '.pytest_cache' -o -name '.mypy_cache' \\) -prune -exec rm -rf {} + 2>/dev/null || true"], kind='dev', path='~', default_selected=True)
+    add_target('old_node_modules', 'Old node_modules (unchanged > 7 days)', 0, ["find ~/Documents ~/Desktop ~/Developer ~/repos ~/code ~/projects ~/Sites ~/dev -maxdepth 6 -type d -name node_modules -print0 2>/dev/null | xargs -0 -I{} sh -c 'p=$(dirname \"{}\"); lm=$(stat -f %m \"$p\" 2>/dev/null || echo 0); cutoff=$(($(date +%s)-604800)); [ \"$lm\" -lt \"$cutoff\" ] && rm -rf \"{}\" 2>/dev/null || true'"], kind='dev', path='~/Documents', default_selected=False)
+
+    add_target('apfs_snapshots', 'APFS local snapshots', 0, ["for snap in $(tmutil listlocalsnapshotdates / 2>/dev/null | grep -E '^[0-9]{4}-'); do sudo tmutil deletelocalsnapshots \"$snap\" >/dev/null 2>&1; done", "sudo diskutil apfs deleteAllSnapshots / >/dev/null 2>&1 || true"], kind='system', scope='system', path='APFS snapshots', default_selected=False)
+    add_target('purge_ram', 'Purge inactive RAM', 0, ["sudo purge 2>/dev/null || purge 2>/dev/null || true"], kind='memory', scope='system', path='RAM', default_selected=True)
+
+    # Add top heavy cache children for per-folder custom targeting.
+    for parent in ['~/Library/Caches', '~/.Trash']:
+        p = os.path.expanduser(parent)
+        if not os.path.isdir(p):
+            continue
+        try:
+            children = storage_breakdown(p, limit=30, offset=0).get('items', [])
+            for child in children[:20]:
+                sz = int(child.get('size_bytes') or 0)
+                if sz < 200 * 1024 * 1024:
+                    continue
+                cpath = child.get('path') or ''
+                if not cpath:
+                    continue
+                add_target(
+                    'item_' + hashlib.md5(cpath.encode()).hexdigest()[:10],
+                    f"Large item: {os.path.basename(cpath)}",
+                    sz,
+                    [f"rm -rf {shq(cpath)} 2>/dev/null || true"],
+                    kind='item',
+                    scope='custom',
+                    path=cpath,
+                    default_selected=False,
+                    extra={'parent': parent}
+                )
+        except Exception:
+            pass
+
+    if include_unused_apps:
+        stale_days = 90
+        cutoff = now - stale_days * 86400
+        for app in list_installed_apps(limit=200):
+            app_path = app.get('path') or ''
+            if not app_path:
+                continue
+            last_used = int(app.get('last_used_epoch') or 0)
+            sz = int(app.get('size_bytes') or 0)
+            # Keep this candidate list focused on potentially removable large/unused apps.
+            if sz < 500 * 1024 * 1024:
+                continue
+            if last_used and last_used > cutoff:
+                continue
+            base = app.get('name') or os.path.basename(app_path).replace('.app', '')
+            safe_base = str(base).replace('"', '\\"')
+            add_target(
+                'app_' + hashlib.md5(app_path.encode()).hexdigest()[:10],
+                f"Unused app candidate: {base}",
+                sz,
+                [
+                    f"rm -rf {shq(app_path)} 2>/dev/null || true",
+                    f"rm -rf \"$HOME/Library/Application Support/{safe_base}\" \"$HOME/Library/Caches/{safe_base}\" \"$HOME/Library/Logs/{safe_base}\" 2>/dev/null || true"
+                ],
+                kind='app',
+                scope='custom',
+                path=app_path,
+                default_selected=False,
+                extra={
+                    'last_used_epoch': last_used,
+                    'last_used_days_ago': int((now - last_used) / 86400) if last_used else None
+                }
+            )
+
+    targets.sort(key=lambda x: x.get('size_bytes', 0), reverse=True)
+    return targets
+
+def run_deep_clean_job(jid, selected_ids=None, strict=True):
+    selected_set = set(selected_ids or [])
+    catalog = deep_clean_catalog(include_unused_apps=True)
+    if selected_set:
+        tasks = [x for x in catalog if x.get('id') in selected_set]
+    else:
+        tasks = [x for x in catalog if x.get('default_selected')]
+
+    before_total, before_used, before_free = disk_df_bytes()
+    est = sum(int(x.get('size_bytes') or 0) for x in tasks)
+
+    job_log(jid, f"Starting strict deep clean with {len(tasks)} selected target(s)...")
+    job_log(jid, f"Volume before: total {fsize(before_total)} | used {fsize(before_used)} | free {fsize(before_free)}")
+    job_log(jid, f"Estimated reclaim from selection: {fsize(est)}")
+
+    if not tasks:
+        job_log(jid, 'No targets selected. Nothing to clean.')
+        job_done(jid)
+        return
+
+    total = len(tasks)
+    for idx, item in enumerate(tasks, 1):
+        label = item.get('label', 'target')
+        sz = item.get('size', '0 KB')
+        job_log(jid, f"[{idx}/{total}] Processing {label} ({sz})")
+        for cmd in item.get('commands') or []:
+            sh(cmd, 90 if strict else 45)
+        job_log(jid, f"  done: {label}")
+
+    after_total, after_used, after_free = disk_df_bytes()
+    gained = max(0, after_free - before_free)
+    job_log(jid, f"Deep clean complete. Estimated: {fsize(est)} | actual immediate free gain: {fsize(gained)}")
+    job_log(jid, f"Volume after: total {fsize(after_total)} | used {fsize(after_used)} | free {fsize(after_free)}")
+    job_log(jid, "Note: macOS System Data may recalculate over time. Reboot can reflect final reclaim.")
+    job_done(jid)
 
 def entry(fp):
     try:
@@ -921,21 +1135,7 @@ def execute_tool(name, args):
 
         elif name == "deep_clean":
             jid = new_job()
-            # Run the clean steps directly in a thread (avoids class binding issues)
-            def _run_clean(j):
-                try:
-                    job_log(j, "Starting deep clean...")
-                    for label, cmd in [("User caches", "rm -rf ~/Library/Caches/* 2>/dev/null"),
-                                       ("npm cache", "npm cache clean --force 2>/dev/null"),
-                                       ("Homebrew cleanup", "brew cleanup -s 2>/dev/null"),
-                                       ("Trash", "rm -rf ~/.Trash/* 2>/dev/null")]:
-                        job_log(j, f"Cleaning {label} ...")
-                        sh(cmd, 35)
-                        job_log(j, f"  done: {label}")
-                    job_log(j, "Deep clean complete."); job_done(j)
-                except Exception as ex:
-                    job_log(j, f"Error: {ex}"); job_done(j, False)
-            threading.Thread(target=_run_clean, args=(jid,), daemon=True).start()
+            threading.Thread(target=run_deep_clean_job, args=(jid, None, True), daemon=True).start()
             return json.dumps({"job_id": jid, "status": "started"}), False
 
         elif name == "get_disk_usage":
@@ -1101,6 +1301,29 @@ class H(http.server.SimpleHTTPRequestHandler):
             jid = new_job(); threading.Thread(target=self.job_purge, args=(jid,), daemon=True).start(); self._json({'job': jid})
         elif p == '/api/clean':
             jid = new_job(); threading.Thread(target=self.job_clean, args=(jid,), daemon=True).start(); self._json({'job': jid})
+        elif p == '/api/clean/scan':
+            total, used, free = disk_df_bytes()
+            items = deep_clean_catalog(include_unused_apps=True)
+            self._json({
+                'items': items,
+                'volume': {
+                    'path': '/System/Volumes/Data',
+                    'total_bytes': total,
+                    'used_bytes': used,
+                    'free_bytes': free,
+                    'total': fsize(total),
+                    'used': fsize(used),
+                    'free': fsize(free)
+                },
+                'estimated_total_bytes': sum(int(x.get('size_bytes') or 0) for x in items),
+                'recommended_ids': [x.get('id') for x in items if x.get('default_selected')]
+            })
+        elif p == '/api/clean/custom':
+            selected_ids = b.get('selected_ids') or []
+            strict = bool(b.get('strict', True))
+            jid = new_job()
+            threading.Thread(target=run_deep_clean_job, args=(jid, selected_ids, strict), daemon=True).start()
+            self._json({'job': jid})
         elif p == '/api/uninstall':
             jid = new_job(); threading.Thread(target=self.job_uninstall, args=(jid, b.get('path',''), b.get('name','')), daemon=True).start(); self._json({'job': jid})
         elif p == '/api/delete-dupes':
@@ -1207,20 +1430,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         return {'files': files[:150], 'count': len(files), 'tab': tab, 'sort': sort}
 
     def list_apps(self):
-        apps = []
-        for base in ['/Applications', os.path.expanduser('~/Applications')]:
-            if not os.path.isdir(base): continue
-            try:
-                for n in sorted(os.listdir(base)):
-                    if n.endswith('.app'):
-                        fp = os.path.join(base, n)
-                        sz = sh(f"du -sk '{fp}' 2>/dev/null | cut -f1")
-                        try: szb = int(sz)*1024
-                        except: szb = 0
-                        apps.append({'name': n[:-4], 'path': fp, 'size': fsize(szb), 'size_bytes': szb})
-            except: pass
-        apps.sort(key=lambda x: x['size_bytes'], reverse=True)
-        return apps
+        return list_installed_apps(limit=400)
 
     def login_items(self):
         items = sh("osascript -e 'tell application \"System Events\" to get the name of every login item' 2>/dev/null")
@@ -1844,15 +2054,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         job_log(jid, "RAM purged."); job_done(jid)
 
     def job_clean(self, jid):
-        steps = [("User caches", "rm -rf ~/Library/Caches/* 2>/dev/null"),
-                 ("npm cache", "npm cache clean --force 2>/dev/null"),
-                 ("Homebrew cleanup", "brew cleanup -s 2>/dev/null"),
-                 ("Trash", "rm -rf ~/.Trash/* 2>/dev/null")]
-        for label, cmd in steps:
-            job_log(jid, f"Cleaning {label} ...")
-            sh(cmd, 40)
-            job_log(jid, f"  done: {label}")
-        job_log(jid, "Deep clean complete."); job_done(jid)
+        run_deep_clean_job(jid, selected_ids=None, strict=True)
 
     def job_uninstall(self, jid, app_path, name):
         if not app_path or not os.path.exists(app_path):

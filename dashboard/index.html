@@ -35,11 +35,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-s
 body::before{content:"";position:fixed;inset:0;z-index:0;background:
   radial-gradient(700px circle at 12% -5%, rgba(var(--accr),.08), transparent 55%),
   radial-gradient(600px circle at 100% 110%, rgba(120,90,255,.07), transparent 55%);pointer-events:none}
-.glass{background:var(--panel);backdrop-filter:blur(40px) saturate(150%);-webkit-backdrop-filter:blur(40px) saturate(150%);border:1px solid var(--line);border-radius:var(--r)}
+.glass{background:var(--panel);-webkit-backdrop-filter:blur(40px) saturate(150%);backdrop-filter:blur(40px) saturate(150%);border:1px solid var(--line);border-radius:var(--r)}
 [data-theme="oled"] .glass{
   background:transparent;
-  backdrop-filter:none;
   -webkit-backdrop-filter:none;
+  backdrop-filter:none;
   border-color:rgba(186,255,41,.08);
   border-radius:0;
   box-shadow:none;
@@ -318,9 +318,6 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 [data-theme="oled"] .vhead{
   border-bottom:1px solid rgba(229,255,82,.06);
 }
-[data-theme="oled"] .vbody{
-  scrollbar-color:rgba(229,255,82,.16) transparent;
-}
 [data-theme="oled"] .navitem.on{
   border:none !important;
   border-left:2px solid rgba(var(--accr),.98) !important;
@@ -453,7 +450,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 .smallbtn{padding:6px 10px;border-radius:9px;font-size:12px}
 
 /* dock */
-#dock{position:absolute;bottom:var(--dock-bottom);left:50%;transform:translateX(-50%);z-index:50;display:flex;gap:6px;padding:8px 12px;min-height:var(--dock-h);background:var(--panel);backdrop-filter:blur(50px);border:1px solid var(--line2);border-radius:18px;box-shadow:var(--shadow)}
+#dock{position:absolute;bottom:var(--dock-bottom);left:50%;transform:translateX(-50%);z-index:50;display:flex;gap:6px;padding:8px 12px;min-height:var(--dock-h);background:var(--panel);-webkit-backdrop-filter:blur(50px);backdrop-filter:blur(50px);border:1px solid var(--line2);border-radius:18px;box-shadow:var(--shadow)}
 .dapp{position:relative;width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:23px;cursor:pointer;transition:transform .16s cubic-bezier(.2,.8,.3,1.4);background:linear-gradient(160deg,rgba(255,255,255,.1),rgba(255,255,255,.02));border:1px solid var(--line)}
 .dapp:hover{transform:translateY(-12px) scale(1.12)}
 .dapp .tip{position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);background:rgba(20,22,26,.96);border:1px solid var(--line2);color:var(--t1);font-size:11px;font-weight:600;padding:4px 10px;border-radius:7px;white-space:nowrap;opacity:0;pointer-events:none;transition:.12s}
@@ -474,7 +471,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 }
 
 /* modal */
-#scrim{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px}
+#scrim{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px}
 #scrim.on{display:flex}
 .modal{width:min(560px,94vw);max-height:84vh;display:flex;flex-direction:column;border-radius:18px;overflow:hidden}
 .modal .mh{padding:18px 20px 12px;border-bottom:1px solid var(--line)}
@@ -492,7 +489,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 
 /* toast */
 #toasts{position:fixed;top:64px;right:14px;z-index:300;display:flex;flex-direction:column;gap:6px}
-.toast{padding:10px 14px;border-radius:11px;background:var(--panel);backdrop-filter:blur(40px);border:1px solid var(--line2);font-size:12px;font-weight:600;box-shadow:var(--shadow);animation:tin .25s}
+.toast{padding:10px 14px;border-radius:11px;background:var(--panel);-webkit-backdrop-filter:blur(40px);backdrop-filter:blur(40px);border:1px solid var(--line2);font-size:12px;font-weight:600;box-shadow:var(--shadow);animation:tin .25s}
 @keyframes tin{from{opacity:0;transform:translateX(20px)}}
 
 /* === ADVANCED CHINNA AI VOICE UI === */
@@ -898,7 +895,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 <div id="toasts"></div>
 
 <!-- V6 WELCOME / UPDATE OVERLAY -->
-<div id="v6overlay" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.72);backdrop-filter:blur(16px);align-items:center;justify-content:center;padding:20px">
+<div id="v6overlay" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.72);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);align-items:center;justify-content:center;padding:20px">
   <div class="glass" style="max-width:500px;width:100%;border-radius:20px;overflow:hidden">
     <div style="padding:24px 24px 16px;border-bottom:1px solid var(--line)">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
@@ -930,10 +927,15 @@ let allFiles=[], curTab='large', allApps=[], dupeSel=new Set(), allDupes=[];
 let storStack=[], storState={path:'~', items:[], offset:0, hasMore:false, limit:40};
 let chatHistory = [];   // full conversation memory for Chinna AI (sent to backend)
 let aiAttachments = []; // current files staged for next message {name, mime, size, data_b64}
+let deepCleanItems = [];
+let deepCleanSelected = new Set();
+let deepCleanVolume = null;
 
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;$('toasts').appendChild(t);setTimeout(()=>t.remove(),3500);}
 function ficon(k){return {PDF:'📕',Video:'🎬',Audio:'🎵',Archive:'🗜',App:'📦','Disk Image':'💿',Installer:'📦',Code:'⌨',Data:'🗃',Image:'🖼',Doc:'📄',Sheet:'📊',Slides:'📽',Text:'📝'}[k]||'📄';}
 function color(p){return p>85?'var(--red)':p>65?'var(--amber)':'var(--acc)';}
+function fmtBytes(n){const x=Number(n||0);if(x>=1073741824)return (x/1073741824).toFixed(2)+' GB';if(x>=1048576)return (x/1048576).toFixed(1)+' MB';if(x>=1024)return Math.round(x/1024)+' KB';return x+' B';}
+function escHtml(s){return String(s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
 
 // ═══════════════════════════════════════════════════════════════
 // ADVANCED CHINNA AI VOICE — full state machine + waveform + interrupt + continuous
@@ -2471,11 +2473,139 @@ function closeModalRefresh(){closeModal();$('m-foot').innerHTML='<button type="b
 
 /* confirm flows */
 function confirmAction(kind){
+  if(kind==='clean'){
+    confirmDeepCleanCustom();
+    return;
+  }
   const meta={
     purge:['Purge RAM','Freeing inactive memory. Safe operation that can help when RAM feels full.','Running macOS memory purge (may ask for sudo password in terminal)','Purge'],
     clean:['Deep Clean','Clearing system caches, npm, Homebrew, and emptying Trash. This can take 30–90 seconds.','Scanning and removing temporary files across multiple locations','Clean']
   }[kind];
   openModal(meta[0],meta[1],meta[2],()=>{showProgress(meta[0], 'Live progress will appear below…');runJob(api(kind,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}),meta[0]+' complete');},meta[3]);
+}
+
+async function confirmDeepCleanCustom(){
+  deepCleanItems = [];
+  deepCleanSelected = new Set();
+  deepCleanVolume = null;
+
+  openModal(
+    'Deep Clean · Strict + Custom',
+    'Scanning your disk and cleanup targets. You can choose exactly what to remove before running.',
+    '<div style="display:flex;align-items:center;gap:10px"><div class="spin" style="width:18px;height:18px;border-width:2px;margin:0"></div><span style="font-size:12px">Building strict cleanup plan...</span></div>',
+    ()=>runSelectedDeepClean(),
+    'Run Selected Clean'
+  );
+
+  const goBtn = $('m-go');
+  goBtn.disabled = true;
+  goBtn.style.opacity = '.55';
+  goBtn.textContent = 'Scanning...';
+
+  try {
+    const data = await api('clean/scan', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    deepCleanItems = data.items || [];
+    deepCleanVolume = data.volume || null;
+    deepCleanSelected = new Set((data.recommended_ids || []).filter(Boolean));
+    renderDeepCleanSelection();
+    goBtn.disabled = false;
+    goBtn.style.opacity = '';
+    goBtn.textContent = 'Run Selected Clean';
+  } catch(e) {
+    $('m-confirm').innerHTML = '<div style="color:var(--red);font-size:12px">Failed to scan cleanup targets. Try again.</div>';
+    goBtn.style.display = 'none';
+  }
+}
+
+function renderDeepCleanSelection(){
+  const c = $('m-confirm');
+  if(!c) return;
+  if(!deepCleanItems.length){
+    c.innerHTML = '<div style="font-size:12px;opacity:.85">No cleanup targets found right now.</div>';
+    return;
+  }
+
+  c.innerHTML = `
+    <div style="display:grid;gap:10px">
+      <div style="font-size:12px;line-height:1.6;padding:10px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.03)">
+        <div><b>Volume:</b> ${escHtml(deepCleanVolume?.path || '/System/Volumes/Data')}</div>
+        <div>Used: <span id="dc-used">${fmtBytes(deepCleanVolume?.used_bytes || 0)}</span> · Free: <span id="dc-free">${fmtBytes(deepCleanVolume?.free_bytes || 0)}</span> · Total: <span id="dc-total">${fmtBytes(deepCleanVolume?.total_bytes || 0)}</span></div>
+        <div style="margin-top:4px;color:var(--acc)">Selected reclaim estimate: <b id="dc-selected">0 B</b> · Free after clean: <b id="dc-free-after">0 B</b></div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="bigbtn ghost smallbtn" onclick="setDeepCleanSelection('recommended')">Recommended</button>
+        <button type="button" class="bigbtn ghost smallbtn" onclick="setDeepCleanSelection('all')">Select all</button>
+        <button type="button" class="bigbtn ghost smallbtn" onclick="setDeepCleanSelection('none')">Clear all</button>
+      </div>
+
+      <div style="max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.24)">
+        ${(deepCleanItems||[]).map(item => {
+          const checked = deepCleanSelected.has(item.id) ? 'checked' : '';
+          const hint = item.path ? escHtml(item.path) : escHtml(item.kind || 'item');
+          return `
+            <label style="display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.06)">
+              <input type="checkbox" data-dc-id="${escHtml(item.id)}" ${checked} onchange="toggleDeepCleanItem('${esc(item.id)}', this.checked)" style="margin-top:2px;accent-color:var(--acc)">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:12px">${escHtml(item.label)}</div>
+                <div style="font-size:10px;opacity:.62;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${hint}</div>
+              </div>
+              <div style="font-size:11px;color:var(--acc);white-space:nowrap">${escHtml(item.size || fmtBytes(item.size_bytes||0))}</div>
+            </label>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  updateDeepCleanEstimate();
+}
+
+function toggleDeepCleanItem(id, on){
+  if(on) deepCleanSelected.add(id);
+  else deepCleanSelected.delete(id);
+  updateDeepCleanEstimate();
+}
+
+function setDeepCleanSelection(mode){
+  if(mode === 'none'){
+    deepCleanSelected = new Set();
+  }else if(mode === 'all'){
+    deepCleanSelected = new Set((deepCleanItems||[]).map(x=>x.id));
+  }else{
+    deepCleanSelected = new Set((deepCleanItems||[]).filter(x=>x.default_selected).map(x=>x.id));
+  }
+  document.querySelectorAll('input[data-dc-id]').forEach(el => {
+    el.checked = deepCleanSelected.has(el.getAttribute('data-dc-id'));
+  });
+  updateDeepCleanEstimate();
+}
+
+function updateDeepCleanEstimate(){
+  const selectedBytes = (deepCleanItems||[])
+    .filter(x => deepCleanSelected.has(x.id))
+    .reduce((a,x)=>a + Number(x.size_bytes||0), 0);
+  const freeNow = Number(deepCleanVolume?.free_bytes || 0);
+  const freeAfter = freeNow + selectedBytes;
+  if($('dc-selected')) $('dc-selected').textContent = fmtBytes(selectedBytes);
+  if($('dc-free-after')) $('dc-free-after').textContent = fmtBytes(freeAfter);
+}
+
+function runSelectedDeepClean(){
+  const selected = [...deepCleanSelected];
+  if(!selected.length){
+    toast('Select at least one item to clean');
+    return;
+  }
+  showProgress('Deep Clean · Running', 'Executing selected cleanup targets with strict mode. Live progress appears below.');
+  runJob(
+    api('clean/custom', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({selected_ids: selected, strict: true})
+    }),
+    'Deep Clean complete'
+  );
 }
 function confirmUninstall(path,name){
   openModal('Uninstall '+name,'This removes the app and its leftover support files. This cannot be undone.',

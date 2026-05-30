@@ -1,0 +1,11 @@
+{
+  "$schema": "https://webhint.io/schema/hintrc",
+  "extends": [
+    "development"
+  ],
+  "hints": {
+    "no-inline-styles": "off",
+    "compat-api/css": "off",
+    "css-prefix-order": "off"
+  }
+}
