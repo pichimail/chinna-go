@@ -21,7 +21,7 @@ What's in V6:
   ✅ P14 Resumable Installer (step tracking, brew, zshrc, defaults)
   ✅ P15 Interactive Menu (box drawing, 25+ grouped commands)
 """
-import base64, os, subprocess, time, sys
+import base64, os, shutil, subprocess, time, sys
 
 HOME  = os.path.expanduser("~")
 CHINNA = os.path.join(HOME, ".chinna")
@@ -52,13 +52,27 @@ def main():
     for d in [DASH, os.path.join(CHINNA,"lib"), os.path.join(CHINNA,"logs")]:
         os.makedirs(d, exist_ok=True)
 
-    step("Writing server (1891 lines, 37 endpoints)...")
-    with open(os.path.join(CHINNA, "dashboard_server.py"), "wb") as f:
-        f.write(base64.b64decode(SERVER_B64))
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    local_server = os.path.join(repo_root, "lib", "server.py")
+    local_dashboard = os.path.join(repo_root, "dashboard", "index.html")
+    local_assets = os.path.join(repo_root, "dashboard", "assets")
 
-    step("Writing dashboard (117KB, 15 views, 3 themes)...")
-    with open(os.path.join(DASH, "index.html"), "wb") as f:
-        f.write(base64.b64decode(DASH_B64))
+    step("Writing server (latest build)...")
+    if os.path.exists(local_server):
+        shutil.copy2(local_server, os.path.join(CHINNA, "dashboard_server.py"))
+    else:
+        with open(os.path.join(CHINNA, "dashboard_server.py"), "wb") as f:
+            f.write(base64.b64decode(SERVER_B64))
+
+    step("Writing dashboard (latest UI)...")
+    if os.path.exists(local_dashboard):
+        shutil.copy2(local_dashboard, os.path.join(DASH, "index.html"))
+    else:
+        with open(os.path.join(DASH, "index.html"), "wb") as f:
+            f.write(base64.b64decode(DASH_B64))
+
+    if os.path.isdir(local_assets):
+        shutil.copytree(local_assets, os.path.join(DASH, "assets"), dirs_exist_ok=True)
 
     step("Writing VERSION = 6.0.0...")
     with open(os.path.join(CHINNA, "VERSION"), "w") as f:

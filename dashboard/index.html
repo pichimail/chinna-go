@@ -1314,6 +1314,8 @@ let chatxMessages = [];
 let chatxPollTimer = null;
 let chatxLastId = 0;
 let chatxPreview = { messageId: null, zoom: 1 };
+let chatxSeenIncoming = new Set();
+let chatxNotificationAsked = false;
 
 function applyTheme(theme, persist=true){
   const safe = ['dark','oled','light','macos'].includes(theme) ? theme : 'macos';
@@ -2597,9 +2599,43 @@ function chatxFmtSize(n){
   return x+' B';
 }
 
+function chatxCanNotify(){
+  return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+}
+
+function chatxRequestNotifications(){
+  if(chatxNotificationAsked) return;
+  chatxNotificationAsked = true;
+  if(typeof Notification === 'undefined') return;
+  if(Notification.permission !== 'default') return;
+  Notification.requestPermission().catch(()=>{});
+}
+
+function chatxNotifyIncoming(m){
+  const mid = Number(m?.id||0);
+  if(!mid || chatxSeenIncoming.has(mid)) return;
+  chatxSeenIncoming.add(mid);
+
+  const sender = chatxContacts.find(c=>c.id===m.from_id)?.name || m.from_id || 'Unknown';
+  const isActiveThread = chatxPeer===m.from_id && !document.hidden;
+  if(isActiveThread) return;
+
+  toast(`New message from ${sender}`);
+  if(chatxCanNotify()){
+    try{
+      new Notification(`New Secure Chat message`, {
+        body: `From ${sender}`,
+        tag: `chatx-${mid}`,
+        renotify: true
+      });
+    }catch{}
+  }
+}
+
 async function chatxInit(){
   const me = await chatxEnsureIdentity();
   chatxLoadContacts();
+  chatxRequestNotifications();
   $('chatx-name').textContent = me.name;
   $('chatx-id').textContent = me.id;
   const img=chatxAvatarData(me.id);
@@ -2639,7 +2675,11 @@ async function chatxAddContact(){
   }
   const d = await api(`chat/user?id=${encodeURIComponent(pid)}`).catch(()=>({error:'User not found'}));
   if(d.error){
-    toast(d.error);
+    if(String(d.error).toLowerCase().includes('user not found')){
+      toast('User not found. Ask your contact to open Secure Chat once, then try again.');
+    }else{
+      toast(d.error);
+    }
     return;
   }
   if(!chatxContacts.find(x=>x.id===d.id)){
@@ -2731,9 +2771,18 @@ async function chatxSend(){
 
 async function chatxPoll(){
   if(!chatxIdentity) return;
+  const prevLastId = Number(chatxLastId||0);
   const d = await api(`chat/poll?user_id=${encodeURIComponent(chatxIdentity.id)}&since_id=${chatxLastId}`).catch(()=>null);
   if(!d || d.error) return;
-  chatxLastId = Math.max(chatxLastId, Number(d.last_id||0));
+  const incoming = (d.messages||[]).filter(m=>{
+    const mid = Number(m?.id||0);
+    return mid > prevLastId && m.to_id===chatxIdentity.id && m.from_id!==chatxIdentity.id;
+  });
+  chatxLastId = Math.max(prevLastId, Number(d.last_id||0));
+
+  if(prevLastId > 0 && incoming.length){
+    incoming.slice(-6).forEach(chatxNotifyIncoming);
+  }
   if(chatxPeer) await chatxLoadHistory();
 }
 

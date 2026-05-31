@@ -1313,7 +1313,8 @@ class H(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
-        p = parsed.path
+        p_raw = parsed.path or '/'
+        p = p_raw if p_raw == '/' else p_raw.rstrip('/')
         q = dict(urllib.parse.parse_qsl(parsed.query))
         if p == '/favicon.ico':
             favicon_path = os.path.join(DASHBOARD_DIR, 'assets', 'chinna-favicon.svg')
@@ -1375,11 +1376,11 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json({'ok': True, 'app': 'WhatsApp', 'web': 'https://web.whatsapp.com'})
         elif p == '/api/telegram/status':
             self._json(telegram_status())
-        elif p == '/api/chat/user':
+        elif p in ('/api/chat/user', '/chat/api/user'):
             self.chat_get_user(q.get('id', ''))
-        elif p == '/api/chat/poll':
+        elif p in ('/api/chat/poll', '/chat/api/poll'):
             self.chat_poll(q)
-        elif p == '/api/chat/history':
+        elif p in ('/api/chat/history', '/chat/api/history'):
             self.chat_history(q)
         elif p in ('/',''):
             self.path = '/index.html'; super().do_GET()
@@ -1390,7 +1391,8 @@ class H(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
-        p = parsed.path
+        p_raw = parsed.path or '/'
+        p = p_raw if p_raw == '/' else p_raw.rstrip('/')
         q = dict(urllib.parse.parse_qsl(parsed.query))
         b = self._bd()
         if p == '/api/save_keys':
@@ -1461,11 +1463,11 @@ class H(http.server.SimpleHTTPRequestHandler):
         elif p == '/api/chat/clear':
             clear_ai_history()
             self._json({'ok': True, 'message': 'Conversation memory cleared'})
-        elif p == '/api/chat/register':
+        elif p in ('/api/chat/register', '/chat/api/register'):
             self.chat_register(b)
-        elif p == '/api/chat/add-contact':
+        elif p in ('/api/chat/add-contact', '/chat/api/add-contact'):
             self.chat_add_contact(b)
-        elif p == '/api/chat/send':
+        elif p in ('/api/chat/send', '/chat/api/send'):
             self.chat_send(b)
         elif p == '/api/uploaded-file':
             self.serve_uploaded_file(q.get('id'))
