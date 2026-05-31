@@ -11,6 +11,14 @@ HOME = os.path.expanduser('~')
 API_KEYS_FILE = os.path.join(CHINNA_HOME, 'api_keys.json')
 PAIR_STATE_FILE = os.path.join(CHINNA_HOME, 'telegram_pair.json')
 CHAT_DB_FILE = os.path.join(CHINNA_HOME, 'state/chat_db.json')
+
+# Shared TURN fallback for first-run users. Override via env if needed.
+DEFAULT_TURN_URLS = os.environ.get(
+    'CHINNA_DEFAULT_TURN_URLS',
+    'turn:openrelay.metered.ca:80?transport=udp, turns:openrelay.metered.ca:443?transport=tcp'
+)
+DEFAULT_TURN_USERNAME = os.environ.get('CHINNA_DEFAULT_TURN_USERNAME', 'openrelayproject')
+DEFAULT_TURN_CREDENTIAL = os.environ.get('CHINNA_DEFAULT_TURN_CREDENTIAL', 'openrelayproject')
 os.makedirs(DASHBOARD_DIR, exist_ok=True)
 
 stats_cache = {}
@@ -162,6 +170,16 @@ def load_keys():
             keys[name] = shell_cfg[name]
         if not keys.get(name) and os.environ.get(name):
             keys[name] = os.environ[name]
+
+    # Ensure voice/video calling has TURN fallback for all users by default.
+    if not keys.get('TURN_URLS') and DEFAULT_TURN_URLS:
+        keys['TURN_URLS'] = DEFAULT_TURN_URLS
+    if not keys.get('TURN_USERNAME') and DEFAULT_TURN_USERNAME:
+        keys['TURN_USERNAME'] = DEFAULT_TURN_USERNAME
+    if not keys.get('TURN_CREDENTIAL') and DEFAULT_TURN_CREDENTIAL:
+        keys['TURN_CREDENTIAL'] = DEFAULT_TURN_CREDENTIAL
+    if not keys.get('TURN_ENABLED') and keys.get('TURN_URLS'):
+        keys['TURN_ENABLED'] = '1'
     return keys
 
 def save_keys(d):
