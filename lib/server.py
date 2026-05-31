@@ -1497,6 +1497,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json({'job': jid})
         elif p == '/api/install-app':
             self.install_dashboard_app()
+        elif p == '/api/install-swiftbar':
+            self._json(self.install_swiftbar_quick_actions())
         else:
             self._json({'error': f'unknown {p}'}, 404)
 
@@ -1613,6 +1615,36 @@ class H(http.server.SimpleHTTPRequestHandler):
             })
         except Exception as e:
             self._json({'error': safe_text(str(e))}, 500)
+
+    def install_swiftbar_quick_actions(self):
+        try:
+            plugin_dir = os.path.join(HOME, 'Library', 'Application Support', 'SwiftBar', 'Plugins')
+            plugin_path = os.path.join(plugin_dir, 'chinna.1m.sh')
+            dash_url = f"http://localhost:{int(os.environ.get('CHINNA_DASHBOARD_PORT', PORT))}"
+            chinna_bin = shutil.which('chinna') or os.path.join(CHINNA_HOME, 'bin', 'chinna')
+            os.makedirs(plugin_dir, exist_ok=True)
+            plugin = f"""#!/usr/bin/env bash
+echo \"CH\"
+echo \"---\"
+echo \"Open Dashboard | bash='open' param1='{dash_url}' terminal=false refresh=false\"
+echo \"Install / Refresh Mac App | bash='{chinna_bin}' param1='app-install' terminal=false refresh=false\"
+echo \"Install / Refresh SwiftBar Actions | bash='{chinna_bin}' param1='notch' terminal=false refresh=false\"
+echo \"⚡ Purge RAM | bash='{chinna_bin}' param1='purge' terminal=false refresh=true\"
+echo \"🧹 Deep Clean | bash='{chinna_bin}' param1='clean' terminal=false refresh=true\"
+echo \"⬆️ Update Now | bash='{chinna_bin}' param1='update' param2='--apply' terminal=false refresh=true\"
+"""
+            with open(plugin_path, 'w') as f:
+                f.write(plugin)
+            os.chmod(plugin_path, 0o755)
+            subprocess.run(['open', '-a', 'SwiftBar'], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return {
+                'ok': True,
+                'plugin_path': plugin_path,
+                'swiftbar_app': os.path.exists('/Applications/SwiftBar.app'),
+                'result': 'SwiftBar quick actions installed'
+            }
+        except Exception as e:
+            return {'error': safe_text(str(e))}
 
     # ── Encrypted Chat Backend ───────────────────────────────
     def chat_register(self, b):
