@@ -1,0 +1,18 @@
+<svg width="420" height="96" viewBox="0 0 420 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g1" x1="8" y1="8" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F2F6FB"/>
+      <stop offset="1" stop-color="#CED9E6"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="24" y1="20" x2="76" y2="76" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3A9AF8"/>
+      <stop offset="1" stop-color="#1E5FDA"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="80" height="80" rx="22" fill="url(#g1)"/>
+  <path d="M24 30L48 18L72 30V66L48 78L24 66V30Z" fill="url(#g2)"/>
+  <path d="M34 36H62V42H34V36Z" fill="#EAF2FF"/>
+  <path d="M34 48H62V54H34V48Z" fill="#DCE9FF"/>
+  <text x="108" y="48" font-family="SF Pro Display, -apple-system, BlinkMacSystemFont, sans-serif" font-size="34" font-weight="760" fill="#E8EEF7" letter-spacing="1.2">CHINNA</text>
+  <text x="108" y="73" font-family="SF Pro Text, -apple-system, BlinkMacSystemFont, sans-serif" font-size="17" font-weight="520" fill="#8EA6C6">go</text>
+</svg>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Chinna V5 — Dashboard Server (Python stdlib only, zero deps)."""
-import base64, hashlib, http.server, json, os, re, subprocess, sys, threading, time, traceback, unicodedata, urllib.parse, urllib.request
+import base64, hashlib, http.server, json, os, re, subprocess, sys, tempfile, threading, time, traceback, unicodedata, urllib.parse, urllib.request
 from datetime import datetime, timezone
 
 CHINNA_VERSION = "6.0.0"
@@ -10,12 +10,14 @@ DASHBOARD_DIR = os.path.join(CHINNA_HOME, 'dashboard')
 HOME = os.path.expanduser('~')
 API_KEYS_FILE = os.path.join(CHINNA_HOME, 'api_keys.json')
 PAIR_STATE_FILE = os.path.join(CHINNA_HOME, 'telegram_pair.json')
+CHAT_DB_FILE = os.path.join(CHINNA_HOME, 'state/chat_db.json')
 os.makedirs(DASHBOARD_DIR, exist_ok=True)
 
 stats_cache = {}
 cache_lock = threading.Lock()
 jobs = {}
 jobs_lock = threading.Lock()
+chat_lock = threading.Lock()
 
 def sh(cmd, timeout=20):
     try:
@@ -56,6 +58,24 @@ def write_json(path, payload):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w') as f:
         json.dump(payload, f, indent=2, ensure_ascii=False)
+
+def _chat_default():
+    return {'users': {}, 'messages': [], 'last_id': 0}
+
+def load_chat_db():
+    data = read_json(CHAT_DB_FILE, _chat_default())
+    if not isinstance(data, dict):
+        return _chat_default()
+    data.setdefault('users', {})
+    data.setdefault('messages', [])
+    data.setdefault('last_id', 0)
+    return data
+
+def save_chat_db(data):
+    write_json(CHAT_DB_FILE, data)
+
+def safe_id(value):
+    return re.sub(r'[^a-zA-Z0-9_.-]', '', str(value or ''))[:64]
 
 def read_shell_config():
     cfg = {}
@@ -1291,6 +1311,12 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json({'ok': True, 'app': 'WhatsApp', 'web': 'https://web.whatsapp.com'})
         elif p == '/api/telegram/status':
             self._json(telegram_status())
+        elif p == '/api/chat/user':
+            self.chat_get_user(q.get('id', ''))
+        elif p == '/api/chat/poll':
+            self.chat_poll(q)
+        elif p == '/api/chat/history':
+            self.chat_history(q)
         elif p in ('/',''):
             self.path = '/index.html'; super().do_GET()
         elif p.startswith('/api/'):
@@ -1299,7 +1325,10 @@ class H(http.server.SimpleHTTPRequestHandler):
             super().do_GET()
 
     def do_POST(self):
-        p = self.path; b = self._bd()
+        parsed = urllib.parse.urlparse(self.path)
+        p = parsed.path
+        q = dict(urllib.parse.parse_qsl(parsed.query))
+        b = self._bd()
         if p == '/api/save_keys':
             d = {}
             if b.get('chinna_ai_key'): d['OPENROUTER_API_KEY'] = b['chinna_ai_key']
@@ -1368,6 +1397,12 @@ class H(http.server.SimpleHTTPRequestHandler):
         elif p == '/api/chat/clear':
             clear_ai_history()
             self._json({'ok': True, 'message': 'Conversation memory cleared'})
+        elif p == '/api/chat/register':
+            self.chat_register(b)
+        elif p == '/api/chat/add-contact':
+            self.chat_add_contact(b)
+        elif p == '/api/chat/send':
+            self.chat_send(b)
         elif p == '/api/uploaded-file':
             self.serve_uploaded_file(q.get('id'))
         elif p == '/api/projects':
@@ -1396,6 +1431,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             jid = new_job()
             threading.Thread(target=self.job_audit, args=(jid, b.get('path', HOME)), daemon=True).start()
             self._json({'job': jid})
+        elif p == '/api/install-app':
+            self.install_dashboard_app()
         else:
             self._json({'error': f'unknown {p}'}, 404)
 
@@ -1482,6 +1519,157 @@ class H(http.server.SimpleHTTPRequestHandler):
             return {'result': rpt, 'saved': out}
         except:
             return {'result': rpt, 'saved': None}
+
+    def install_dashboard_app(self):
+        port = int(os.environ.get('CHINNA_DASHBOARD_PORT', PORT))
+        url = f"http://localhost:{port}"
+        app_dir = os.path.join(HOME, 'Applications')
+        app_path = os.path.join(app_dir, 'Chinna.app')
+        os.makedirs(app_dir, exist_ok=True)
+        try:
+            if os.path.exists(app_path):
+                sh(f"rm -rf {shq(app_path)}")
+            script = f'open location "{url}"'
+            out = sh(f"osacompile -o {shq(app_path)} -e {shq(script)}", 15)
+            sh(f"xattr -dr com.apple.quarantine {shq(app_path)} 2>/dev/null || true")
+            sh(f"open -a {shq(app_path)} 2>/dev/null || true")
+            self._json({'ok': True, 'app_path': app_path, 'url': url, 'result': out or 'installed'})
+        except Exception as e:
+            self._json({'error': safe_text(str(e))}, 500)
+
+    # ── Encrypted Chat Backend ───────────────────────────────
+    def chat_register(self, b):
+        uid = safe_id(b.get('user_id'))
+        if not uid:
+            self._json({'error': 'user_id required'}, 400)
+            return
+        display = safe_text(b.get('display_name', uid))[:80]
+        public_key = b.get('public_key_jwk') or {}
+
+        with chat_lock:
+            db = load_chat_db()
+            users = db.setdefault('users', {})
+            u = users.setdefault(uid, {'contacts': []})
+            u['id'] = uid
+            u['display_name'] = display
+            u['public_key_jwk'] = public_key
+            u['updated'] = int(time.time())
+            u.setdefault('contacts', [])
+            save_chat_db(db)
+
+        self._json({'ok': True, 'user': {'id': uid, 'display_name': display}})
+
+    def chat_get_user(self, uid):
+        uid = safe_id(uid)
+        if not uid:
+            self._json({'error': 'id required'}, 400)
+            return
+        db = load_chat_db()
+        u = db.get('users', {}).get(uid)
+        if not u:
+            self._json({'error': 'user not found'}, 404)
+            return
+        self._json({
+            'id': uid,
+            'display_name': u.get('display_name', uid),
+            'public_key_jwk': u.get('public_key_jwk') or {},
+            'updated': u.get('updated', 0)
+        })
+
+    def chat_add_contact(self, b):
+        uid = safe_id(b.get('user_id'))
+        peer = safe_id(b.get('peer_id'))
+        if not uid or not peer:
+            self._json({'error': 'user_id and peer_id required'}, 400)
+            return
+
+        with chat_lock:
+            db = load_chat_db()
+            users = db.setdefault('users', {})
+            if uid not in users or peer not in users:
+                self._json({'error': 'one or both users not registered'}, 404)
+                return
+            users[uid].setdefault('contacts', [])
+            users[peer].setdefault('contacts', [])
+            if peer not in users[uid]['contacts']:
+                users[uid]['contacts'].append(peer)
+            if uid not in users[peer]['contacts']:
+                users[peer]['contacts'].append(uid)
+            save_chat_db(db)
+
+        self._json({'ok': True, 'user_id': uid, 'peer_id': peer})
+
+    def chat_send(self, b):
+        frm = safe_id(b.get('from_id'))
+        to = safe_id(b.get('to_id'))
+        cipher = b.get('cipher_b64') or ''
+        iv = b.get('iv_b64') or ''
+        meta = b.get('meta') or {}
+        if not frm or not to or not cipher or not iv:
+            self._json({'error': 'from_id, to_id, cipher_b64, iv_b64 required'}, 400)
+            return
+
+        with chat_lock:
+            db = load_chat_db()
+            if frm not in db.get('users', {}) or to not in db.get('users', {}):
+                self._json({'error': 'user not registered'}, 404)
+                return
+            db['last_id'] = int(db.get('last_id', 0)) + 1
+            msg = {
+                'id': db['last_id'],
+                'from_id': frm,
+                'to_id': to,
+                'cipher_b64': cipher,
+                'iv_b64': iv,
+                'meta': meta,
+                'created': int(time.time())
+            }
+            db.setdefault('messages', []).append(msg)
+            # keep db bounded for initial users
+            db['messages'] = db['messages'][-4000:]
+            save_chat_db(db)
+
+        self._json({'ok': True, 'id': msg['id'], 'created': msg['created']})
+
+    def chat_poll(self, q):
+        uid = safe_id(q.get('user_id', ''))
+        since = int(q.get('since_id', '0') or 0)
+        if not uid:
+            self._json({'error': 'user_id required'}, 400)
+            return
+
+        db = load_chat_db()
+        users = db.get('users', {})
+        if uid not in users:
+            self._json({'error': 'user not registered'}, 404)
+            return
+
+        out = []
+        for m in db.get('messages', []):
+            mid = int(m.get('id', 0))
+            if mid <= since:
+                continue
+            if m.get('to_id') == uid or m.get('from_id') == uid:
+                out.append(m)
+        out.sort(key=lambda x: x.get('id', 0))
+        self._json({'messages': out[-300:], 'last_id': (out[-1]['id'] if out else since)})
+
+    def chat_history(self, q):
+        uid = safe_id(q.get('user_id', ''))
+        peer = safe_id(q.get('peer_id', ''))
+        lim = int(q.get('limit', '200') or 200)
+        if not uid or not peer:
+            self._json({'error': 'user_id and peer_id required'}, 400)
+            return
+        db = load_chat_db()
+        out = []
+        for m in db.get('messages', []):
+            a = m.get('from_id')
+            b = m.get('to_id')
+            if (a == uid and b == peer) or (a == peer and b == uid):
+                out.append(m)
+        out.sort(key=lambda x: x.get('id', 0))
+        self._json({'messages': out[-max(1, min(1000, lim)):], 'count': len(out)})
 
     def chat(self, b):
         """New dynamic Chinna AI with full conversation history + real tool calling loop + attachments."""

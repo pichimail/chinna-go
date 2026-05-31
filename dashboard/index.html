@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chinna V6</title>
+<link rel="icon" type="image/svg+xml" href="/assets/chinna-favicon.svg">
 <style>
 :root{
   --bg:#0b0c0e; --panel:rgba(22,24,28,.72); --panel2:rgba(32,35,40,.6);
@@ -53,7 +54,8 @@ body::before{content:"";position:fixed;inset:0;z-index:0;background:
 .topbar{display:flex;align-items:center;gap:14px;padding:10px 16px;flex-shrink:0}
 .dots{display:flex;gap:7px}.dots i{width:12px;height:12px;border-radius:50%;display:block}
 .dots i:nth-child(1){background:#ff5f57}.dots i:nth-child(2){background:#febc2e}.dots i:nth-child(3){background:#28c840}
-.brand{font-weight:800;letter-spacing:3px;font-size:14px;color:var(--acc);text-shadow:0 0 24px rgba(var(--accr),.4)}
+.brand{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:2px;font-size:14px;color:var(--acc);text-shadow:0 0 24px rgba(var(--accr),.4)}
+.brand img{height:20px;width:auto;display:block;filter:drop-shadow(0 0 10px rgba(var(--accr),.25));}
 body.offline .brand{opacity:.6}
 body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;opacity:.6}
 .vitals{display:flex;gap:18px;margin-left:8px}
@@ -449,6 +451,38 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 .loadmore{display:flex;justify-content:center;padding:10px 0 6px}
 .smallbtn{padding:6px 10px;border-radius:9px;font-size:12px}
 
+#view-chatx .chatx-grid{display:grid;grid-template-columns:280px 1fr;gap:10px;min-height:420px}
+#view-chatx .chatx-col{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03);display:flex;flex-direction:column;min-height:0}
+#view-chatx .chatx-col.right{background:rgba(255,255,255,.02)}
+#view-chatx .chatx-meta-chip{display:inline-flex;align-items:center;gap:5px;font-size:10px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;color:var(--t2);background:rgba(255,255,255,.03)}
+.chatx-preview-file{margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:7px;background:rgba(0,0,0,.18)}
+
+#chatx-preview{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:320;display:none;align-items:center;justify-content:center;padding:24px}
+#chatx-preview.on{display:flex}
+#chatx-preview .pv-card{width:min(960px,96vw);height:min(760px,90vh);border:1px solid var(--line2);border-radius:14px;background:var(--panel);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);display:flex;flex-direction:column;overflow:hidden}
+#chatx-preview .pv-head{display:flex;align-items:center;gap:8px;padding:10px;border-bottom:1px solid var(--line)}
+#chatx-preview .pv-title{font-size:12px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#chatx-preview .pv-body{flex:1;overflow:auto;padding:12px;display:grid;place-items:center;background:rgba(0,0,0,.22)}
+#chatx-preview .pv-img{max-width:100%;max-height:100%;transform-origin:center center;transition:transform .16s ease}
+#chatx-preview .pv-text{width:100%;height:100%;max-height:100%;overflow:auto;white-space:pre-wrap;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12px;color:var(--t1);background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:10px;padding:10px}
+#chatx-preview .pv-bin{font-size:12px;color:var(--t2)}
+
+@media (max-width: 980px){
+  #view-chatx .chatx-grid{grid-template-columns:1fr;min-height:unset;gap:8px}
+  #view-chatx .chatx-col.left{max-height:210px}
+  #view-chatx #chatx-contacts{min-height:90px}
+  #view-chatx #chatx-thread{min-height:260px;max-height:46vh}
+}
+
+@media (max-width: 640px){
+  #view-chatx .chatx-grid{gap:6px}
+  #view-chatx .chatx-col{border-radius:10px}
+  #view-chatx #chatx-thread{min-height:220px;max-height:42vh;padding:8px}
+  #view-chatx #chatx-input{font-size:12px}
+  #chatx-preview{padding:10px}
+  #chatx-preview .pv-card{width:100%;height:94vh;border-radius:10px}
+}
+
 /* dock */
 #dock{position:absolute;bottom:var(--dock-bottom);left:50%;transform:translateX(-50%);z-index:50;display:flex;gap:6px;padding:8px 12px;min-height:var(--dock-h);background:var(--panel);-webkit-backdrop-filter:blur(50px);backdrop-filter:blur(50px);border:1px solid var(--line2);border-radius:18px;box-shadow:var(--shadow)}
 .dapp{position:relative;width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:23px;cursor:pointer;transition:transform .16s cubic-bezier(.2,.8,.3,1.4);background:linear-gradient(160deg,rgba(255,255,255,.1),rgba(255,255,255,.02));border:1px solid var(--line)}
@@ -528,7 +562,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
   <!-- TOP BAR -->
   <div class="topbar glass">
     <div class="dots"><i></i><i></i><i></i></div>
-    <div class="brand">CHINNA&nbsp;V6</div>
+    <div class="brand"><img src="/assets/chinna-logo.svg" alt="Chinna"><span>V6</span></div>
     <div class="vitals">
       <span class="vital">CPU <b id="v-cpu">—</b></span>
       <span class="vital">RAM <b id="v-ram">—</b></span>
@@ -567,6 +601,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
       <div class="navitem" data-v="macos" onclick="go('macos')"><span class="ic">🍎</span> macOS Tools</div>
       <div class="navitem" data-v="models" onclick="go('models')"><span class="ic">🤖</span> Models &amp; AI</div>
       <div class="navitem" data-v="ai" onclick="go('ai')"><span class="ic">✦</span> Chinna AI</div>
+      <div class="navitem" data-v="chatx" onclick="go('chatx')"><span class="ic">🛡</span> Secure Chat</div>
       <div class="navitem" data-v="projects" onclick="go('projects')"><span class="ic">📁</span> Projects</div>
     </div>
 
@@ -688,6 +723,45 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
         <div class="attachment-chips" id="ai-attachments"></div>
       </div>
 
+      <!-- SECURE CHAT -->
+      <div class="view" id="view-chatx">
+        <div class="vhead"><h2>Secure Chat</h2><span class="sub">End-to-end encrypted messaging, files, forward & export</span></div>
+        <div class="vbody chatx-grid">
+          <div class="chatx-col left" style="padding:10px;gap:8px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <canvas id="chatx-avatar" width="44" height="44" style="width:44px;height:44px;border-radius:10px;border:1px solid var(--line)"></canvas>
+              <div style="min-width:0">
+                <div id="chatx-name" style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">User</div>
+                <div id="chatx-id" style="font-size:10px;color:var(--t3)">—</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button type="button" class="bigbtn ghost smallbtn" onclick="chatxCopyId()">Copy ID</button>
+              <button type="button" class="bigbtn ghost smallbtn" onclick="chatxExportCurrent()">Export</button>
+            </div>
+            <div style="display:flex;gap:6px">
+              <input id="chatx-add-id" class="field" placeholder="Friend ID" style="margin:0;font-size:12px;min-width:0">
+              <button type="button" class="bigbtn smallbtn" onclick="chatxAddContact()">Add</button>
+            </div>
+            <div style="font-size:10px;color:var(--t3)">Share your unique ID to connect with friends.</div>
+            <div id="chatx-contacts" style="overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px;min-height:150px"></div>
+          </div>
+          <div class="chatx-col right">
+            <div style="padding:10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+              <div id="chatx-peer-title" style="font-size:12px;color:var(--t2)">Select a contact</div>
+              <button type="button" class="bigbtn ghost smallbtn" onclick="chatxRefresh()">Refresh</button>
+            </div>
+            <div id="chatx-thread" style="flex:1;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px"></div>
+            <div style="padding:10px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center">
+              <input type="file" id="chatx-file" style="display:none">
+              <button type="button" class="bigbtn" onclick="$('chatx-file').click()">📎</button>
+              <input id="chatx-input" class="field" placeholder="Encrypted message..." style="flex:1;margin:0" onkeydown="if(event.key==='Enter')chatxSend()">
+              <button type="button" class="bigbtn solid" onclick="chatxSend()">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- PROJECTS (Full View) -->
       <div class="view" id="view-projects">
         <div class="vhead">
@@ -734,6 +808,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
           <div class="navlabel" style="margin-left:0">OpenAI key — optional (Whisper/GPT)</div>
           <input class="field" id="set-oa" type="password" autocomplete="new-password" placeholder="sk-…">
           <button type="button" class="bigbtn solid" style="margin-top:16px" onclick="saveKeys()">Save Keys</button>
+          <button type="button" class="bigbtn" style="margin-top:10px" onclick="installMacApp()">Install as Mac App (1-click)</button>
           <div class="panelgrid">
             <div class="paircard">
               <h4>Telegram Pairing</h4>
@@ -894,6 +969,21 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 
 <div id="toasts"></div>
 
+<div id="chatx-preview" onclick="if(event.target.id==='chatx-preview')chatxClosePreview()">
+  <div class="pv-card">
+    <div class="pv-head">
+      <div class="pv-title" id="chatx-preview-title">Preview</div>
+      <div class="spacer"></div>
+      <button type="button" class="miniA" onclick="chatxPreviewZoom('out')">-</button>
+      <button type="button" class="miniA" onclick="chatxPreviewZoom('in')">+</button>
+      <button type="button" class="miniA" onclick="chatxOpenPreviewInTab()">Open Tab</button>
+      <button type="button" class="miniA" onclick="chatxPreviewDownload()">Download</button>
+      <button type="button" class="miniA" onclick="chatxClosePreview()">Close</button>
+    </div>
+    <div class="pv-body" id="chatx-preview-body"></div>
+  </div>
+</div>
+
 <!-- V6 WELCOME / UPDATE OVERLAY -->
 <div id="v6overlay" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.72);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);align-items:center;justify-content:center;padding:20px">
   <div class="glass" style="max-width:500px;width:100%;border-radius:20px;overflow:hidden">
@@ -932,6 +1022,13 @@ let deepCleanSelected = new Set();
 let deepCleanVolume = null;
 let deepCleanForce = false;
 let deepCleanForceRequired = new Set();
+let chatxIdentity = null;
+let chatxContacts = [];
+let chatxPeer = null;
+let chatxMessages = [];
+let chatxPollTimer = null;
+let chatxLastId = 0;
+let chatxPreview = { messageId: null, zoom: 1 };
 
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;$('toasts').appendChild(t);setTimeout(()=>t.remove(),3500);}
 function ficon(k){return {PDF:'📕',Video:'🎬',Audio:'🎵',Archive:'🗜',App:'📦','Disk Image':'💿',Installer:'📦',Code:'⌨',Data:'🗃',Image:'🖼',Doc:'📄',Sheet:'📊',Slides:'📽',Text:'📝'}[k]||'📄';}
@@ -1392,6 +1489,7 @@ function go(v){
   if(v==='network')loadNet();
   if(v==='storage')loadStorage(HOME_PATH,false);
   if(v==='ai'){ loadAIStatus(); if(voiceEnabled) ensureVoiceUI(); setupAttachmentUI(); }
+  if(v==='chatx'){ chatxInit(); }
   if(v==='settings')loadTelegramStatus();
   if(v==='projects') loadProjectsView();
 }
@@ -2101,6 +2199,425 @@ async function loadTelegramStatus(){
   $('tg-link').innerHTML=d.pair_url?`Pair link: <span class="muted">${d.pair_url}</span>`:'Pairing link will appear here after generating a code.';
   if(d.qr_url){ $('tg-qr').src=d.qr_url; } else { $('tg-qr').removeAttribute('src'); }
 }
+
+// ===== SECURE CHAT (client-side E2E) =====
+const CHATX_KEYS = {
+  id: 'chinna_chatx_id',
+  name: 'chinna_chatx_name',
+  priv: 'chinna_chatx_priv_jwk',
+  pub: 'chinna_chatx_pub_jwk',
+  contacts: 'chinna_chatx_contacts'
+};
+
+function chatxUuid(){
+  return 'u' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+}
+function chatxHash(str){
+  let h=2166136261;
+  for(let i=0;i<str.length;i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h,16777619);
+  }
+  return h>>>0;
+}
+function chatxAvatarData(id,size=64){
+  const c=document.createElement('canvas');
+  c.width=size; c.height=size;
+  const x=c.getContext('2d');
+  const h=chatxHash(id);
+  const h1=h%360, h2=(h1+96)%360;
+  const g=x.createLinearGradient(0,0,size,size);
+  g.addColorStop(0,`hsl(${h1} 88% 58%)`);
+  g.addColorStop(1,`hsl(${h2} 85% 40%)`);
+  x.fillStyle='#0c1016';
+  x.fillRect(0,0,size,size);
+  const n=8, w=size/n;
+  for(let r=0;r<n;r++){
+    for(let c1=0;c1<n/2;c1++){
+      const bit=((chatxHash(id+':'+r+':'+c1)>>((r+c1)%16))&1)===1;
+      if(!bit) continue;
+      x.fillStyle=g;
+      x.fillRect(c1*w,r*w,w,w);
+      x.fillRect((n-c1-1)*w,r*w,w,w);
+      x.strokeStyle='rgba(255,255,255,.08)';
+      x.strokeRect(c1*w+.5,r*w+.5,w-1,w-1);
+      x.strokeRect((n-c1-1)*w+.5,r*w+.5,w-1,w-1);
+    }
+  }
+  return c.toDataURL('image/png');
+}
+
+async function chatxEnsureIdentity(){
+  if(chatxIdentity) return chatxIdentity;
+  let id = localStorage.getItem(CHATX_KEYS.id);
+  let name = localStorage.getItem(CHATX_KEYS.name);
+  let priv = localStorage.getItem(CHATX_KEYS.priv);
+  let pub = localStorage.getItem(CHATX_KEYS.pub);
+  if(!id){
+    id = chatxUuid();
+    localStorage.setItem(CHATX_KEYS.id,id);
+  }
+  if(!name){
+    name = 'User-' + id.slice(-4);
+    localStorage.setItem(CHATX_KEYS.name,name);
+  }
+  if(!priv || !pub){
+    const kp = await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'}, true, ['deriveKey']);
+    const privJwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+    const pubJwk = await crypto.subtle.exportKey('jwk', kp.publicKey);
+    priv = JSON.stringify(privJwk);
+    pub = JSON.stringify(pubJwk);
+    localStorage.setItem(CHATX_KEYS.priv, priv);
+    localStorage.setItem(CHATX_KEYS.pub, pub);
+  }
+  chatxIdentity = { id, name, privJwk: JSON.parse(priv), pubJwk: JSON.parse(pub) };
+  await api('chat/register',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({user_id:id,display_name:name,public_key_jwk:chatxIdentity.pubJwk})
+  }).catch(()=>{});
+  return chatxIdentity;
+}
+
+function chatxLoadContacts(){
+  try{ chatxContacts = JSON.parse(localStorage.getItem(CHATX_KEYS.contacts)||'[]'); }
+  catch{ chatxContacts = []; }
+}
+function chatxSaveContacts(){
+  localStorage.setItem(CHATX_KEYS.contacts, JSON.stringify(chatxContacts));
+}
+function chatxFmtSize(n){
+  const x=Number(n||0);
+  if(x>=1073741824) return (x/1073741824).toFixed(2)+' GB';
+  if(x>=1048576) return (x/1048576).toFixed(2)+' MB';
+  if(x>=1024) return Math.round(x/1024)+' KB';
+  return x+' B';
+}
+
+async function chatxInit(){
+  const me = await chatxEnsureIdentity();
+  chatxLoadContacts();
+  $('chatx-name').textContent = me.name;
+  $('chatx-id').textContent = me.id;
+  const img=chatxAvatarData(me.id);
+  const ctx=$('chatx-avatar').getContext('2d');
+  const i=new Image();
+  i.onload=()=>ctx.drawImage(i,0,0,44,44);
+  i.src=img;
+  renderChatxContacts();
+  if(!chatxPollTimer){
+    chatxPollTimer = setInterval(chatxPoll, 2500);
+  }
+  const fi=$('chatx-file');
+  if(fi){ fi.onchange=()=>toast(fi.files?.[0]?`Attached ${fi.files[0].name}`:''); }
+}
+
+function renderChatxContacts(){
+  const el=$('chatx-contacts');
+  if(!el) return;
+  if(!chatxContacts.length){
+    el.innerHTML='<div style="font-size:11px;color:var(--t3);padding:8px">No contacts yet.</div>';
+    return;
+  }
+  el.innerHTML = chatxContacts.map(c=>`
+    <div onclick="chatxSelectPeer('${esc(c.id)}')" style="display:flex;gap:8px;align-items:center;padding:7px;border-radius:8px;cursor:pointer;background:${chatxPeer===c.id?'rgba(var(--accr),.16)':'transparent'};margin-bottom:4px">
+      <img src="${chatxAvatarData(c.id,40)}" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--line)">
+      <div style="min-width:0"><div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(c.name||c.id)}</div><div style="font-size:10px;color:var(--t3)">${escHtml(c.id)}</div></div>
+    </div>
+  `).join('');
+}
+
+async function chatxAddContact(){
+  const me = await chatxEnsureIdentity();
+  const pid = ($('chatx-add-id').value||'').trim();
+  if(!pid){
+    toast('Enter friend ID');
+    return;
+  }
+  const d = await api(`chat/user?id=${encodeURIComponent(pid)}`).catch(()=>({error:'User not found'}));
+  if(d.error){
+    toast(d.error);
+    return;
+  }
+  if(!chatxContacts.find(x=>x.id===d.id)){
+    chatxContacts.push({id:d.id,name:d.display_name||d.id,pub:d.public_key_jwk});
+    chatxSaveContacts();
+  }
+  await api('chat/add-contact',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({user_id:me.id,peer_id:d.id})
+  }).catch(()=>{});
+  $('chatx-add-id').value='';
+  renderChatxContacts();
+  chatxSelectPeer(d.id);
+}
+
+function chatxSelectPeer(id){
+  chatxPeer=id;
+  renderChatxContacts();
+  const c=chatxContacts.find(x=>x.id===id);
+  $('chatx-peer-title').textContent=c?`Chat with ${c.name}`:'Chat';
+  chatxLoadHistory();
+}
+
+async function chatxDeriveAes(peerPubJwk){
+  const me = await chatxEnsureIdentity();
+  const priv = await crypto.subtle.importKey('jwk', me.privJwk, {name:'ECDH',namedCurve:'P-256'}, false, ['deriveKey']);
+  const pub = await crypto.subtle.importKey('jwk', peerPubJwk, {name:'ECDH',namedCurve:'P-256'}, false, []);
+  return crypto.subtle.deriveKey({name:'ECDH',public:pub}, priv, {name:'AES-GCM',length:256}, false, ['encrypt','decrypt']);
+}
+function b64FromBuf(buf){
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+}
+function bufFromB64(b64){
+  const s=atob(b64);
+  const a=new Uint8Array(s.length);
+  for(let i=0;i<s.length;i++) a[i]=s.charCodeAt(i);
+  return a.buffer;
+}
+
+async function chatxEncrypt(peerPubJwk, payload){
+  const key = await chatxDeriveAes(peerPubJwk);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = new TextEncoder().encode(JSON.stringify(payload));
+  const cipher = await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, data);
+  return { iv_b64:b64FromBuf(iv), cipher_b64:b64FromBuf(cipher) };
+}
+
+async function chatxDecrypt(peerPubJwk, iv_b64, cipher_b64){
+  const key = await chatxDeriveAes(peerPubJwk);
+  const plain = await crypto.subtle.decrypt({name:'AES-GCM',iv:new Uint8Array(bufFromB64(iv_b64))}, key, bufFromB64(cipher_b64));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+async function chatxSend(){
+  const me = await chatxEnsureIdentity();
+  const peer = chatxContacts.find(x=>x.id===chatxPeer);
+  if(!peer){
+    toast('Select a contact');
+    return;
+  }
+  const text = ($('chatx-input').value||'').trim();
+  const f = $('chatx-file').files?.[0];
+  if(!text && !f) return;
+
+  let file=null;
+  if(f){
+    file = await new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=()=>res({name:f.name,mime:f.type||'application/octet-stream',size:f.size,data_b64:String(r.result).split(',')[1]});
+      r.onerror=rej;
+      r.readAsDataURL(f);
+    });
+  }
+
+  const payload = { text, file, sender: me.name, ts: Date.now() };
+  const enc = await chatxEncrypt(peer.pub, payload);
+  const s = await api('chat/send',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({from_id:me.id,to_id:peer.id,iv_b64:enc.iv_b64,cipher_b64:enc.cipher_b64,meta:{has_file:!!file,file_name:file?.name||''}})
+  });
+  if(!s.error){
+    $('chatx-input').value='';
+    $('chatx-file').value='';
+    await chatxLoadHistory();
+  }
+}
+
+async function chatxPoll(){
+  if(!chatxIdentity) return;
+  const d = await api(`chat/poll?user_id=${encodeURIComponent(chatxIdentity.id)}&since_id=${chatxLastId}`).catch(()=>null);
+  if(!d || d.error) return;
+  chatxLastId = Math.max(chatxLastId, Number(d.last_id||0));
+  if(chatxPeer) await chatxLoadHistory();
+}
+
+async function chatxLoadHistory(){
+  if(!chatxPeer || !chatxIdentity) return;
+  const peer = chatxContacts.find(x=>x.id===chatxPeer);
+  if(!peer) return;
+  const d = await api(`chat/history?user_id=${encodeURIComponent(chatxIdentity.id)}&peer_id=${encodeURIComponent(chatxPeer)}&limit=240`).catch(()=>({messages:[]}));
+  const msgs=[];
+  for(const m of (d.messages||[])){
+    try{
+      const payload = await chatxDecrypt(peer.pub, m.iv_b64, m.cipher_b64);
+      msgs.push({...m,payload});
+    }catch{}
+  }
+  chatxMessages = msgs;
+  renderChatxThread();
+}
+
+function chatxRenderFile(f,msg){
+  if(!f) return '';
+  const chips = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"><span class="chatx-meta-chip">${escHtml(f.mime||'application/octet-stream')}</span><span class="chatx-meta-chip">${escHtml(chatxFmtSize(f.size||0))}</span></div>`;
+  const actions = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" class="miniA" onclick="chatxOpenPreview('${esc(msg.id)}')">Preview</button><button type="button" class="miniA" onclick="chatxOpenFileInTab('${esc(msg.id)}')">Open</button><button type="button" class="miniA" onclick="chatxDownloadFile('${esc(msg.id)}')">Download</button></div>`;
+  if((f.mime||'').startsWith('image/')){
+    return `<div class="chatx-preview-file">${chips}<img src="data:${f.mime};base64,${f.data_b64}" style="max-width:220px;border-radius:10px;border:1px solid var(--line)">${actions}</div>`;
+  }
+  if((f.mime||'').includes('pdf')){
+    return `<div class="chatx-preview-file">${chips}<embed src="data:${f.mime};base64,${f.data_b64}" type="application/pdf" width="220" height="130">${actions}</div>`;
+  }
+  if((f.mime||'').startsWith('text/')||/\.(txt|md|json|js|ts|py|log)$/i.test(f.name||'')){
+    const txt=atob(f.data_b64||'').slice(0,350).replace(/[<>&]/g,'');
+    return `<div class="chatx-preview-file">${chips}<pre style="max-height:110px;overflow:auto;background:rgba(0,0,0,.25);padding:6px;border-radius:8px">${txt}</pre>${actions}</div>`;
+  }
+  return `<div class="chatx-preview-file">${chips}<div style="font-size:11px">📎 ${escHtml(f.name||'file')}</div>${actions}</div>`;
+}
+
+function renderChatxThread(){
+  const el=$('chatx-thread');
+  if(!el) return;
+  if(!chatxMessages.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--t3)">No messages yet.</div>';
+    return;
+  }
+  el.innerHTML = chatxMessages.map(m=>{
+    const mine = m.from_id===chatxIdentity.id;
+    const p = m.payload||{};
+    return `<div style="align-self:${mine?'flex-end':'flex-start'};max-width:78%;background:${mine?'rgba(var(--accr),.18)':'rgba(255,255,255,.06)'};border:1px solid var(--line);border-radius:12px;padding:8px 10px">
+      <div style="font-size:11px;color:var(--t3)">${escHtml(p.sender||m.from_id)} · ${new Date((m.created||0)*1000).toLocaleTimeString()}</div>
+      <div style="white-space:pre-wrap;margin-top:2px">${escHtml(p.text||'')}</div>
+      ${chatxRenderFile(p.file,m)}
+      <div style="margin-top:6px;display:flex;gap:6px;justify-content:flex-end">
+        <button type="button" class="miniA" onclick="chatxForward('${esc(m.id)}')">Forward</button>
+      </div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function chatxCopyId(){
+  if(!chatxIdentity) return;
+  navigator.clipboard.writeText(chatxIdentity.id).then(()=>toast('Chat ID copied'));
+}
+
+async function chatxForward(mid){
+  const m = chatxMessages.find(x=>String(x.id)===String(mid));
+  if(!m) return;
+  const choices = chatxContacts.filter(c=>c.id!==chatxPeer);
+  if(!choices.length){
+    toast('No other contacts to forward');
+    return;
+  }
+  const target = prompt('Forward to contact ID:', choices[0].id);
+  if(!target) return;
+  const peer = chatxContacts.find(c=>c.id===target.trim());
+  if(!peer){
+    toast('Contact not found');
+    return;
+  }
+  const payload = m.payload||{};
+  const enc = await chatxEncrypt(peer.pub, payload);
+  await api('chat/send',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({from_id:chatxIdentity.id,to_id:peer.id,iv_b64:enc.iv_b64,cipher_b64:enc.cipher_b64,meta:{forwarded:true,has_file:!!payload.file}})
+  });
+  toast('Forwarded');
+}
+
+function chatxDownloadFile(mid){
+  const m = chatxMessages.find(x=>String(x.id)===String(mid));
+  const f=m?.payload?.file;
+  if(!f) return;
+  const a=document.createElement('a');
+  a.href=`data:${f.mime||'application/octet-stream'};base64,${f.data_b64||''}`;
+  a.download=f.name||'file';
+  a.click();
+}
+
+function chatxFindMessage(mid){
+  return chatxMessages.find(x=>String(x.id)===String(mid));
+}
+
+function chatxOpenFileInTab(mid){
+  const m = chatxFindMessage(mid);
+  const f = m?.payload?.file;
+  if(!f) return;
+  const bytes = Uint8Array.from(atob(f.data_b64||''), ch => ch.charCodeAt(0));
+  const blob = new Blob([bytes], {type:f.mime||'application/octet-stream'});
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank', 'noopener,noreferrer');
+  setTimeout(()=>URL.revokeObjectURL(url), 45000);
+}
+
+function chatxOpenPreview(mid){
+  const m = chatxFindMessage(mid);
+  const f = m?.payload?.file;
+  if(!f) return;
+  chatxPreview = { messageId: String(mid), zoom: 1 };
+  $('chatx-preview-title').textContent = `${f.name||'file'} · ${chatxFmtSize(f.size||0)}`;
+  const body = $('chatx-preview-body');
+  if((f.mime||'').startsWith('image/')){
+    body.innerHTML = `<img class="pv-img" id="chatx-preview-img" src="data:${f.mime};base64,${f.data_b64}" alt="preview">`;
+  }else if((f.mime||'').includes('pdf')){
+    body.innerHTML = `<embed src="data:${f.mime};base64,${f.data_b64}" type="application/pdf" width="100%" height="100%">`;
+  }else if((f.mime||'').startsWith('text/')||/\.(txt|md|json|js|ts|py|log)$/i.test(f.name||'')){
+    const txt = atob(f.data_b64||'').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    body.innerHTML = `<pre class="pv-text">${txt}</pre>`;
+  }else{
+    body.innerHTML = `<div class="pv-bin">Binary file preview not available.<br>${escHtml(f.mime||'application/octet-stream')}</div>`;
+  }
+  $('chatx-preview').classList.add('on');
+}
+
+function chatxPreviewZoom(kind){
+  const img = $('chatx-preview-img');
+  if(!img) return;
+  if(kind==='in') chatxPreview.zoom = Math.min(4, chatxPreview.zoom + 0.2);
+  else chatxPreview.zoom = Math.max(0.4, chatxPreview.zoom - 0.2);
+  img.style.transform = `scale(${chatxPreview.zoom})`;
+}
+
+function chatxClosePreview(){
+  $('chatx-preview').classList.remove('on');
+}
+
+function chatxOpenPreviewInTab(){
+  if(!chatxPreview.messageId) return;
+  chatxOpenFileInTab(chatxPreview.messageId);
+}
+
+function chatxPreviewDownload(){
+  if(!chatxPreview.messageId) return;
+  chatxDownloadFile(chatxPreview.messageId);
+}
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape' && $('chatx-preview')?.classList.contains('on')){
+    chatxClosePreview();
+  }
+});
+
+function chatxExportCurrent(){
+  if(!chatxMessages.length){
+    toast('No messages to export');
+    return;
+  }
+  const blob = new Blob([JSON.stringify(chatxMessages,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`chinna-chat-${chatxPeer||'thread'}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function chatxRefresh(){
+  await chatxLoadHistory();
+}
+
+async function installMacApp(){
+  const d = await api('install-app',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>({error:'failed'}));
+  if(d.error){
+    toast('Install failed: '+d.error);
+    return;
+  }
+  toast('Mac app installed at '+(d.app_path||'~/Applications/Chinna.app'));
+}
+
 function showSources(row,sources){
   if(!sources || !sources.length) return;
   const box=document.createElement('div');

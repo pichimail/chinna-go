@@ -1,0 +1,33 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="80" y1="80" x2="944" y2="944" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6F8FA"/>
+      <stop offset="1" stop-color="#D9E3EE"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="184" y1="164" x2="844" y2="864" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#EAF0F6" stop-opacity="0.86"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="292" y1="232" x2="738" y2="776" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3A9AF8"/>
+      <stop offset="1" stop-color="#1E5FDA"/>
+    </linearGradient>
+    <filter id="shadow" x="120" y="120" width="784" height="784" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="26" flood-color="#0D1B2A" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <rect x="80" y="80" width="864" height="864" rx="196" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <rect x="176" y="176" width="672" height="672" rx="158" fill="url(#glass)"/>
+    <rect x="176" y="176" width="672" height="672" rx="158" stroke="#FFFFFF" stroke-opacity="0.64" stroke-width="2"/>
+  </g>
+  <path d="M322 332H700V692H322V332Z" fill="url(#accent)"/>
+  <path d="M322 332H700V692H322V332Z" fill="url(#accent)"/>
+  <path d="M322 332L512 212L700 332V692L512 812L322 692V332Z" fill="url(#accent)"/>
+  <path d="M378 404H646V464H378V404Z" fill="#EAF2FF"/>
+  <path d="M378 516H646V576H378V516Z" fill="#DCE9FF"/>
+  <path d="M378 628H562V688H378V628Z" fill="#C8DCFF"/>
+  <circle cx="662" cy="658" r="52" fill="#F3F8FF"/>
+  <path d="M640 659H685" stroke="#1E5FDA" stroke-width="12" stroke-linecap="round"/>
+  <path d="M662 637V681" stroke="#1E5FDA" stroke-width="12" stroke-linecap="round"/>
+</svg>

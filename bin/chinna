@@ -1181,6 +1181,47 @@ cmd_dashboard() {
 }
 
 # ═══════════════════════════════════════════════════════════════
+# COMMAND: app-install (one-click Mac app wrapper)
+# ═══════════════════════════════════════════════════════════════
+cmd_app_install() {
+    banner
+    echo -e "   ${BOLD}${ORANGE}🧩 INSTALL MAC APP${RESET}"; echo ""
+
+    source "$CHINNA_LIB/server.sh" 2>/dev/null || { fail "server.sh not found"; return 1; }
+    if ! is_dashboard_running 2>/dev/null; then
+        info "Starting dashboard on :${CHINNA_DASHBOARD_PORT:-7777}..."
+        start_dashboard
+    fi
+
+    local port="${CHINNA_DASHBOARD_PORT:-7777}"
+    local url="http://localhost:${port}"
+    local app_path="$HOME/Applications/Chinna.app"
+
+    mkdir -p "$HOME/Applications"
+    rm -rf "$app_path"
+    osacompile -o "$app_path" -e "open location \"$url\"" >/dev/null 2>&1 || {
+        fail "Failed to create app bundle"
+        return 1
+    }
+
+    xattr -dr com.apple.quarantine "$app_path" 2>/dev/null || true
+    open -a "$app_path" >/dev/null 2>&1 || true
+    ok "Installed: $app_path"
+    info "Launching dashboard app..."
+}
+
+cmd_app() {
+    case "${1:-install}" in
+        install|add|create|setup|"") cmd_app_install ;;
+        *)
+            warn "Unknown app subcommand: $1"
+            info "Usage: chinna app install"
+            return 1
+            ;;
+    esac
+}
+
+# ═══════════════════════════════════════════════════════════════
 # COMMAND: uninstall
 # ═══════════════════════════════════════════════════════════════
 cmd_uninstall() {
@@ -1385,6 +1426,7 @@ show_help() {
      ${C}publish${RESET}                Push update to GitHub
      ${C}doctor${RESET}                 Health check
      ${C}update${RESET}                 Self-update Chinna
+    ${C}app-install${RESET}            Install Chinna as a 1-click Mac app
     ${C}notch${RESET}                  Install menu-bar quick actions (Purge/Clean/Update)
      ${C}uninstall${RESET} [--purge]    Remove Chinna app or fully purge everything
 
@@ -1457,6 +1499,8 @@ main() {
         projects)                   shift; cmd_projects "$@" ;;
         plugin|plugins)             shift; cmd_plugins "$@" ;;
         update|upgrade)             shift; cmd_update "$@" ;;
+        app-install|install-app)    cmd_app_install ;;
+        app)                        shift; cmd_app "$@" ;;
         notch|quickbar|menubar)     cmd_notch ;;
         uninstall|remove)           shift; cmd_uninstall "$@" ;;
         help|-h|--help)             show_help ;;
