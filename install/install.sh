@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════╗
-# ║  CHINNA V6 — One-line installer (Resumable)             ║
+# ║  CHINNA V6 — Always-Fresh installer                     ║
 # ║  curl -fsSL https://raw.githubusercontent.com/          ║
 # ║    pichimail/chinna-go/main/install/install.sh | bash   ║
 # ╚══════════════════════════════════════════════════════════╝
@@ -11,7 +11,6 @@ RAW="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 CHINNA="${CHINNA_HOME:-$HOME/.chinna}"
 PORT="${CHINNA_DASHBOARD_PORT:-7777}"
 STATE_FILE="${CHINNA}/.installstate"
-INSTALLER_RELEASE="6.0.1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -23,7 +22,7 @@ fi
 echo ""
 echo "  ╔══════════════════════════════════════════════════╗"
 echo "  ║   C H I N N A   V 6   —  Mac Sidekick           ║"
-echo "  ║   Resumable · Models · Music · WhatsApp · More   ║"
+echo "  ║   Always-Fresh · Models · Music · WhatsApp · More║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo ""
 if [ "${LOCAL_SOURCE}" = "on" ]; then
@@ -50,24 +49,21 @@ copy_or_fetch() {
     curl -fsSL "${RAW}/${rel}" -o "${dest}"
 }
 
-# ── Resumable step system (Prompt 14) ──────────────────────
+# ── One-time-setup resumable step system ─────────────────────
+# Core app files (server, dashboard, CLI) are ALWAYS force-refreshed.
+# Only one-time setup steps (Homebrew, CLI tools, .zshrc block) are skipped
+# once they are confirmed done on this machine.
 is_done()   { grep -qxF "$1" "$STATE_FILE" 2>/dev/null; }
 mark_done() { echo "$1" >> "$STATE_FILE"; }
 run_step()  {
     local name="$1"; shift
     if is_done "$name"; then
-        echo "  ↷ Skipping (already done): $name"
+        echo "  ↷ Skipping (already set up): $name"
     else
         echo "  → Running: $name"
         "$@" && mark_done "$name"
     fi
 }
-
-# Reset stale resumable state on installer upgrades so users always receive latest app code.
-if ! is_done "installer_release_${INSTALLER_RELEASE}"; then
-    rm -f "$STATE_FILE"
-    mark_done "installer_release_${INSTALLER_RELEASE}"
-fi
 
 # ── Step implementations ───────────────────────────────────
 step_backup_zshrc() {
@@ -123,19 +119,23 @@ step_install_node_tools() {
 }
 
 step_write_server() {
-    echo "    Installing server..."
+    echo "    ↻ Force-refreshing server (dashboard_server.py)..."
     copy_or_fetch "lib/server.py" "${CHINNA}/dashboard_server.py"
-    echo "    ✓ server.py written"
+    echo "    ✓ server.py updated"
 }
 
 step_write_dashboard() {
-    echo "    Installing dashboard..."
+    echo "    ↻ Force-refreshing dashboard (index.html)..."
     copy_or_fetch "dashboard/index.html" "${CHINNA}/dashboard/index.html"
-    echo "    ✓ index.html written"
+    # Also copy dashboard assets if present
+    for asset in chinna-favicon.svg chinna-icon.svg chinna-logo.svg; do
+        copy_or_fetch "dashboard/assets/${asset}" "${CHINNA}/dashboard/assets/${asset}" 2>/dev/null || true
+    done
+    echo "    ✓ dashboard updated"
 }
 
 step_write_libs() {
-    echo "    Installing lib files..."
+    echo "    ↻ Force-refreshing lib files..."
     for lib in config clean stack registry notify daemon server plugins voice lang; do
         copy_or_fetch "lib/${lib}.sh" "${CHINNA}/lib/${lib}.sh" 2>/dev/null && \
             echo "      ✓ lib/${lib}.sh" || \
@@ -144,11 +144,11 @@ step_write_libs() {
 }
 
 step_write_bin() {
-    echo "    Installing chinna CLI..."
+    echo "    ↻ Force-refreshing chinna CLI..."
     mkdir -p "$HOME/.local/bin"
     copy_or_fetch "bin/chinna" "$HOME/.local/bin/chinna"
     chmod +x "$HOME/.local/bin/chinna"
-    echo "    ✓ chinna installed to ~/.local/bin/chinna"
+    echo "    ✓ chinna CLI updated → ~/.local/bin/chinna"
 }
 
 step_write_defaults() {
@@ -216,22 +216,31 @@ step_start_server() {
     fi
 }
 
-# ── Run all steps (resumable) ──────────────────────────────
+# ──────────────────────────────────────────────────────────────
+# ONE-TIME SETUP  (skipped if already done on this machine)
+# ──────────────────────────────────────────────────────────────
 run_step "backup_zshrc"       step_backup_zshrc
 run_step "check_python"       step_check_python
 run_step "install_homebrew"   step_install_homebrew
 run_step "brew_shellenv"      step_brew_shellenv
 run_step "install_clis"       step_install_clis
 run_step "install_node_tools" step_install_node_tools
+run_step "zshrc_block"        step_zshrc_block
 
-# Always refresh core Chinna app files on every installer run.
+# ──────────────────────────────────────────────────────────────
+# ALWAYS FORCE-REFRESHED  (new + existing users get latest code)
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "  ↻ Pulling latest V6 app files from GitHub..."
 step_write_server
 step_write_dashboard
 step_write_libs
 step_write_bin
 step_write_defaults
 
-run_step "zshrc_block"        step_zshrc_block
+# ──────────────────────────────────────────────────────────────
+# RESTART SERVER
+# ──────────────────────────────────────────────────────────────
 step_start_server
 
 # ── macOS notification ─────────────────────────────────────
@@ -254,7 +263,7 @@ echo "    chinna model-set free → switch AI model"
 echo "    chinna clean          → deep Mac clean"
 echo "    chinna audit          → project audit"
 echo ""
-echo "  Re-run installer anytime — completed steps are skipped."
+echo "  Re-run anytime — one-time setup is skipped, app code is always refreshed."
 echo ""
 
 open "http://localhost:${PORT}" 2>/dev/null || true

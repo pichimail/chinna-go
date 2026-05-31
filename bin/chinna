@@ -1095,22 +1095,24 @@ cmd_update() {
     [ -n "$remote_ver" ] || { fail "Could not fetch remote version"; return 1; }
 
     if ! version_gt "$remote_ver" "$CHINNA_VERSION"; then
-        ok "Already on the latest version ($CHINNA_VERSION)"
-        return 0
+        info "Already on v$CHINNA_VERSION — force-refreshing app files anyway..."
+    else
+        info "Available: v$CHINNA_VERSION → v$remote_ver"
     fi
 
-    info "Available: v$CHINNA_VERSION → v$remote_ver"
+    remote_ver="${remote_ver:-$CHINNA_VERSION}"
+
     info "This update keeps your data, config, and API keys intact."
 
-    if [ "${1:-}" = "--apply" ]; then
+    if [ "${1:-}" = "--apply" ] || [ "${1:-}" = "-y" ] || [ "${1:-}" = "--yes" ]; then
         apply_update "$remote_ver"
         return $?
     fi
 
     local choice
     choice=$(chinna_toast_action \
-        "Chinna Update Available" \
-        "v${remote_ver} is ready. Update now?\nYour files, config, and API keys will stay intact." \
+        "Chinna Update" \
+        "Force-refresh to latest v${remote_ver}?\nYour files, config, and API keys will stay intact." \
         "Update Now|Later" 2>/dev/null)
     [ -n "$choice" ] || choice="Later"
 
