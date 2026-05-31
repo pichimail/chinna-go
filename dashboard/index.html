@@ -32,11 +32,11 @@
 [data-theme="light"]{ --bg:#eef0f3; --panel:rgba(255,255,255,.78); --panel2:rgba(255,255,255,.6); --line:rgba(0,0,0,.08); --line2:rgba(0,0,0,.14); --t1:#0b0c0e; --t2:rgba(11,12,14,.62); --t3:rgba(11,12,14,.4); --acc:#5a9e00; --accr:90,158,0; --shadow:0 16px 40px rgba(0,0,0,.12); }
 html[data-theme="macos"]{
   color-scheme: light;
-  --bg:#dde3eb;
-  --panel:rgba(255,255,255,.55);
-  --panel2:rgba(255,255,255,.42);
-  --line:rgba(255,255,255,.55);
-  --line2:rgba(255,255,255,.78);
+    --bg:#dbe2eb;
+    --panel:rgba(255,255,255,.48);
+    --panel2:rgba(255,255,255,.38);
+    --line:rgba(255,255,255,.58);
+    --line2:rgba(255,255,255,.82);
   --t1:#0b1018;
   --t2:rgba(11,16,24,.68);
   --t3:rgba(11,16,24,.42);
@@ -49,19 +49,22 @@ html[data-theme="macos"]{
   --blue:#0a84ff;
   --purple:#7d7aff;
   --r:18px;
-  --shadow:0 24px 64px rgba(24,36,55,.16);
 }
-*{margin:0;padding:0;box-sizing:border-box}
+
+html[data-theme="macos"] body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(720px circle at 10% 0%, rgba(255,255,255,.96), transparent 52%),
+    radial-gradient(760px circle at 100% 108%, rgba(122,166,218,.48), transparent 46%),
+    radial-gradient(560px circle at 50% 104%, rgba(255,255,255,.52), transparent 50%),
+    linear-gradient(180deg, rgba(255,255,255,.42), rgba(255,255,255,0));
+}
+
 html,body{height:100%;width:100%;overflow:hidden}
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased;font-size:13px}
-body::before{content:"";position:fixed;inset:0;z-index:0;background:
-  radial-gradient(700px circle at 12% -5%, rgba(var(--accr),.08), transparent 55%),
-  radial-gradient(600px circle at 100% 110%, rgba(120,90,255,.07), transparent 55%);pointer-events:none}
-html[data-theme="macos"] body::before{background:
-  radial-gradient(720px circle at 10% 0%, rgba(255,255,255,.92), transparent 52%),
-  radial-gradient(760px circle at 100% 108%, rgba(122,166,218,.42), transparent 46%),
-  linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,0));
-  pointer-events:none}
 .glass{background:var(--panel);-webkit-backdrop-filter:blur(40px) saturate(150%);backdrop-filter:blur(40px) saturate(150%);border:1px solid var(--line);border-radius:var(--r)}
 [data-theme="macos"] .glass{
   background:rgba(255,255,255,.54);
@@ -74,6 +77,11 @@ html[data-theme="macos"] body::before{background:
 [data-theme="macos"] .topbar,
 [data-theme="macos"] #nav,
 [data-theme="macos"] #center,
+  [data-theme="macos"] .navlabel{color:rgba(11,16,24,.46)}
+  [data-theme="macos"] .vhead{padding:18px 20px 14px}
+  [data-theme="macos"] .vbody{padding:0 20px 20px}
+  [data-theme="macos"] .toolbar{padding:10px 20px}
+  [data-theme="macos"] .view .list,[data-theme="macos"] .view .outbox{background:rgba(255,255,255,.28)}
 [data-theme="macos"] #right{
   background:transparent;
 }
@@ -157,6 +165,27 @@ html[data-theme="macos"] body::before{background:
 [data-theme="macos"] .vital b,
 [data-theme="macos"] .vhead h2,
 [data-theme="macos"] .installapptitle{font-weight:800}
+[data-theme="macos"] .modal{border-radius:24px}
+[data-theme="macos"] .toast{background:rgba(255,255,255,.68);border-color:rgba(255,255,255,.85)}
+[data-theme="macos"] .launch-card{background:rgba(255,255,255,.68);border-color:rgba(255,255,255,.86)}
+
+@media (max-width: 1180px){
+  html[data-theme="macos"] #body{flex-direction:column;padding-bottom:calc(var(--dock-reserve) + 12px)}
+  html[data-theme="macos"] #nav,
+  html[data-theme="macos"] #right{width:auto;max-height:190px;overflow:auto}
+  html[data-theme="macos"] #center{min-height:0;order:2}
+  html[data-theme="macos"] #nav{order:1}
+  html[data-theme="macos"] #right{order:3}
+}
+
+@media (max-width: 780px){
+  html[data-theme="macos"] #app{padding:8px}
+  html[data-theme="macos"] .topbar{padding:9px 12px}
+  html[data-theme="macos"] .vhead{padding:14px 14px 10px}
+  html[data-theme="macos"] .vbody{padding:0 14px 14px}
+  html[data-theme="macos"] .toolbar{padding:8px 14px}
+  html[data-theme="macos"] #dock{max-width:96vw;overflow-x:auto}
+}
 [data-theme="oled"] .glass{
   background:transparent;
   -webkit-backdrop-filter:none;
@@ -569,6 +598,20 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 .installappactions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 .installappfine{margin-top:10px;font-size:12px;color:var(--t3);line-height:1.5}
 .bigbtn[disabled]{opacity:.7;cursor:wait}
+.onboard-shell{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(280px,.72fr);gap:14px;align-items:start}
+.onboard-hero,.onboard-side{padding:18px;border-radius:22px;background:var(--panel2);border:1px solid var(--line)}
+.onboard-top{display:flex;align-items:center;gap:14px}
+.onboard-title{font-size:26px;font-weight:800;letter-spacing:.1px}
+.onboard-sub{margin-top:5px;font-size:13px;line-height:1.55;color:var(--t2)}
+.onboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
+.onboard-step{padding:14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+.onboard-step-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:999px;background:rgba(var(--accr),.16);color:var(--acc);font-size:11px;font-weight:800;margin-bottom:8px}
+.onboard-step-title{font-size:13px;font-weight:800;color:var(--t1)}
+.onboard-step-copy{margin-top:4px;font-size:12px;line-height:1.55;color:var(--t2)}
+.onboard-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.side-title{font-size:14px;font-weight:800;color:var(--t1);margin-bottom:10px}
+.side-list{display:grid;gap:10px;font-size:12px;line-height:1.55;color:var(--t2)}
+.side-callout{margin-top:14px;padding:12px;border-radius:14px;background:rgba(10,132,255,.10);color:var(--t1);font-size:12px;line-height:1.6;border:1px solid rgba(10,132,255,.16)}
 .paircode{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:18px;font-weight:800;letter-spacing:2px;color:var(--acc)}
 .pairhint{font-size:12px;color:var(--t2);line-height:1.5;margin-top:6px}
 .pairqr{width:176px;height:176px;border-radius:14px;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
@@ -624,6 +667,11 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
   #view-chatx #chatx-input{font-size:12px}
   #chatx-preview{padding:10px}
   #chatx-preview .pv-card{width:100%;height:94vh;border-radius:10px}
+}
+
+@media (max-width: 980px){
+  .onboard-shell{grid-template-columns:1fr}
+  .onboard-grid{grid-template-columns:1fr}
 }
 
 /* dock */
@@ -741,6 +789,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
       <div class="navitem" data-v="doctor" onclick="go('doctor')"><span class="ic">🩺</span> Doctor</div>
 
       <div class="navlabel">Tools</div>
+      <div class="navitem" data-v="onboarding" onclick="go('onboarding')"><span class="ic">✨</span> Get Started</div>
       <div class="navitem" data-v="whatsapp" onclick="go('whatsapp')"><span class="ic">💬</span> WhatsApp</div>
       <div class="navitem" data-v="macos" onclick="go('macos')"><span class="ic">🍎</span> macOS Tools</div>
       <div class="navitem" data-v="models" onclick="go('models')"><span class="ic">🤖</span> Models &amp; AI</div>
@@ -1019,6 +1068,66 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
         </div>
       </div>
       <!-- MACOS TOOLS -->
+      <div class="view" id="view-onboarding">
+        <div class="vhead"><h2>Welcome to Chinna on Mac</h2><span class="sub">A dedicated quick start for first-time users</span></div>
+        <div class="vbody">
+          <div class="onboard-shell">
+            <div class="onboard-hero glass">
+              <div class="onboard-top">
+                <img class="launch-mark" src="/assets/chinna-icon.svg" alt="Chinna">
+                <div>
+                  <div class="onboard-title">A Mac app feel from the first launch</div>
+                  <div class="onboard-sub">Pick the macOS theme, install the native app wrapper, and add SwiftBar quick actions in one pass.</div>
+                </div>
+              </div>
+
+              <div class="onboard-grid">
+                <div class="onboard-step">
+                  <div class="onboard-step-num">1</div>
+                  <div class="onboard-step-title">Install Chinna.app</div>
+                  <div class="onboard-step-copy">Create the branded app bundle in Applications for Dock, Spotlight, and native-style launching.</div>
+                </div>
+                <div class="onboard-step">
+                  <div class="onboard-step-num">2</div>
+                  <div class="onboard-step-title">Add SwiftBar actions</div>
+                  <div class="onboard-step-copy">Put Purge, Clean, Update, and dashboard actions in the menu bar near the notch.</div>
+                </div>
+                <div class="onboard-step">
+                  <div class="onboard-step-num">3</div>
+                  <div class="onboard-step-title">Use the macOS theme</div>
+                  <div class="onboard-step-copy">Switch to the glassy macOS look for the dashboard, built for a lighter and more native feel.</div>
+                </div>
+                <div class="onboard-step">
+                  <div class="onboard-step-num">4</div>
+                  <div class="onboard-step-title">Continue to tools</div>
+                  <div class="onboard-step-copy">Open macOS Tools, then move into the rest of the dashboard once setup is complete.</div>
+                </div>
+              </div>
+
+              <div class="onboard-actions">
+                <button type="button" class="bigbtn solid" onclick="installMacApp()">Install Chinna.app</button>
+                <button type="button" class="bigbtn" onclick="installSwiftBarQuickActions()">Install SwiftBar quick actions</button>
+                <button type="button" class="bigbtn ghost" onclick="applyTheme('macos')">Use macOS theme</button>
+                <button type="button" class="bigbtn ghost" onclick="completeMacOnboarding()">Skip to dashboard</button>
+              </div>
+            </div>
+
+            <div class="onboard-side glass">
+              <div class="side-title">What you get</div>
+              <div class="side-list">
+                <div>• Real Chinna.app wrapper with branded icon</div>
+                <div>• Menu-bar quick actions for the notch / SwiftBar</div>
+                <div>• macOS theme that stays selected for this device</div>
+                <div>• One-click launch path for new users</div>
+              </div>
+              <div class="side-callout">
+                First-time users should start here. Existing users can skip directly into the tools.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="view" id="view-macos">
         <div class="vhead"><h2>macOS Tools</h2><span class="sub">Apple Music · System controls · Screen sharing</span></div>
         <div class="vbody">
@@ -1187,6 +1296,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 const $ = id => document.getElementById(id);
 const api = (p,opt) => fetch('/api/'+p,opt).then(r=>r.json());
 const THEME_KEY = 'chinna_theme';
+const ONBOARDING_KEY = 'chinna_macos_onboarded';
 let HOME_PATH = '~';
 let allFiles=[], curTab='large', allApps=[], dupeSel=new Set(), allDupes=[];
 let storStack=[], storState={path:'~', items:[], offset:0, hasMore:false, limit:40};
@@ -1218,6 +1328,11 @@ function showLaunchSplash(){
   if(!splash) return;
   splash.classList.add('on');
   window.setTimeout(()=>splash.classList.remove('on'), 1100);
+}
+
+function completeMacOnboarding(){
+  localStorage.setItem(ONBOARDING_KEY, '1');
+  go('macos');
 }
 
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;$('toasts').appendChild(t);setTimeout(()=>t.remove(),3500);}
@@ -3425,9 +3540,11 @@ async function waSend(){
 // ── V6 INIT ──────────────────────────────────────────────────
 function initV6(){
   showLaunchSplash();
+  const firstRun = !localStorage.getItem(ONBOARDING_KEY);
   if(!localStorage.getItem('chinna_v6_welcomed')){
     document.getElementById('v6overlay').style.display='flex';
   }
+  window.setTimeout(()=>{ if(firstRun) go('onboarding'); }, 1150);
   loadModels();
 }
 function dismissV6(){
