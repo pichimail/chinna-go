@@ -182,7 +182,8 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 [data-theme="oled"] .sourcebox,
 [data-theme="oled"] .toast,
 [data-theme="oled"] .proglog,
-[data-theme="oled"] .confirmlist{
+[data-theme="oled"] .confirmlist,
+[data-theme="oled"] .installappcard{
   border-bottom:1px solid rgba(229,255,82,.07) !important;
 }
 [data-theme="oled"] .navitem:hover,
@@ -439,6 +440,15 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 .panelgrid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin-top:14px}
 .paircard,.statuscard{padding:14px;border-radius:14px;background:var(--panel2);border:1px solid var(--line)}
 .paircard h4,.statuscard h4{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:8px}
+.installappcard{margin-top:14px;padding:16px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.09);box-shadow:0 18px 44px rgba(0,0,0,.24)}
+.installapphead{display:flex;align-items:center;gap:14px}
+.installappicon{width:64px;height:64px;border-radius:18px;display:block;box-shadow:0 12px 24px rgba(0,0,0,.32)}
+.installapptitle{font-size:20px;font-weight:800;letter-spacing:.2px}
+.installappsub{margin-top:4px;color:var(--t2);line-height:1.5}
+.installappmeta{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.installappactions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.installappfine{margin-top:10px;font-size:12px;color:var(--t3);line-height:1.5}
+.bigbtn[disabled]{opacity:.7;cursor:wait}
 .paircode{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:18px;font-weight:800;letter-spacing:2px;color:var(--acc)}
 .pairhint{font-size:12px;color:var(--t2);line-height:1.5;margin-top:6px}
 .pairqr{width:176px;height:176px;border-radius:14px;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
@@ -808,7 +818,26 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
           <div class="navlabel" style="margin-left:0">OpenAI key — optional (Whisper/GPT)</div>
           <input class="field" id="set-oa" type="password" autocomplete="new-password" placeholder="sk-…">
           <button type="button" class="bigbtn solid" style="margin-top:16px" onclick="saveKeys()">Save Keys</button>
-          <button type="button" class="bigbtn" style="margin-top:10px" onclick="installMacApp()">Install as Mac App (1-click)</button>
+          <div class="installappcard">
+            <div class="installapphead">
+              <img class="installappicon" src="/assets/chinna-icon.svg" alt="Chinna icon">
+              <div>
+                <div class="installapptitle">Install Chinna.app</div>
+                <div class="installappsub">Create a proper Mac app in your Applications folder with the Chinna icon, Dock presence, Spotlight launch, and a clean one-click entry point for first-time users.</div>
+              </div>
+            </div>
+            <div class="installappmeta">
+              <span class="chip">One click</span>
+              <span class="chip">Applications</span>
+              <span class="chip">Dock + Spotlight</span>
+              <span class="chip">SwiftBar-ready</span>
+            </div>
+            <div class="installappactions">
+              <button type="button" class="bigbtn solid" id="install-app-btn" onclick="installMacApp()">Install Chinna.app</button>
+              <button type="button" class="bigbtn ghost smallbtn" onclick="window.open(location.origin,'_blank')">Open in Browser</button>
+            </div>
+            <div class="installappfine" id="install-app-note">Best for initial users who want Chinna to behave like a regular Mac app from day one.</div>
+          </div>
           <div class="panelgrid">
             <div class="paircard">
               <h4>Telegram Pairing</h4>
@@ -2610,12 +2639,29 @@ async function chatxRefresh(){
 }
 
 async function installMacApp(){
+  const btn=$('install-app-btn');
+  const note=$('install-app-note');
+  if(btn){
+    btn.disabled=true;
+    btn.textContent='Installing Chinna.app…';
+  }
+  if(note) note.textContent='Building a branded Mac app in ~/Applications and opening it when ready…';
   const d = await api('install-app',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>({error:'failed'}));
   if(d.error){
+    if(btn){
+      btn.disabled=false;
+      btn.textContent='Install Chinna.app';
+    }
+    if(note) note.textContent='Install failed. Check macOS permissions and try again.';
     toast('Install failed: '+d.error);
     return;
   }
-  toast('Mac app installed at '+(d.app_path||'~/Applications/Chinna.app'));
+  if(btn){
+    btn.disabled=false;
+    btn.textContent='Reinstall Chinna.app';
+  }
+  if(note) note.textContent='Installed at '+(d.app_path||'~/Applications/Chinna.app')+'. Launch it from Applications, Dock, Spotlight, or SwiftBar.';
+  toast('Chinna.app installed at '+(d.app_path||'~/Applications/Chinna.app'));
 }
 
 function showSources(row,sources){

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Chinna V6 — Dashboard Server (Python stdlib only, zero deps)."""
-import base64, hashlib, http.server, json, os, re, subprocess, sys, tempfile, threading, time, traceback, unicodedata, urllib.parse, urllib.request
+import base64, hashlib, http.server, json, os, plistlib, re, shutil, subprocess, sys, tempfile, threading, time, traceback, unicodedata, urllib.parse, urllib.request
 from datetime import datetime, timezone
 
 CHINNA_VERSION = "6.0.0"
@@ -76,6 +76,59 @@ def save_chat_db(data):
 
 def safe_id(value):
     return re.sub(r'[^a-zA-Z0-9_.-]', '', str(value or ''))[:64]
+
+def build_icns_from_svg(svg_path, icns_path):
+    if not os.path.exists(svg_path):
+        return False, 'icon asset missing'
+    if not shutil.which('qlmanage') or not shutil.which('sips') or not shutil.which('iconutil'):
+        return False, 'macOS icon tools unavailable'
+    try:
+        with tempfile.TemporaryDirectory(prefix='chinna-icon-') as tmp:
+            subprocess.run(['qlmanage', '-t', '-s', '1024', '-o', tmp, svg_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            previews = [os.path.join(tmp, name) for name in os.listdir(tmp) if name.endswith('.png')]
+            if not previews:
+                return False, 'failed to rasterize icon asset'
+            src = previews[0]
+            iconset = os.path.join(tmp, 'Chinna.iconset')
+            os.makedirs(iconset, exist_ok=True)
+            for size, name in [
+                (16, 'icon_16x16.png'),
+                (32, 'icon_16x16@2x.png'),
+                (32, 'icon_32x32.png'),
+                (64, 'icon_32x32@2x.png'),
+                (128, 'icon_128x128.png'),
+                (256, 'icon_128x128@2x.png'),
+                (256, 'icon_256x256.png'),
+                (512, 'icon_256x256@2x.png'),
+                (512, 'icon_512x512.png'),
+            ]:
+                subprocess.run(['sips', '-z', str(size), str(size), src, '--out', os.path.join(iconset, name)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            shutil.copy2(src, os.path.join(iconset, 'icon_512x512@2x.png'))
+            subprocess.run(['iconutil', '-c', 'icns', iconset, '-o', icns_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True, ''
+    except Exception as e:
+        return False, safe_text(str(e))
+
+def style_mac_app_bundle(app_path):
+    info_path = os.path.join(app_path, 'Contents', 'Info.plist')
+    if not os.path.exists(info_path):
+        return False, 'Info.plist missing'
+    try:
+        with open(info_path, 'rb') as f:
+            info = plistlib.load(f)
+        info['CFBundleDisplayName'] = 'Chinna'
+        info['CFBundleName'] = 'Chinna'
+        info['CFBundleIdentifier'] = 'com.pichimail.chinna'
+        info['CFBundleIconFile'] = 'applet'
+        info['CFBundleShortVersionString'] = CHINNA_VERSION
+        info['CFBundleVersion'] = CHINNA_VERSION
+        info['LSApplicationCategoryType'] = 'public.app-category.productivity'
+        info['LSMinimumSystemVersion'] = '13.0'
+        with open(info_path, 'wb') as f:
+            plistlib.dump(info, f)
+        return True, ''
+    except Exception as e:
+        return False, safe_text(str(e))
 
 def read_shell_config():
     cfg = {}
@@ -1263,9 +1316,20 @@ class H(http.server.SimpleHTTPRequestHandler):
         p = parsed.path
         q = dict(urllib.parse.parse_qsl(parsed.query))
         if p == '/favicon.ico':
-            self.send_response(204)
-            self.send_header('Cache-Control', 'public, max-age=86400')
-            self.end_headers()
+            favicon_path = os.path.join(DASHBOARD_DIR, 'assets', 'chinna-favicon.svg')
+            if os.path.exists(favicon_path):
+                with open(favicon_path, 'rb') as f:
+                    data = f.read()
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/svg+xml')
+                self.send_header('Cache-Control', 'public, max-age=86400')
+                self.send_header('Content-Length', str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+            else:
+                self.send_response(204)
+                self.send_header('Cache-Control', 'public, max-age=86400')
+                self.end_headers()
             return
         if p == '/api/stats':
             with cache_lock:
@@ -1528,12 +1592,25 @@ class H(http.server.SimpleHTTPRequestHandler):
         os.makedirs(app_dir, exist_ok=True)
         try:
             if os.path.exists(app_path):
-                sh(f"rm -rf {shq(app_path)}")
+                shutil.rmtree(app_path)
             script = f'open location "{url}"'
-            out = sh(f"osacompile -o {shq(app_path)} -e {shq(script)}", 15)
+            subprocess.run(['osacompile', '-o', app_path, '-e', script], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            style_ok, style_err = style_mac_app_bundle(app_path)
+            icon_svg = os.path.join(DASHBOARD_DIR, 'assets', 'chinna-icon.svg')
+            icon_path = os.path.join(app_path, 'Contents', 'Resources', 'applet.icns')
+            icon_ok, icon_err = build_icns_from_svg(icon_svg, icon_path)
             sh(f"xattr -dr com.apple.quarantine {shq(app_path)} 2>/dev/null || true")
-            sh(f"open -a {shq(app_path)} 2>/dev/null || true")
-            self._json({'ok': True, 'app_path': app_path, 'url': url, 'result': out or 'installed'})
+            subprocess.run(['open', '-a', app_path], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self._json({
+                'ok': True,
+                'app_path': app_path,
+                'url': url,
+                'result': 'installed',
+                'icon_installed': icon_ok,
+                'style_applied': style_ok,
+                'icon_note': icon_err,
+                'style_note': style_err,
+            })
         except Exception as e:
             self._json({'error': safe_text(str(e))}, 500)
 

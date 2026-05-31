@@ -1133,7 +1133,7 @@ cmd_notch() {
     if command -v install_notch_quick_actions >/dev/null 2>&1; then
         if install_notch_quick_actions; then
             ok "Quick actions installed for menu bar (SwiftBar)"
-            info "Open SwiftBar to see 🟠 near the notch/menu area"
+            info "Open SwiftBar to see Chinna in the menu bar"
             open -a SwiftBar >/dev/null 2>&1 || true
             return 0
         fi
@@ -1197,19 +1197,21 @@ cmd_app_install() {
 
     local port="${CHINNA_DASHBOARD_PORT:-7777}"
     local url="http://localhost:${port}"
-    local app_path="$HOME/Applications/Chinna.app"
+    local response app_path err
 
-    mkdir -p "$HOME/Applications"
-    rm -rf "$app_path"
-    osacompile -o "$app_path" -e "open location \"$url\"" >/dev/null 2>&1 || {
-        fail "Failed to create app bundle"
+    response="$(curl -fsSL -X POST -H 'Content-Type: application/json' -d '{}' "$url/api/install-app" 2>/dev/null)" || {
+        fail "Failed to reach the dashboard installer"
         return 1
     }
 
-    xattr -dr com.apple.quarantine "$app_path" 2>/dev/null || true
-    open -a "$app_path" >/dev/null 2>&1 || true
+    err="$(printf '%s' "$response" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("error", ""))' 2>/dev/null)"
+    [ -z "$err" ] || { fail "$err"; return 1; }
+
+    app_path="$(printf '%s' "$response" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("app_path", ""))' 2>/dev/null)"
+    app_path="${app_path:-$HOME/Applications/Chinna.app}"
+
     ok "Installed: $app_path"
-    info "Launching dashboard app..."
+    info "Launching Chinna.app..."
 }
 
 cmd_app() {

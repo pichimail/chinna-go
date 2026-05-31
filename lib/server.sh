@@ -25,6 +25,11 @@ start_dashboard() {
         cp "$SCRIPT_DIR/../dashboard/index.html" "$CHINNA_HOME/dashboard/index.html" 2>/dev/null || true
     fi
 
+    if [ -d "$SCRIPT_DIR/../dashboard/assets" ]; then
+        mkdir -p "$CHINNA_HOME/dashboard/assets"
+        cp "$SCRIPT_DIR/../dashboard/assets/"*.svg "$CHINNA_HOME/dashboard/assets/" 2>/dev/null || true
+    fi
+
     if command -v setsid >/dev/null 2>&1; then
         setsid python3 "$DASHBOARD_SERVER" "$port" >>"$DASHBOARD_LOG_FILE" 2>&1 < /dev/null &
     else

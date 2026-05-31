@@ -132,12 +132,13 @@ install_notch_quick_actions() {
     mkdir -p "$plugin_dir"
     cat > "$plugin_path" <<PLUGIN
 #!/usr/bin/env bash
-echo "🟠"
+echo "CH"
 echo "---"
+echo "Open Dashboard | bash='open' param1='${dash_url}' terminal=false refresh=false"
+echo "Install / Refresh Mac App | bash='${chinna_bin}' param1='app-install' terminal=false refresh=false"
 echo "⚡ Purge RAM | bash='${chinna_bin}' param1='purge' terminal=false refresh=true"
 echo "🧹 Deep Clean | bash='${chinna_bin}' param1='clean' terminal=false refresh=true"
 echo "⬆️ Update Now | bash='${chinna_bin}' param1='update' param2='--apply' terminal=false refresh=true"
-echo "🌐 Open Dashboard | bash='open' param1='${dash_url}' terminal=false refresh=false"
 PLUGIN
     chmod +x "$plugin_path"
     log "SwiftBar quick actions installed at $plugin_path"
