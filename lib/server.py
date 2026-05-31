@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Chinna V6 — Dashboard Server (Python stdlib only, zero deps)."""
-import base64, hashlib, http.server, json, os, plistlib, re, shutil, subprocess, sys, tempfile, threading, time, traceback, unicodedata, urllib.parse, urllib.request
+import base64, hashlib, http.server, json, os, plistlib, re, secrets, shutil, subprocess, sys, tempfile, threading, time, traceback, unicodedata, urllib.parse, urllib.request
 from datetime import datetime, timezone
 
 CHINNA_VERSION = "6.0.0"
@@ -148,7 +148,16 @@ def read_shell_config():
 def load_keys():
     keys = read_json(API_KEYS_FILE, {})
     shell_cfg = read_shell_config()
-    for name in ('OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'):
+    for name in (
+        'OPENROUTER_API_KEY',
+        'OPENAI_API_KEY',
+        'TELEGRAM_BOT_TOKEN',
+        'TELEGRAM_CHAT_ID',
+        'TURN_ENABLED',
+        'TURN_URLS',
+        'TURN_USERNAME',
+        'TURN_CREDENTIAL',
+    ):
         if not keys.get(name) and shell_cfg.get(name):
             keys[name] = shell_cfg[name]
         if not keys.get(name) and os.environ.get(name):
@@ -158,6 +167,11 @@ def load_keys():
 def save_keys(d):
     cur = load_keys(); cur.update(d)
     write_json(API_KEYS_FILE, cur)
+
+def generate_turn_credentials():
+    uname = 'chinna-' + secrets.token_hex(4)
+    cred = secrets.token_urlsafe(24)
+    return uname, cred
 
 def save_pair_state(state):
     write_json(PAIR_STATE_FILE, state)
@@ -1356,13 +1370,19 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json(self.sys_report())
         elif p == '/api/get_keys':
             k = load_keys()
+            turn_enabled = str(k.get('TURN_ENABLED', '')).strip().lower() in ('1', 'true', 'yes', 'on')
             self._json({
                 'chinna_ai_set': bool(k.get('OPENROUTER_API_KEY')),
                 'openai_set': bool(k.get('OPENAI_API_KEY')),
                 'telegram_set': bool(k.get('TELEGRAM_BOT_TOKEN')),
                 'telegram_paired': bool(k.get('TELEGRAM_CHAT_ID')),
                 'telegram_bot': telegram_status().get('bot_username', ''),
-                'pair_code': telegram_status().get('pair_code', '')
+                'pair_code': telegram_status().get('pair_code', ''),
+                'turn_enabled': turn_enabled,
+                'turn_urls': safe_text(k.get('TURN_URLS', '')),
+                'turn_username': safe_text(k.get('TURN_USERNAME', '')),
+                'turn_credential': safe_text(k.get('TURN_CREDENTIAL', '')),
+                'turn_credential_set': bool(k.get('TURN_CREDENTIAL')),
             })
         elif p == '/api/version':
             self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6'})
@@ -1401,7 +1421,30 @@ class H(http.server.SimpleHTTPRequestHandler):
             if b.get('openai_key'): d['OPENAI_API_KEY'] = b['openai_key']
             if b.get('telegram_token'): d['TELEGRAM_BOT_TOKEN'] = b['telegram_token']
             if b.get('telegram_chat'): d['TELEGRAM_CHAT_ID'] = b['telegram_chat']
+            if 'turn_enabled' in b: d['TURN_ENABLED'] = '1' if bool(b.get('turn_enabled')) else '0'
+            if b.get('turn_urls') is not None: d['TURN_URLS'] = safe_text(b.get('turn_urls', ''))[:800]
+            if b.get('turn_username') is not None: d['TURN_USERNAME'] = safe_text(b.get('turn_username', ''))[:120]
+            if b.get('turn_credential') is not None: d['TURN_CREDENTIAL'] = safe_text(b.get('turn_credential', ''))[:200]
             save_keys(d); self._json({'result':'✅ Keys saved'})
+        elif p == '/api/turn/generate':
+            uname, cred = generate_turn_credentials()
+            d = {
+                'TURN_ENABLED': '1',
+                'TURN_USERNAME': uname,
+                'TURN_CREDENTIAL': cred,
+            }
+            # Optional: allow caller to set URLs while generating credentials.
+            if b.get('turn_urls') is not None:
+                d['TURN_URLS'] = safe_text(b.get('turn_urls', ''))[:800]
+            save_keys(d)
+            self._json({
+                'ok': True,
+                'turn_enabled': True,
+                'turn_username': uname,
+                'turn_credential': cred,
+                'turn_urls': d.get('TURN_URLS', safe_text(load_keys().get('TURN_URLS', ''))),
+                'result': '✅ TURN credentials generated'
+            })
         elif p == '/api/purge':
             jid = new_job(); threading.Thread(target=self.job_purge, args=(jid,), daemon=True).start(); self._json({'job': jid})
         elif p == '/api/clean':

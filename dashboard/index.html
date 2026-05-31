@@ -642,6 +642,25 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 #view-chatx .chatx-col.right{background:rgba(255,255,255,.02)}
 #view-chatx .chatx-meta-chip{display:inline-flex;align-items:center;gap:5px;font-size:10px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;color:var(--t2);background:rgba(255,255,255,.03)}
 .chatx-preview-file{margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:7px;background:rgba(0,0,0,.18)}
+.chatx-call{display:none;border-bottom:1px solid var(--line);padding:10px;background:rgba(0,0,0,.16)}
+.chatx-call.on{display:block}
+.chatx-call-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:var(--t2);margin-bottom:8px}
+.chatx-call-quality{font-size:10px;color:var(--t3);margin-bottom:7px;line-height:1.45}
+.chatx-call-stage{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#070a10;min-height:210px;display:grid;place-items:center}
+.chatx-call-stage video{width:100%;height:100%;object-fit:cover;background:#05070c}
+.chatx-call-stage .chatx-local-video{position:absolute;right:10px;bottom:10px;width:130px;height:88px;border-radius:10px;border:1px solid var(--line2);box-shadow:0 8px 22px rgba(0,0,0,.45)}
+.chatx-call-stage .chatx-remote-placeholder{position:absolute;inset:0;display:grid;place-items:center;color:var(--t3);font-size:12px;pointer-events:none}
+.chatx-call-controls{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chatx-call-devices{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.chatx-call-devices .field{margin:0;font-size:11px;padding:8px 10px}
+.chatx-call-log{border:1px solid var(--line);border-radius:10px;padding:6px;background:rgba(255,255,255,.02);min-height:88px;max-height:128px;overflow:auto}
+.chatx-call-log-item{font-size:10px;line-height:1.35;color:var(--t2);padding:5px 6px;border-radius:7px;background:rgba(255,255,255,.03);margin-bottom:4px}
+.chatx-call-log-item strong{color:var(--t1);font-size:11px}
+.chatx-incoming{display:none;position:absolute;left:12px;right:12px;top:62px;z-index:8;border:1px solid var(--line2);border-radius:12px;background:rgba(8,12,18,.96);padding:10px;box-shadow:0 14px 28px rgba(0,0,0,.35)}
+.chatx-incoming.on{display:block}
+.chatx-incoming-head{font-size:12px;font-weight:700;color:var(--t1)}
+.chatx-incoming-sub{margin-top:4px;font-size:11px;color:var(--t2)}
+.chatx-incoming-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 
 #chatx-preview{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:320;display:none;align-items:center;justify-content:center;padding:24px}
 #chatx-preview.on{display:flex}
@@ -658,6 +677,8 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
   #view-chatx .chatx-col.left{max-height:210px}
   #view-chatx #chatx-contacts{min-height:90px}
   #view-chatx #chatx-thread{min-height:260px;max-height:46vh}
+  .chatx-call-stage{min-height:180px}
+  .chatx-call-devices{grid-template-columns:1fr}
 }
 
 @media (max-width: 640px){
@@ -938,11 +959,49 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
             </div>
             <div style="font-size:10px;color:var(--t3)">Share your unique ID to connect with friends.</div>
             <div id="chatx-contacts" style="overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px;min-height:150px"></div>
+            <div style="font-size:10px;color:var(--t3);margin-top:2px">Call log</div>
+            <div id="chatx-call-log" class="chatx-call-log"><div style="font-size:10px;color:var(--t3);padding:4px">No call events yet.</div></div>
           </div>
           <div class="chatx-col right">
             <div style="padding:10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
               <div id="chatx-peer-title" style="font-size:12px;color:var(--t2)">Select a contact</div>
-              <button type="button" class="bigbtn ghost smallbtn" onclick="chatxRefresh()">Refresh</button>
+              <div style="display:flex;gap:6px;align-items:center">
+                <button type="button" class="bigbtn ghost smallbtn" id="chatx-call-voice" onclick="chatxStartVoiceCall()">Call</button>
+                <button type="button" class="bigbtn ghost smallbtn" id="chatx-call-video" onclick="chatxStartVideoCall()">Video</button>
+                <button type="button" class="bigbtn ghost smallbtn" onclick="chatxRefresh()">Refresh</button>
+              </div>
+            </div>
+            <div class="chatx-incoming" id="chatx-incoming">
+              <div class="chatx-incoming-head" id="chatx-incoming-head">Incoming call</div>
+              <div class="chatx-incoming-sub" id="chatx-incoming-sub">Someone is calling you.</div>
+              <div class="chatx-incoming-actions">
+                <button type="button" class="bigbtn solid smallbtn" onclick="chatxAcceptIncoming()">Accept</button>
+                <button type="button" class="bigbtn ghost smallbtn" onclick="chatxRejectIncoming()">Reject</button>
+              </div>
+            </div>
+            <div class="chatx-call" id="chatx-call-wrap">
+              <div class="chatx-call-top">
+                <div id="chatx-call-status">Call idle</div>
+                <div id="chatx-call-timer">00:00</div>
+              </div>
+              <div class="chatx-call-quality" id="chatx-call-quality">State: idle · Up: 0 kbps · Down: 0 kbps · Loss: 0.0% · RTT: —</div>
+              <div class="chatx-call-stage" id="chatx-call-stage">
+                <video id="chatx-remote-video" autoplay playsinline></video>
+                <video id="chatx-local-video" class="chatx-local-video" autoplay playsinline muted></video>
+                <div class="chatx-remote-placeholder" id="chatx-remote-placeholder">No active call</div>
+              </div>
+              <div class="chatx-call-controls">
+                <button type="button" class="miniA" id="chatx-btn-mic" onclick="chatxToggleMic()">Mute Mic</button>
+                <button type="button" class="miniA" id="chatx-btn-cam" onclick="chatxToggleCamera()">Camera Off</button>
+                <button type="button" class="miniA" id="chatx-btn-spk" onclick="chatxToggleSpeaker()">Mute Speaker</button>
+                <button type="button" class="miniA" id="chatx-btn-share" onclick="chatxToggleScreenShare()">Share Screen</button>
+                <button type="button" class="miniA" onclick="chatxFullscreenRemote()">Fullscreen</button>
+                <button type="button" class="miniA danger" id="chatx-btn-end" onclick="chatxEndCall()">End Call</button>
+              </div>
+              <div class="chatx-call-devices">
+                <select id="chatx-mic-select" class="field" onchange="chatxChangePreferredMic()"><option value="">Preferred microphone (default)</option></select>
+                <select id="chatx-cam-select" class="field" onchange="chatxChangePreferredCam()"><option value="">Preferred camera (default)</option></select>
+              </div>
             </div>
             <div id="chatx-thread" style="flex:1;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px"></div>
             <div style="padding:10px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center">
@@ -1000,6 +1059,19 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
           <input class="field" id="set-or" type="password" autocomplete="new-password" placeholder="sk-or-v1-…">
           <div class="navlabel" style="margin-left:0">OpenAI key — optional (Whisper/GPT)</div>
           <input class="field" id="set-oa" type="password" autocomplete="new-password" placeholder="sk-…">
+          <div class="navlabel" style="margin-left:0">WebRTC TURN fallback (optional)</div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);margin-top:6px">
+            <input id="set-turn-enabled" type="checkbox" style="accent-color:var(--acc)">
+            Enable TURN fallback for stricter networks
+          </label>
+          <input class="field" id="set-turn-urls" placeholder="turn:turn.example.com:3478?transport=udp, turns:turn.example.com:5349?transport=tcp">
+          <input class="field" id="set-turn-user" placeholder="TURN username (optional)">
+          <input class="field" id="set-turn-cred" type="password" autocomplete="new-password" placeholder="TURN credential (optional)">
+          <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+            <button type="button" class="bigbtn ghost smallbtn" id="turn-gen-btn" onclick="generateTurnCredentials()">Generate TURN Credentials</button>
+            <button type="button" class="bigbtn ghost smallbtn" id="turn-test-btn" onclick="testTurnConnectivity()">Test TURN Relay</button>
+            <div id="turn-test-status" style="font-size:11px;color:var(--t3)">No TURN test yet.</div>
+          </div>
           <button type="button" class="bigbtn solid" style="margin-top:16px" onclick="saveKeys()">Save Keys</button>
           <div class="installappcard">
             <div class="installapphead">
@@ -1316,6 +1388,22 @@ let chatxLastId = 0;
 let chatxPreview = { messageId: null, zoom: 1 };
 let chatxSeenIncoming = new Set();
 let chatxNotificationAsked = false;
+let chatxCall = null;
+let chatxPC = null;
+let chatxLocalStream = null;
+let chatxRemoteStream = null;
+let chatxSignalQueue = [];
+let chatxCallTick = null;
+let chatxSpeakerMuted = false;
+let chatxSignalSeen = new Set();
+let chatxIncomingOffer = null;
+let chatxRingtoneCtx = null;
+let chatxRingtoneTimer = null;
+let chatxQualityTimer = null;
+let chatxLastStats = { at: 0, bytesSent: 0, bytesRecv: 0 };
+let chatxRtcConfig = { turnEnabled: false, turnUrls: '', turnUsername: '', turnCredential: '' };
+let chatxDevicePrefs = { micId: '', camId: '' };
+let chatxCallLog = [];
 
 function applyTheme(theme, persist=true){
   const safe = ['dark','oled','light','macos'].includes(theme) ? theme : 'macos';
@@ -1797,7 +1885,7 @@ function go(v){
   if(v==='storage')loadStorage(HOME_PATH,false);
   if(v==='ai'){ loadAIStatus(); if(voiceEnabled) ensureVoiceUI(); setupAttachmentUI(); }
   if(v==='chatx'){ chatxInit(); }
-  if(v==='settings')loadTelegramStatus();
+  if(v==='settings'){ loadTelegramStatus(); loadKeySettings(); }
   if(v==='projects') loadProjectsView();
 }
 
@@ -2497,6 +2585,15 @@ async function loadAIStatus(){
   $('ai-status').textContent=k.chinna_ai_set?'Connected · ready':'No API key — add one in Settings';
   setVoiceButton();
 }
+async function loadKeySettings(){
+  const k = await api('get_keys').catch(()=>null);
+  if(!k) return;
+  if($('set-turn-enabled')) $('set-turn-enabled').checked = !!k.turn_enabled;
+  if($('set-turn-urls')) $('set-turn-urls').value = k.turn_urls || '';
+  if($('set-turn-user')) $('set-turn-user').value = k.turn_username || '';
+  if($('set-turn-cred')) $('set-turn-cred').value = k.turn_credential || '';
+  if($('turn-test-status')) $('turn-test-status').textContent = (k.turn_enabled && (k.turn_urls||'').trim()) ? 'TURN configured. Run test to verify relay.' : 'No TURN test yet.';
+}
 async function loadTelegramStatus(){
   const d=await api('telegram/status');
   $('tg-bot').textContent=`Bot: ${d.bot_username?('@'+d.bot_username):'—'}`;
@@ -2511,7 +2608,9 @@ const CHATX_KEYS = {
   name: 'chinna_chatx_name',
   priv: 'chinna_chatx_priv_jwk',
   pub: 'chinna_chatx_pub_jwk',
-  contacts: 'chinna_chatx_contacts'
+  contacts: 'chinna_chatx_contacts',
+  mediaPrefs: 'chinna_chatx_media_prefs',
+  callLog: 'chinna_chatx_call_log'
 };
 
 function chatxUuid(){
@@ -2599,6 +2698,194 @@ function chatxFmtSize(n){
   return x+' B';
 }
 
+function chatxLoadDevicePrefs(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(CHATX_KEYS.mediaPrefs)||'{}');
+    chatxDevicePrefs = {
+      micId: String(raw.micId||''),
+      camId: String(raw.camId||''),
+    };
+  }catch{
+    chatxDevicePrefs = { micId:'', camId:'' };
+  }
+}
+
+function chatxSaveDevicePrefs(){
+  localStorage.setItem(CHATX_KEYS.mediaPrefs, JSON.stringify(chatxDevicePrefs));
+}
+
+function chatxLoadCallLog(){
+  try{
+    const arr = JSON.parse(localStorage.getItem(CHATX_KEYS.callLog)||'[]');
+    chatxCallLog = Array.isArray(arr) ? arr : [];
+  }catch{
+    chatxCallLog = [];
+  }
+}
+
+function chatxSaveCallLog(){
+  localStorage.setItem(CHATX_KEYS.callLog, JSON.stringify(chatxCallLog.slice(0,20)));
+}
+
+function chatxLogCall(status, peerId, mode='voice', direction='incoming'){
+  const item = {
+    status: String(status||'missed'),
+    peerId: String(peerId||''),
+    mode: mode==='video' ? 'video' : 'voice',
+    direction: direction==='outgoing' ? 'outgoing' : 'incoming',
+    ts: Date.now(),
+  };
+  chatxCallLog.unshift(item);
+  chatxCallLog = chatxCallLog.slice(0,20);
+  chatxSaveCallLog();
+  chatxRenderCallLog();
+}
+
+function chatxRenderCallLog(){
+  const el = $('chatx-call-log');
+  if(!el) return;
+  if(!chatxCallLog.length){
+    el.innerHTML = '<div style="font-size:10px;color:var(--t3);padding:4px">No call events yet.</div>';
+    return;
+  }
+  el.innerHTML = chatxCallLog.slice(0,8).map(item=>{
+    const name = chatxCallPeerName(item.peerId);
+    const when = new Date(item.ts||Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const st = String(item.status||'missed');
+    const tone = st==='answered' ? 'var(--green)' : (st==='declined' ? 'var(--amber)' : 'var(--red)');
+    return `<div class="chatx-call-log-item"><strong>${escHtml(name)}</strong> · <span style="color:${tone}">${escHtml(st)}</span><br>${escHtml(item.mode||'voice')} · ${escHtml(item.direction||'incoming')} · ${escHtml(when)}</div>`;
+  }).join('');
+}
+
+async function chatxRefreshMediaDevices(){
+  const micSel = $('chatx-mic-select');
+  const camSel = $('chatx-cam-select');
+  if(!micSel || !camSel || !navigator.mediaDevices?.enumerateDevices) return;
+  const devices = await navigator.mediaDevices.enumerateDevices().catch(()=>[]);
+  const mics = devices.filter(d=>d.kind==='audioinput');
+  const cams = devices.filter(d=>d.kind==='videoinput');
+  micSel.innerHTML = `<option value="">Preferred microphone (default)</option>` + mics.map(d=>`<option value="${escHtml(d.deviceId)}">${escHtml(d.label||('Microphone '+d.deviceId.slice(0,6)))}</option>`).join('');
+  camSel.innerHTML = `<option value="">Preferred camera (default)</option>` + cams.map(d=>`<option value="${escHtml(d.deviceId)}">${escHtml(d.label||('Camera '+d.deviceId.slice(0,6)))}</option>`).join('');
+  micSel.value = mics.some(d=>d.deviceId===chatxDevicePrefs.micId) ? chatxDevicePrefs.micId : '';
+  camSel.value = cams.some(d=>d.deviceId===chatxDevicePrefs.camId) ? chatxDevicePrefs.camId : '';
+}
+
+async function chatxApplyPreferredTrack(kind, deviceId){
+  if(!chatxPC || !chatxLocalStream || !deviceId) return;
+  const isAudio = kind==='audio';
+  const sender = chatxPC.getSenders().find(s=>s.track && s.track.kind===kind);
+  if(!sender) return;
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia(isAudio ? {audio:{deviceId:{exact:deviceId}},video:false} : {audio:false,video:{deviceId:{exact:deviceId}}});
+    const track = isAudio ? stream.getAudioTracks()[0] : stream.getVideoTracks()[0];
+    if(!track) return;
+    const old = isAudio ? chatxLocalStream.getAudioTracks()[0] : chatxLocalStream.getVideoTracks()[0];
+    await sender.replaceTrack(track);
+    if(old){
+      chatxLocalStream.removeTrack(old);
+      old.stop();
+    }
+    chatxLocalStream.addTrack(track);
+    chatxAttachStreams();
+    chatxSyncCallButtons();
+  }catch(e){
+    toast(`Unable to switch ${isAudio?'microphone':'camera'}: ${e?.message||'permission/device error'}`);
+  }
+}
+
+function chatxChangePreferredMic(){
+  chatxDevicePrefs.micId = String($('chatx-mic-select')?.value||'');
+  chatxSaveDevicePrefs();
+  if(chatxCall) chatxApplyPreferredTrack('audio', chatxDevicePrefs.micId);
+}
+
+function chatxChangePreferredCam(){
+  chatxDevicePrefs.camId = String($('chatx-cam-select')?.value||'');
+  chatxSaveDevicePrefs();
+  if(chatxCall && chatxCall.mode==='video') chatxApplyPreferredTrack('video', chatxDevicePrefs.camId);
+}
+
+async function testTurnConnectivity(){
+  if(typeof RTCPeerConnection === 'undefined'){
+    toast('WebRTC is unavailable in this browser');
+    return;
+  }
+  const btn = $('turn-test-btn');
+  const out = $('turn-test-status');
+  const enabled = !!$('set-turn-enabled')?.checked;
+  const urls = chatxParseTurnUrls(($('set-turn-urls')?.value||'').trim());
+  if(!enabled || !urls.length){
+    if(out) out.textContent = 'Enable TURN and provide at least one TURN URL.';
+    return;
+  }
+  const username = ($('set-turn-user')?.value||'').trim();
+  const credential = $('set-turn-cred')?.value || '';
+  if(btn) btn.disabled = true;
+  if(out) out.textContent = 'Testing TURN relay...';
+  let pc = null;
+  try{
+    pc = new RTCPeerConnection({iceServers:[{urls, username, credential}]});
+    pc.createDataChannel('turn-probe');
+    let relayFound = false;
+    let candidateSeen = false;
+    pc.onicecandidate = ev => {
+      if(!ev.candidate) return;
+      candidateSeen = true;
+      const line = String(ev.candidate.candidate||'');
+      if(/ typ relay /i.test(line)) relayFound = true;
+    };
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await new Promise(r=>setTimeout(r, 6500));
+    if(relayFound){
+      if(out) out.textContent = 'TURN test passed: relay candidate received.';
+      toast('TURN relay reachable');
+    }else if(candidateSeen){
+      if(out) out.textContent = 'TURN test failed: only non-relay candidates were gathered.';
+      toast('TURN relay unavailable (no relay candidate)');
+    }else{
+      if(out) out.textContent = 'TURN test failed: no ICE candidates gathered.';
+      toast('TURN test failed: no candidates');
+    }
+  }catch(e){
+    if(out) out.textContent = `TURN test error: ${e?.message||'unknown error'}`;
+    toast('TURN test failed');
+  }finally{
+    if(pc){
+      try{ pc.close(); }catch{}
+    }
+    if(btn) btn.disabled = false;
+  }
+}
+
+async function generateTurnCredentials(){
+  const btn = $('turn-gen-btn');
+  const out = $('turn-test-status');
+  const turnUrls = ($('set-turn-urls')?.value||'').trim();
+  if(btn) btn.disabled = true;
+  if(out) out.textContent = 'Generating TURN credentials...';
+  try{
+    const d = await api('turn/generate', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({turn_urls: turnUrls})
+    });
+    if(d.error) throw new Error(String(d.error));
+    if($('set-turn-enabled')) $('set-turn-enabled').checked = true;
+    if($('set-turn-user')) $('set-turn-user').value = d.turn_username || '';
+    if($('set-turn-cred')) $('set-turn-cred').value = d.turn_credential || '';
+    if($('set-turn-urls') && d.turn_urls) $('set-turn-urls').value = d.turn_urls;
+    if(out) out.textContent = 'TURN credentials generated and applied.';
+    toast(d.result || 'TURN credentials generated');
+    await chatxLoadRtcConfig().catch(()=>{});
+  }catch(e){
+    if(out) out.textContent = `TURN generation failed: ${e?.message||'unknown error'}`;
+    toast('TURN credential generation failed');
+  }finally{
+    if(btn) btn.disabled = false;
+  }
+}
+
 function chatxCanNotify(){
   return typeof Notification !== 'undefined' && Notification.permission === 'granted';
 }
@@ -2632,8 +2919,556 @@ function chatxNotifyIncoming(m){
   }
 }
 
+function chatxParseTurnUrls(raw){
+  const parts = String(raw||'').split(/[\n,\s]+/).map(x=>x.trim()).filter(Boolean);
+  return parts.map(v => /^(turn:|turns:)/i.test(v) ? v : `turn:${v}`);
+}
+
+function chatxBuildIceServers(){
+  const servers = [{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}];
+  if(!chatxRtcConfig.turnEnabled) return servers;
+  const urls = chatxParseTurnUrls(chatxRtcConfig.turnUrls);
+  if(!urls.length) return servers;
+  const turn = { urls };
+  if(chatxRtcConfig.turnUsername) turn.username = chatxRtcConfig.turnUsername;
+  if(chatxRtcConfig.turnCredential) turn.credential = chatxRtcConfig.turnCredential;
+  servers.push(turn);
+  return servers;
+}
+
+async function chatxLoadRtcConfig(){
+  const k = await api('get_keys').catch(()=>null);
+  chatxRtcConfig = {
+    turnEnabled: !!k?.turn_enabled,
+    turnUrls: String(k?.turn_urls||''),
+    turnUsername: String(k?.turn_username||''),
+    turnCredential: String(k?.turn_credential||''),
+  };
+}
+
+function chatxSetIncomingModal(on, fromId='', mode='voice'){
+  const box = $('chatx-incoming');
+  if(!box) return;
+  box.classList.toggle('on', !!on);
+  if(on){
+    $('chatx-incoming-head').textContent = `Incoming ${mode==='video'?'video':'voice'} call`;
+    $('chatx-incoming-sub').textContent = `${chatxCallPeerName(fromId)} is calling you.`;
+  }
+  chatxSyncCallButtons();
+}
+
+function chatxRingPulse(){
+  if(!chatxRingtoneCtx) return;
+  const now = chatxRingtoneCtx.currentTime;
+  const seq = [720, 960, 720];
+  seq.forEach((freq, idx)=>{
+    const osc = chatxRingtoneCtx.createOscillator();
+    const gain = chatxRingtoneCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, now + idx * 0.2);
+    gain.gain.exponentialRampToValueAtTime(0.07, now + idx * 0.2 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.2 + 0.16);
+    osc.connect(gain).connect(chatxRingtoneCtx.destination);
+    osc.start(now + idx * 0.2);
+    osc.stop(now + idx * 0.2 + 0.17);
+  });
+}
+
+function chatxStartRingtone(){
+  if(chatxRingtoneTimer) return;
+  try{
+    if(!chatxRingtoneCtx) chatxRingtoneCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(chatxRingtoneCtx.state === 'suspended') chatxRingtoneCtx.resume().catch(()=>{});
+    chatxRingPulse();
+    chatxRingtoneTimer = setInterval(chatxRingPulse, 1400);
+  }catch{}
+}
+
+function chatxStopRingtone(){
+  if(chatxRingtoneTimer){
+    clearInterval(chatxRingtoneTimer);
+    chatxRingtoneTimer = null;
+  }
+}
+
+function chatxSetQualityText(text){
+  const el = $('chatx-call-quality');
+  if(el) el.textContent = text;
+}
+
+function chatxResetQuality(){
+  if(chatxQualityTimer){
+    clearInterval(chatxQualityTimer);
+    chatxQualityTimer = null;
+  }
+  chatxLastStats = { at: 0, bytesSent: 0, bytesRecv: 0 };
+  chatxSetQualityText('State: idle · Up: 0 kbps · Down: 0 kbps · Loss: 0.0% · RTT: —');
+}
+
+async function chatxUpdateQuality(){
+  if(!chatxPC) return;
+  const state = chatxPC.connectionState || 'new';
+  let bytesSent = 0;
+  let bytesRecv = 0;
+  let lost = 0;
+  let recv = 0;
+  let rttMs = null;
+  const stats = await chatxPC.getStats().catch(()=>null);
+  if(stats){
+    stats.forEach(rep=>{
+      if(rep.type === 'outbound-rtp' && !rep.isRemote){
+        bytesSent += Number(rep.bytesSent||0);
+      }
+      if(rep.type === 'inbound-rtp' && !rep.isRemote){
+        bytesRecv += Number(rep.bytesReceived||0);
+        lost += Number(rep.packetsLost||0);
+        recv += Number(rep.packetsReceived||0);
+      }
+      if(rep.type === 'candidate-pair' && rep.state === 'succeeded' && rep.currentRoundTripTime != null){
+        rttMs = Math.round(Number(rep.currentRoundTripTime) * 1000);
+      }
+    });
+  }
+  const now = Date.now();
+  const dt = Math.max(0.001, (now - (chatxLastStats.at||now)) / 1000);
+  const upKbps = chatxLastStats.at ? Math.max(0, ((bytesSent - chatxLastStats.bytesSent) * 8) / dt / 1000) : 0;
+  const downKbps = chatxLastStats.at ? Math.max(0, ((bytesRecv - chatxLastStats.bytesRecv) * 8) / dt / 1000) : 0;
+  chatxLastStats = { at: now, bytesSent, bytesRecv };
+  const lossPct = (recv + lost) > 0 ? (lost * 100 / (recv + lost)) : 0;
+  chatxSetQualityText(`State: ${state} · Up: ${Math.round(upKbps)} kbps · Down: ${Math.round(downKbps)} kbps · Loss: ${lossPct.toFixed(1)}% · RTT: ${rttMs==null?'—':(rttMs+' ms')}`);
+}
+
+function chatxStartQualityMonitor(){
+  chatxResetQuality();
+  chatxQualityTimer = setInterval(()=>{ chatxUpdateQuality().catch(()=>{}); }, 2000);
+}
+
+function chatxAcceptIncoming(){
+  if(!chatxIncomingOffer) return;
+  const pending = chatxIncomingOffer;
+  chatxIncomingOffer = null;
+  chatxStopRingtone();
+  chatxSetIncomingModal(false);
+  chatxAcceptOffer(pending.fromId, pending.payload);
+}
+
+function chatxRejectIncoming(){
+  if(!chatxIncomingOffer) return;
+  const pending = chatxIncomingOffer;
+  chatxLogCall('declined', pending.fromId, pending.payload?.mode||'voice', 'incoming');
+  chatxIncomingOffer = null;
+  chatxStopRingtone();
+  chatxSetIncomingModal(false);
+  chatxSendSignal(pending.fromId,{t:'reject',call_id:pending.payload.call_id}).catch(()=>{});
+}
+
+function chatxCallPeerName(peerId){
+  const peer = chatxContacts.find(c=>c.id===peerId);
+  return peer?.name || peerId || 'Unknown';
+}
+
+function chatxFmtCallTime(sec){
+  const s = Math.max(0, Number(sec||0));
+  const mm = String(Math.floor(s/60)).padStart(2,'0');
+  const ss = String(s%60).padStart(2,'0');
+  return `${mm}:${ss}`;
+}
+
+function chatxResetTimer(){
+  if(chatxCallTick){
+    clearInterval(chatxCallTick);
+    chatxCallTick = null;
+  }
+  const el = $('chatx-call-timer');
+  if(el) el.textContent = '00:00';
+}
+
+function chatxStartTimer(){
+  chatxResetTimer();
+  chatxCallTick = setInterval(()=>{
+    if(!chatxCall?.startedAt) return;
+    const elapsed = Math.floor((Date.now()-chatxCall.startedAt)/1000);
+    const el = $('chatx-call-timer');
+    if(el) el.textContent = chatxFmtCallTime(elapsed);
+  },1000);
+}
+
+function chatxCallStatus(text){
+  const el = $('chatx-call-status');
+  if(el) el.textContent = text;
+}
+
+function chatxSyncCallButtons(){
+  const hasPeer = !!chatxPeer;
+  const active = !!chatxCall;
+  const pendingIncoming = !!chatxIncomingOffer;
+  const voice = $('chatx-call-voice');
+  const video = $('chatx-call-video');
+  if(voice) voice.disabled = !hasPeer || active || pendingIncoming;
+  if(video) video.disabled = !hasPeer || active || pendingIncoming;
+  const mic = $('chatx-btn-mic');
+  const cam = $('chatx-btn-cam');
+  const spk = $('chatx-btn-spk');
+  const share = $('chatx-btn-share');
+  const end = $('chatx-btn-end');
+  if(mic) mic.disabled = !active;
+  if(cam) cam.disabled = !active;
+  if(spk) spk.disabled = !active;
+  if(share) share.disabled = !active;
+  if(end) end.disabled = !active;
+
+  const audioTrack = chatxLocalStream?.getAudioTracks?.()[0];
+  const videoTrack = chatxLocalStream?.getVideoTracks?.()[0];
+  if(mic) mic.textContent = audioTrack && audioTrack.enabled ? 'Mute Mic' : 'Unmute Mic';
+  if(cam) cam.textContent = videoTrack && videoTrack.enabled ? 'Camera Off' : 'Camera On';
+  if(spk) spk.textContent = chatxSpeakerMuted ? 'Unmute Speaker' : 'Mute Speaker';
+}
+
+function chatxSetCallPanel(on){
+  const wrap = $('chatx-call-wrap');
+  if(!wrap) return;
+  wrap.classList.toggle('on', !!on);
+  const ph = $('chatx-remote-placeholder');
+  if(ph) ph.style.display = on ? 'none' : 'grid';
+}
+
+function chatxAttachStreams(){
+  const lv = $('chatx-local-video');
+  const rv = $('chatx-remote-video');
+  if(lv) lv.srcObject = chatxLocalStream || null;
+  if(rv){
+    rv.srcObject = chatxRemoteStream || null;
+    rv.muted = !!chatxSpeakerMuted;
+  }
+}
+
+function chatxStopMedia(){
+  if(chatxLocalStream){
+    for(const t of chatxLocalStream.getTracks()) t.stop();
+  }
+  chatxLocalStream = null;
+  chatxRemoteStream = null;
+  chatxAttachStreams();
+}
+
+async function chatxPrepareLocalStream(mode){
+  if(!navigator.mediaDevices?.getUserMedia){
+    throw new Error('Media devices are unavailable in this browser.');
+  }
+  chatxStopMedia();
+  const audioPref = chatxDevicePrefs.micId ? {deviceId:{exact:chatxDevicePrefs.micId}} : true;
+  const videoPref = mode==='video'
+    ? (chatxDevicePrefs.camId ? {deviceId:{exact:chatxDevicePrefs.camId}} : true)
+    : false;
+  try{
+    chatxLocalStream = await navigator.mediaDevices.getUserMedia({audio:audioPref, video:videoPref});
+  }catch(e){
+    chatxLocalStream = await navigator.mediaDevices.getUserMedia({audio:true, video: mode==='video'});
+    if(chatxDevicePrefs.micId || chatxDevicePrefs.camId){
+      toast('Preferred media device unavailable, using system default');
+    }
+  }
+  chatxAttachStreams();
+  await chatxRefreshMediaDevices();
+}
+
+async function chatxSendSignal(peerId, signal){
+  const me = await chatxEnsureIdentity();
+  const peer = chatxContacts.find(x=>x.id===peerId);
+  if(!peer?.pub) return;
+  const payload = {
+    __chatx_call:true,
+    ...signal,
+    sender: me.name,
+    ts: Date.now()
+  };
+  const enc = await chatxEncrypt(peer.pub, payload);
+  await api('chat/send',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      from_id:me.id,
+      to_id:peer.id,
+      iv_b64:enc.iv_b64,
+      cipher_b64:enc.cipher_b64,
+      meta:{call_signal:true,signal_type:signal.t||''}
+    })
+  }).catch(()=>{});
+}
+
+function chatxCreatePc(){
+  if(chatxPC){
+    try{ chatxPC.close(); }catch{}
+  }
+  chatxSignalQueue = [];
+  chatxRemoteStream = new MediaStream();
+  const pc = new RTCPeerConnection({iceServers: chatxBuildIceServers()});
+  chatxStartQualityMonitor();
+  if(chatxLocalStream){
+    for(const t of chatxLocalStream.getTracks()) pc.addTrack(t, chatxLocalStream);
+  }
+  pc.ontrack = ev => {
+    const stream = ev.streams?.[0];
+    if(stream){
+      chatxRemoteStream = stream;
+    }else{
+      for(const tr of ev.track ? [ev.track] : []) chatxRemoteStream.addTrack(tr);
+    }
+    chatxAttachStreams();
+  };
+  pc.onicecandidate = ev => {
+    if(ev.candidate && chatxCall?.peerId){
+      chatxSendSignal(chatxCall.peerId,{t:'ice',call_id:chatxCall.id,candidate:ev.candidate.toJSON?.()||ev.candidate}).catch(()=>{});
+    }
+  };
+  pc.onconnectionstatechange = () => {
+    const st = pc.connectionState;
+    if(st==='connected'){
+      if(chatxCall && !chatxCall.startedAt) chatxCall.startedAt = Date.now();
+      if(chatxCall && !chatxCall.loggedAnswered){
+        chatxCall.loggedAnswered = true;
+        chatxLogCall('answered', chatxCall.peerId, chatxCall.mode||'voice', chatxCall.direction||'incoming');
+      }
+      chatxStartTimer();
+      chatxUpdateQuality().catch(()=>{});
+      chatxCallStatus(`In call with ${chatxCallPeerName(chatxCall?.peerId)}`);
+      chatxSetCallPanel(true);
+    }else if((st==='failed' || st==='disconnected') && chatxCall){
+      chatxEndCall(false,false);
+      toast('Call ended');
+    }
+  };
+  chatxPC = pc;
+  chatxAttachStreams();
+  return pc;
+}
+
+async function chatxStartCall(mode){
+  if(chatxCall){
+    toast('A call is already active');
+    return;
+  }
+  if(chatxIncomingOffer){
+    toast('Please accept or reject the incoming call first');
+    return;
+  }
+  if(typeof RTCPeerConnection === 'undefined'){
+    toast('WebRTC calling is not supported in this browser');
+    return;
+  }
+  if(!chatxPeer){
+    toast('Select a contact first');
+    return;
+  }
+  try{
+    await chatxPrepareLocalStream(mode);
+    const pc = chatxCreatePc();
+    const callId = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    chatxCall = {id:callId,peerId:chatxPeer,mode,status:'calling',startedAt:0,direction:'outgoing',loggedAnswered:false};
+    chatxCallStatus(`Calling ${chatxCallPeerName(chatxPeer)}...`);
+    chatxSetCallPanel(true);
+    chatxSyncCallButtons();
+    const offer = await pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
+    await pc.setLocalDescription(offer);
+    await chatxSendSignal(chatxPeer,{t:'offer',call_id:callId,mode,sdp:offer.sdp});
+  }catch(err){
+    chatxStopMedia();
+    chatxCall = null;
+    chatxSyncCallButtons();
+    toast(err?.message || 'Unable to start call');
+  }
+}
+
+function chatxStartVoiceCall(){
+  chatxStartCall('voice');
+}
+
+function chatxStartVideoCall(){
+  chatxStartCall('video');
+}
+
+async function chatxAcceptOffer(fromId, payload){
+  if(typeof RTCPeerConnection === 'undefined'){
+    await chatxSendSignal(fromId,{t:'reject',call_id:payload.call_id});
+    return;
+  }
+  if(chatxCall && chatxCall.id!==payload.call_id){
+    await chatxSendSignal(fromId,{t:'busy',call_id:payload.call_id});
+    return;
+  }
+  const contact = chatxContacts.find(c=>c.id===fromId);
+  if(!contact) return;
+  const mode = payload.mode==='video' ? 'video' : 'voice';
+  chatxSelectPeer(fromId);
+  try{
+    await chatxPrepareLocalStream(mode);
+    const pc = chatxCreatePc();
+    chatxCall = {id:payload.call_id,peerId:fromId,mode,status:'connecting',startedAt:0,direction:'incoming',loggedAnswered:false};
+    chatxCallStatus(`Connecting with ${chatxCallPeerName(fromId)}...`);
+    chatxSetCallPanel(true);
+    chatxSyncCallButtons();
+    await pc.setRemoteDescription({type:'offer',sdp:payload.sdp});
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    for(const cand of chatxSignalQueue.splice(0)){
+      try{ await pc.addIceCandidate(cand); }catch{}
+    }
+    await chatxSendSignal(fromId,{t:'answer',call_id:payload.call_id,sdp:answer.sdp});
+  }catch(err){
+    chatxEndCall(false,false);
+    toast(err?.message || 'Unable to answer call');
+  }
+}
+
+async function chatxHandleCallSignal(fromId, payload){
+  if(!payload?.t) return;
+  if(payload.t==='offer'){
+    if(chatxCall && chatxCall.id!==payload.call_id){
+      await chatxSendSignal(fromId,{t:'busy',call_id:payload.call_id});
+      return;
+    }
+    if(chatxIncomingOffer && chatxIncomingOffer.payload?.call_id !== payload.call_id){
+      await chatxSendSignal(fromId,{t:'busy',call_id:payload.call_id});
+      return;
+    }
+    chatxIncomingOffer = { fromId, payload };
+    chatxSetIncomingModal(true, fromId, payload.mode||'voice');
+    chatxStartRingtone();
+    return;
+  }
+  if(payload.t==='hangup' && chatxIncomingOffer?.payload?.call_id === payload.call_id){
+    chatxLogCall('missed', fromId, payload.mode||chatxIncomingOffer?.payload?.mode||'voice', 'incoming');
+    chatxIncomingOffer = null;
+    chatxSetIncomingModal(false);
+    chatxStopRingtone();
+    return;
+  }
+  if(!chatxCall || chatxCall.id!==payload.call_id) return;
+  if(payload.t==='answer'){
+    if(chatxPC){
+      await chatxPC.setRemoteDescription({type:'answer',sdp:payload.sdp});
+      for(const cand of chatxSignalQueue.splice(0)){
+        try{ await chatxPC.addIceCandidate(cand); }catch{}
+      }
+      chatxCallStatus(`Connecting with ${chatxCallPeerName(fromId)}...`);
+    }
+    return;
+  }
+  if(payload.t==='ice'){
+    if(!payload.candidate) return;
+    const cand = new RTCIceCandidate(payload.candidate);
+    if(chatxPC?.remoteDescription){
+      try{ await chatxPC.addIceCandidate(cand); }catch{}
+    }else{
+      chatxSignalQueue.push(cand);
+    }
+    return;
+  }
+  if(payload.t==='reject'){
+    chatxIncomingOffer = null;
+    chatxSetIncomingModal(false);
+    chatxStopRingtone();
+    chatxLogCall('declined', fromId, chatxCall?.mode||'voice', 'outgoing');
+    toast(`${chatxCallPeerName(fromId)} declined the call`);
+    chatxEndCall(false,false);
+    return;
+  }
+  if(payload.t==='busy'){
+    chatxIncomingOffer = null;
+    chatxSetIncomingModal(false);
+    chatxStopRingtone();
+    chatxLogCall('declined', fromId, chatxCall?.mode||'voice', 'outgoing');
+    toast(`${chatxCallPeerName(fromId)} is busy`);
+    chatxEndCall(false,false);
+    return;
+  }
+  if(payload.t==='hangup'){
+    chatxEndCall(false,false);
+    toast('Call ended');
+  }
+}
+
+async function chatxToggleMic(){
+  const tr = chatxLocalStream?.getAudioTracks?.()[0];
+  if(!tr) return;
+  tr.enabled = !tr.enabled;
+  chatxSyncCallButtons();
+}
+
+async function chatxToggleCamera(){
+  const tr = chatxLocalStream?.getVideoTracks?.()[0];
+  if(!tr){
+    toast('Camera is unavailable in this call mode');
+    return;
+  }
+  tr.enabled = !tr.enabled;
+  chatxSyncCallButtons();
+}
+
+function chatxToggleSpeaker(){
+  chatxSpeakerMuted = !chatxSpeakerMuted;
+  const rv = $('chatx-remote-video');
+  if(rv) rv.muted = chatxSpeakerMuted;
+  chatxSyncCallButtons();
+}
+
+async function chatxToggleScreenShare(){
+  if(!chatxPC) return;
+  const sender = chatxPC.getSenders().find(s=>s.track && s.track.kind==='video');
+  if(!sender){
+    toast('Enable video call to share screen');
+    return;
+  }
+  try{
+    const ds = await navigator.mediaDevices.getDisplayMedia({video:true});
+    const track = ds.getVideoTracks()[0];
+    if(!track) return;
+    track.onended = async () => {
+      const cam = chatxLocalStream?.getVideoTracks?.()[0];
+      if(cam){
+        try{ await sender.replaceTrack(cam); }catch{}
+      }
+      chatxSyncCallButtons();
+    };
+    await sender.replaceTrack(track);
+    chatxSyncCallButtons();
+  }catch{}
+}
+
+function chatxFullscreenRemote(){
+  const stage = $('chatx-call-stage');
+  if(stage?.requestFullscreen) stage.requestFullscreen().catch(()=>{});
+}
+
+async function chatxEndCall(notifyPeer=true, toastDone=true){
+  const prev = chatxCall;
+  chatxCall = null;
+  chatxIncomingOffer = null;
+  chatxSetIncomingModal(false);
+  chatxStopRingtone();
+  chatxResetTimer();
+  chatxResetQuality();
+  if(notifyPeer && prev?.peerId && prev?.id){
+    await chatxSendSignal(prev.peerId,{t:'hangup',call_id:prev.id});
+  }
+  if(chatxPC){
+    try{ chatxPC.close(); }catch{}
+  }
+  chatxPC = null;
+  chatxSignalQueue = [];
+  chatxStopMedia();
+  chatxSetCallPanel(false);
+  chatxCallStatus('Call idle');
+  chatxSyncCallButtons();
+  if(toastDone && prev) toast('Call ended');
+}
+
 async function chatxInit(){
   const me = await chatxEnsureIdentity();
+  await chatxLoadRtcConfig();
+  chatxLoadDevicePrefs();
+  chatxLoadCallLog();
   chatxLoadContacts();
   chatxRequestNotifications();
   $('chatx-name').textContent = me.name;
@@ -2644,8 +3479,19 @@ async function chatxInit(){
   i.onload=()=>ctx.drawImage(i,0,0,44,44);
   i.src=img;
   renderChatxContacts();
+  chatxRenderCallLog();
+  chatxIncomingOffer = null;
+  chatxSetIncomingModal(false);
+  chatxStopRingtone();
+  chatxSetCallPanel(false);
+  chatxSyncCallButtons();
+  await chatxRefreshMediaDevices();
+  if(navigator.mediaDevices && !chatxInit._deviceHooked){
+    navigator.mediaDevices.addEventListener('devicechange', ()=>{ chatxRefreshMediaDevices().catch(()=>{}); });
+    chatxInit._deviceHooked = true;
+  }
   if(!chatxPollTimer){
-    chatxPollTimer = setInterval(chatxPoll, 2500);
+    chatxPollTimer = setInterval(chatxPoll, 1200);
   }
   const fi=$('chatx-file');
   if(fi){ fi.onchange=()=>toast(fi.files?.[0]?`Attached ${fi.files[0].name}`:''); }
@@ -2697,10 +3543,15 @@ async function chatxAddContact(){
 }
 
 function chatxSelectPeer(id){
+  if(chatxCall && chatxCall.peerId!==id){
+    toast('Finish the active call before switching contact');
+    return;
+  }
   chatxPeer=id;
   renderChatxContacts();
   const c=chatxContacts.find(x=>x.id===id);
   $('chatx-peer-title').textContent=c?`Chat with ${c.name}`:'Chat';
+  chatxSyncCallButtons();
   chatxLoadHistory();
 }
 
@@ -2774,14 +3625,34 @@ async function chatxPoll(){
   const prevLastId = Number(chatxLastId||0);
   const d = await api(`chat/poll?user_id=${encodeURIComponent(chatxIdentity.id)}&since_id=${chatxLastId}`).catch(()=>null);
   if(!d || d.error) return;
+
   const incoming = (d.messages||[]).filter(m=>{
     const mid = Number(m?.id||0);
     return mid > prevLastId && m.to_id===chatxIdentity.id && m.from_id!==chatxIdentity.id;
   });
   chatxLastId = Math.max(prevLastId, Number(d.last_id||0));
 
-  if(prevLastId > 0 && incoming.length){
-    incoming.slice(-6).forEach(chatxNotifyIncoming);
+  const plainIncoming = [];
+  for(const m of incoming){
+    const mid = Number(m?.id||0);
+    if(!mid || chatxSignalSeen.has(mid)) continue;
+    chatxSignalSeen.add(mid);
+    const peer = chatxContacts.find(c=>c.id===m.from_id);
+    if(!peer?.pub){
+      plainIncoming.push(m);
+      continue;
+    }
+    let payload = null;
+    try{ payload = await chatxDecrypt(peer.pub, m.iv_b64, m.cipher_b64); }catch{}
+    if(payload?.__chatx_call){
+      await chatxHandleCallSignal(m.from_id, payload);
+    }else{
+      plainIncoming.push(m);
+    }
+  }
+
+  if(prevLastId > 0 && plainIncoming.length){
+    plainIncoming.slice(-6).forEach(chatxNotifyIncoming);
   }
   if(chatxPeer) await chatxLoadHistory();
 }
@@ -2795,6 +3666,7 @@ async function chatxLoadHistory(){
   for(const m of (d.messages||[])){
     try{
       const payload = await chatxDecrypt(peer.pub, m.iv_b64, m.cipher_b64);
+      if(payload?.__chatx_call) continue;
       msgs.push({...m,payload});
     }catch{}
   }
@@ -3293,9 +4165,19 @@ async function reAttachPreviousFile(fileId, fileName, mime){
 
 /* keys */
 async function saveKeys(){
-  const b={};if($('set-or').value)b.chinna_ai_key=$('set-or').value;if($('set-oa').value)b.openai_key=$('set-oa').value;
+  const b={};
+  if($('set-or').value)b.chinna_ai_key=$('set-or').value;
+  if($('set-oa').value)b.openai_key=$('set-oa').value;
+  b.turn_enabled = !!$('set-turn-enabled')?.checked;
+  b.turn_urls = $('set-turn-urls')?.value?.trim?.() || '';
+  b.turn_username = $('set-turn-user')?.value?.trim?.() || '';
+  b.turn_credential = $('set-turn-cred')?.value || '';
   const d=await api('save_keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
-  toast(d.result||'Saved');$('set-or').value='';$('set-oa').value='';
+  toast(d.result||'Saved');
+  $('set-or').value='';
+  $('set-oa').value='';
+  if($('turn-test-status')) $('turn-test-status').textContent = 'Settings saved. Run TURN test.';
+  await chatxLoadRtcConfig().catch(()=>{});
 }
 async function saveTelegramToken(){
   const token=$('tg-token').value.trim();
