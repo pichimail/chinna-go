@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  CHINNA v5 — Sarcastic Mac Sidekick                         ║
+# ║  CHINNA v6 — Sarcastic Mac Sidekick                         ║
 # ║  Telugu · Hindi · English · Tinglish                        ║
 # ║  github.com/pichimail/chinna-go                             ║
 # ╚══════════════════════════════════════════════════════════════╝
 set -uo pipefail
 
-CHINNA_VERSION="5.0.0"
+CHINNA_VERSION="6.0.0"
 CHINNA_REPO="pichimail/chinna-go"
 CHINNA_HOME="${CHINNA_HOME:-$HOME/.chinna}"
 CHINNA_CONFIG="$CHINNA_HOME/config"

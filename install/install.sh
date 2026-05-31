@@ -11,6 +11,7 @@ RAW="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 CHINNA="${CHINNA_HOME:-$HOME/.chinna}"
 PORT="${CHINNA_DASHBOARD_PORT:-7777}"
 STATE_FILE="${CHINNA}/.installstate"
+INSTALLER_RELEASE="6.0.1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -61,6 +62,12 @@ run_step()  {
         "$@" && mark_done "$name"
     fi
 }
+
+# Reset stale resumable state on installer upgrades so users always receive latest app code.
+if ! is_done "installer_release_${INSTALLER_RELEASE}"; then
+    rm -f "$STATE_FILE"
+    mark_done "installer_release_${INSTALLER_RELEASE}"
+fi
 
 # ── Step implementations ───────────────────────────────────
 step_backup_zshrc() {
@@ -216,13 +223,16 @@ run_step "install_homebrew"   step_install_homebrew
 run_step "brew_shellenv"      step_brew_shellenv
 run_step "install_clis"       step_install_clis
 run_step "install_node_tools" step_install_node_tools
-run_step "write_server"       step_write_server
-run_step "write_dashboard"    step_write_dashboard
-run_step "write_libs"         step_write_libs
-run_step "write_bin"          step_write_bin
-run_step "write_defaults"     step_write_defaults
+
+# Always refresh core Chinna app files on every installer run.
+step_write_server
+step_write_dashboard
+step_write_libs
+step_write_bin
+step_write_defaults
+
 run_step "zshrc_block"        step_zshrc_block
-run_step "start_server"       step_start_server
+step_start_server
 
 # ── macOS notification ─────────────────────────────────────
 osascript -e 'display notification "Models, Music, WhatsApp & 15 Godspeed features ready!" with title "🟢 Chinna V6 installed"' 2>/dev/null || true

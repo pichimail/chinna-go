@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Chinna V5 — Dashboard Server (Python stdlib only, zero deps)."""
+"""Chinna V6 — Dashboard Server (Python stdlib only, zero deps)."""
 import base64, hashlib, http.server, json, os, re, subprocess, sys, tempfile, threading, time, traceback, unicodedata, urllib.parse, urllib.request
 from datetime import datetime, timezone
 
@@ -1504,7 +1504,7 @@ class H(http.server.SimpleHTTPRequestHandler):
 
     def sys_report(self):
         rpt = "\n".join([
-            "CHINNA V5 SYSTEM REPORT", "="*40,
+            "CHINNA V6 SYSTEM REPORT", "="*40,
             f"Host:    {sh('hostname -s')}",
             f"macOS:   {sh('sw_vers -productVersion')} ({sh('uname -m')})",
             f"Chip:    {sh('sysctl -n machdep.cpu.brand_string')}",
