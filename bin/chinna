@@ -13,6 +13,9 @@ CHINNA_CONFIG="$CHINNA_HOME/config"
 CHINNA_LIB="$CHINNA_HOME/lib"
 
 mkdir -p "$CHINNA_HOME" "$CHINNA_LIB"
+if [ -f "$CHINNA_HOME/VERSION" ]; then
+    CHINNA_VERSION="$(tr -d '[:space:]' < "$CHINNA_HOME/VERSION")"
+fi
 if [ -f "$CHINNA_CONFIG" ]; then
     # Older/user-edited config files may reference unset vars; do not hard-fail startup.
     set +u
@@ -188,9 +191,21 @@ resolve_installer() {
     return 1
 }
 
+resolve_remote_installer() {
+    local tmp_installer
+    tmp_installer="$(mktemp -t chinna-install.XXXXXX)"
+    if curl -fsSL "https://raw.githubusercontent.com/${CHINNA_REPO}/main/install/install.sh" -o "$tmp_installer" 2>/dev/null; then
+        chmod +x "$tmp_installer"
+        printf '%s\n' "$tmp_installer"
+        return 0
+    fi
+    rm -f "$tmp_installer" 2>/dev/null || true
+    return 1
+}
+
 apply_update() {
     local remote_ver="$1" installer rc=0
-    installer="$(resolve_installer)" || { fail "Installer unavailable"; return 1; }
+    installer="$(resolve_remote_installer)" || installer="$(resolve_installer)" || { fail "Installer unavailable"; return 1; }
 
     info "Applying update to v${remote_ver}..."
     info "User data, configs, and API keys will be preserved."
@@ -1107,6 +1122,34 @@ cmd_update() {
 }
 
 # ═══════════════════════════════════════════════════════════════
+# COMMAND: notch (menu bar quick actions near camera area)
+# ═══════════════════════════════════════════════════════════════
+cmd_notch() {
+    banner
+    echo -e "   ${BOLD}${ORANGE}📍 NOTCH / MENU QUICK ACTIONS${RESET}"; echo ""
+
+    if command -v install_notch_quick_actions >/dev/null 2>&1; then
+        if install_notch_quick_actions; then
+            ok "Quick actions installed for menu bar (SwiftBar)"
+            info "Open SwiftBar to see 🟠 near the notch/menu area"
+            open -a SwiftBar >/dev/null 2>&1 || true
+            return 0
+        fi
+    fi
+
+    warn "SwiftBar is required for notch-adjacent dynamic quick icons."
+    if command -v brew >/dev/null 2>&1; then
+        info "Installing SwiftBar via Homebrew cask..."
+        brew install --cask swiftbar >/dev/null 2>&1 || { fail "SwiftBar install failed"; return 1; }
+        install_notch_quick_actions || true
+        open -a SwiftBar >/dev/null 2>&1 || true
+        ok "SwiftBar installed and Chinna quick actions configured"
+    else
+        info "Install SwiftBar manually, then run: chinna notch"
+    fi
+}
+
+# ═══════════════════════════════════════════════════════════════
 # COMMAND: notify
 # ═══════════════════════════════════════════════════════════════
 cmd_notify() {
@@ -1206,6 +1249,7 @@ dispatch_intent() {
         env_setup)      generate_env . ;;
         publish)        cmd_publish ;;
         update)         cmd_update ;;
+        notch)          cmd_notch ;;
         doctor)         cmd_doctor ;;
         config)         cmd_config ;;
         help)           show_help ;;
@@ -1251,6 +1295,7 @@ show_menu() {
     echo -e "   ${ORANGE}20${RESET}) 🚀  ${BOLD}Start Daemon${RESET}      ${D}Run Chinna in background${RESET}"
     echo -e "   ${ORANGE}21${RESET}) 🌐  ${BOLD}Dashboard${RESET}         ${D}Premium web UI in browser${RESET}"
     echo -e "   ${ORANGE}22${RESET}) 🧩  ${BOLD}Plugins${RESET}           ${D}List / load / bootstrap plugins${RESET}"
+    echo -e "   ${ORANGE}23${RESET}) 📍  ${BOLD}Notch Actions${RESET}     ${D}Menu-bar quick icons near camera area${RESET}"
     echo -e "   ${ORANGE}q${RESET})  ${D}Quit${RESET}"
     echo ""
     echo -ne "   ${BOLD}>${RESET} "
@@ -1288,6 +1333,7 @@ show_menu() {
         20) cmd_start ;;
         21) cmd_dashboard ;;
         22) cmd_plugins ;;
+        23) cmd_notch ;;
         q|Q) echo -e "  ${ORANGE}Later 👋${RESET}"; exit 0 ;;
         "")  show_menu ;;
         *)
@@ -1339,6 +1385,7 @@ show_help() {
      ${C}publish${RESET}                Push update to GitHub
      ${C}doctor${RESET}                 Health check
      ${C}update${RESET}                 Self-update Chinna
+    ${C}notch${RESET}                  Install menu-bar quick actions (Purge/Clean/Update)
      ${C}uninstall${RESET} [--purge]    Remove Chinna app or fully purge everything
 
    ${BOLD}NATURAL LANGUAGE EXAMPLES${RESET}
@@ -1410,6 +1457,7 @@ main() {
         projects)                   shift; cmd_projects "$@" ;;
         plugin|plugins)             shift; cmd_plugins "$@" ;;
         update|upgrade)             shift; cmd_update "$@" ;;
+        notch|quickbar|menubar)     cmd_notch ;;
         uninstall|remove)           shift; cmd_uninstall "$@" ;;
         help|-h|--help)             show_help ;;
         version|-v|--version)       echo "Chinna v$CHINNA_VERSION" ;;

@@ -6,6 +6,8 @@ CHINNA_LOG="$CHINNA_HOME/chinna.log"
 CHINNA_PID="$CHINNA_HOME/chinna.pid"
 PLIST_PATH="$HOME/Library/LaunchAgents/com.chinna.daemon.plist"
 UPDATE_PROMPT_FILE="$CHINNA_HOME/update_prompted_version"
+UPDATE_SNOOZE_FILE="$CHINNA_HOME/update_snooze_until"
+UPDATE_REMINDER_INTERVAL="${CHINNA_UPDATE_REMINDER_INTERVAL:-10800}"
 
 source "$CHINNA_HOME/config" 2>/dev/null || true
 source "$CHINNA_HOME/lib/notify.sh" 2>/dev/null || true
@@ -51,6 +53,96 @@ PY
 load_api_json_keys
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$CHINNA_LOG"; }
+
+current_chinna_version() {
+    if [ -f "$CHINNA_HOME/VERSION" ]; then
+        tr -d '[:space:]' < "$CHINNA_HOME/VERSION"
+        return 0
+    fi
+    printf '%s\n' "${CHINNA_VERSION:-1.0.0}"
+}
+
+update_snooze_until() {
+    [ -f "$UPDATE_SNOOZE_FILE" ] || { echo 0; return 0; }
+    cat "$UPDATE_SNOOZE_FILE" 2>/dev/null | tr -cd '[:digit:]'
+}
+
+set_update_snooze() {
+    local secs="$1"
+    local now
+    now=$(date +%s)
+    echo $((now + secs)) > "$UPDATE_SNOOZE_FILE"
+}
+
+clear_update_snooze() {
+    rm -f "$UPDATE_SNOOZE_FILE" 2>/dev/null || true
+}
+
+run_quick_action() {
+    local action="$1"
+    local chinna_bin
+    chinna_bin="$(command -v chinna 2>/dev/null || echo "$CHINNA_HOME/bin/chinna")"
+    case "$action" in
+        purge)
+            nohup "$chinna_bin" purge >> "$CHINNA_LOG" 2>&1 &
+            chinna_info_toast "Quick Action" "⚡ Purge RAM started" 2>/dev/null || true
+            ;;
+        clean)
+            nohup "$chinna_bin" clean >> "$CHINNA_LOG" 2>&1 &
+            chinna_info_toast "Quick Action" "🧹 Deep Clean started" 2>/dev/null || true
+            ;;
+        update)
+            nohup "$chinna_bin" update --apply >> "$CHINNA_LOG" 2>&1 &
+            chinna_info_toast "Quick Action" "⬆️ Update started" 2>/dev/null || true
+            ;;
+    esac
+}
+
+show_quick_actions_overlay() {
+    local choice
+    choice=$(osascript 2>/dev/null <<'APPLESCRIPT'
+set picked to choose from list {"⚡ Purge RAM", "🧹 Deep Clean", "⬆️ Update", "Later"} with prompt "🟠 Chinna Quick Actions" default items {"Later"}
+if picked is false then
+    return "Later"
+else
+    return item 1 of picked
+end if
+APPLESCRIPT
+)
+    case "$choice" in
+        "⚡ Purge RAM") run_quick_action purge ;;
+        "🧹 Deep Clean") run_quick_action clean ;;
+        "⬆️ Update") run_quick_action update ;;
+        *) ;;
+    esac
+}
+
+install_notch_quick_actions() {
+    local plugin_dir="$HOME/Library/Application Support/SwiftBar/Plugins"
+    local plugin_path="$plugin_dir/chinna.1m.sh"
+    local chinna_bin
+    chinna_bin="$(command -v chinna 2>/dev/null || echo "$CHINNA_HOME/bin/chinna")"
+
+    if ! command -v swiftbar >/dev/null 2>&1; then
+        log "SwiftBar not installed; notch/menu quick actions unavailable"
+        return 1
+    fi
+
+    local dash_url="http://localhost:${CHINNA_DASHBOARD_PORT:-7777}"
+    mkdir -p "$plugin_dir"
+    cat > "$plugin_path" <<PLUGIN
+#!/usr/bin/env bash
+echo "🟠"
+echo "---"
+echo "⚡ Purge RAM | bash='${chinna_bin}' param1='purge' terminal=false refresh=true"
+echo "🧹 Deep Clean | bash='${chinna_bin}' param1='clean' terminal=false refresh=true"
+echo "⬆️ Update Now | bash='${chinna_bin}' param1='update' param2='--apply' terminal=false refresh=true"
+echo "🌐 Open Dashboard | bash='open' param1='${dash_url}' terminal=false refresh=false"
+PLUGIN
+    chmod +x "$plugin_path"
+    log "SwiftBar quick actions installed at $plugin_path"
+    return 0
+}
 
 version_gt() {
     [ "$1" != "$2" ] || return 1
@@ -159,11 +251,15 @@ APPLESCRIPT
 # ─── Auto-update check ────────────────────────────────────────
 check_update() {
     local repo="${CHINNA_REPO:-pichimail/chinna-go}"
-    local current_ver="${CHINNA_VERSION:-1.0.0}"
+    local branch="${CHINNA_BRANCH:-main}"
+    local current_ver
+    current_ver="$(current_chinna_version)"
+    local now
+    now=$(date +%s)
 
     log "Checking for updates..."
     local remote_ver
-    remote_ver=$(curl -fsSL "https://raw.githubusercontent.com/${repo}/main/VERSION" 2>/dev/null | tr -d '[:space:]')
+    remote_ver=$(curl -fsSL "https://raw.githubusercontent.com/${repo}/${branch}/VERSION" 2>/dev/null | tr -d '[:space:]')
 
     if [ -z "$remote_ver" ]; then
         log "Could not fetch remote version"
@@ -171,11 +267,10 @@ check_update() {
     fi
 
     if version_gt "$remote_ver" "$current_ver"; then
-        local last_prompted=""
-        [ -f "$UPDATE_PROMPT_FILE" ] && last_prompted=$(cat "$UPDATE_PROMPT_FILE" 2>/dev/null || true)
-
-        if [ "$last_prompted" = "$remote_ver" ]; then
-            log "Update available but already prompted for v${remote_ver}"
+        local snooze_until
+        snooze_until=$(update_snooze_until)
+        if [ -n "$snooze_until" ] && [ "$snooze_until" -gt "$now" ] 2>/dev/null; then
+            log "Update reminder snoozed until $(date -r "$snooze_until" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "$snooze_until")"
             return 0
         fi
 
@@ -185,22 +280,46 @@ check_update() {
         local choice
         choice=$(chinna_toast_action \
             "Chinna Update Available" \
-            "v${remote_ver} is ready.\nUpdate now? Your data and API keys stay intact." \
-            "Update Now|Later" 2>/dev/null)
+            "v${remote_ver} is ready.\nUpdate now, schedule, or remind later?" \
+            "Update Now|Later|Schedule" 2>/dev/null)
         [ -n "$choice" ] || choice="Later"
 
-        if [ "$choice" = "Update Now" ]; then
-            log "User approved update to v${remote_ver}"
-            local chinna_bin
-            chinna_bin="$(command -v chinna 2>/dev/null || echo "$CHINNA_HOME/bin/chinna")"
-            nohup "$chinna_bin" update --apply >> "$CHINNA_LOG" 2>&1 &
-            chinna_info_toast "Update started" "Chinna is updating to v${remote_ver} now." 2>/dev/null || true
-        else
-            log "User postponed update to v${remote_ver}"
-        fi
+        case "$choice" in
+            "Update Now")
+                log "User approved update to v${remote_ver}"
+                clear_update_snooze
+                run_quick_action update
+                ;;
+            "Schedule")
+                local schedule
+                schedule=$(osascript 2>/dev/null <<'APPLESCRIPT'
+set picked to choose from list {"In 1 hour", "In 3 hours", "In 6 hours", "Tomorrow"} with prompt "Schedule Chinna update reminder" default items {"In 3 hours"}
+if picked is false then
+    return "Later"
+else
+    return item 1 of picked
+end if
+APPLESCRIPT
+)
+                case "$schedule" in
+                    "In 1 hour") set_update_snooze 3600 ;;
+                    "In 6 hours") set_update_snooze 21600 ;;
+                    "Tomorrow") set_update_snooze 86400 ;;
+                    *) set_update_snooze 10800 ;;
+                esac
+                chinna_info_toast "Update scheduled" "Reminder set: ${schedule:-In 3 hours}" 2>/dev/null || true
+                log "User scheduled update reminder: ${schedule:-In 3 hours}"
+                ;;
+            *)
+                set_update_snooze "$UPDATE_REMINDER_INTERVAL"
+                chinna_info_toast "Update postponed" "I will remind you again in 3 hours." 2>/dev/null || true
+                log "User postponed update to v${remote_ver}; snoozed ${UPDATE_REMINDER_INTERVAL}s"
+                ;;
+        esac
     else
         log "Already on latest version $current_ver"
         rm -f "$UPDATE_PROMPT_FILE" 2>/dev/null || true
+        clear_update_snooze
     fi
 }
 
@@ -317,7 +436,7 @@ daemon_loop() {
     echo $$ > "$CHINNA_PID"
 
     local disk_check_interval=3600   # 1 hour
-    local update_check_interval=86400 # 24 hours
+    local update_check_interval="$UPDATE_REMINDER_INTERVAL" # default 3 hours
     local tg_poll_interval=5          # 5 seconds
 
     local last_disk_check=0
@@ -336,7 +455,7 @@ daemon_loop() {
             last_disk_check=$now
         fi
 
-        # Auto-update (every 24h)
+        # Auto-update reminder (every 3h)
         if (( now - last_update_check >= update_check_interval )); then
             check_update
             last_update_check=$now
