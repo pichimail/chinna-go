@@ -113,7 +113,7 @@ step_install_clis() {
 
 step_install_node_tools() {
     command -v brew >/dev/null 2>&1 || return 0
-    local tools=(pnpm yarn bun)
+    local tools=(node pnpm yarn bun)
     echo "    Installing node tools: ${tools[*]}"
     brew install "${tools[@]}" 2>/dev/null | grep -E "✓|already|Pouring" | head -4 || true
 }
@@ -132,6 +132,15 @@ step_write_dashboard() {
         copy_or_fetch "dashboard/assets/${asset}" "${CHINNA}/dashboard/assets/${asset}" 2>/dev/null || true
     done
     echo "    ✓ dashboard updated"
+}
+
+step_write_whatsapp_bridge() {
+    echo "    ↻ Force-refreshing WhatsApp bridge..."
+    mkdir -p "${CHINNA}/whatsapp_bridge"
+    copy_or_fetch "whatsapp_bridge/package.json" "${CHINNA}/whatsapp_bridge/package.json"
+    copy_or_fetch "whatsapp_bridge/server.js" "${CHINNA}/whatsapp_bridge/server.js"
+    copy_or_fetch "whatsapp_bridge/package-lock.json" "${CHINNA}/whatsapp_bridge/package-lock.json" 2>/dev/null || true
+    echo "    ✓ WhatsApp bridge updated"
 }
 
 step_write_libs() {
@@ -234,6 +243,7 @@ echo ""
 echo "  ↻ Pulling latest V6 app files from GitHub..."
 step_write_server
 step_write_dashboard
+step_write_whatsapp_bridge
 step_write_libs
 step_write_bin
 step_write_defaults

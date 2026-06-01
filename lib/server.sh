@@ -30,6 +30,12 @@ start_dashboard() {
         cp "$SCRIPT_DIR/../dashboard/assets/"*.svg "$CHINNA_HOME/dashboard/assets/" 2>/dev/null || true
     fi
 
+    if [ -d "$SCRIPT_DIR/../whatsapp_bridge" ]; then
+        mkdir -p "$CHINNA_HOME/whatsapp_bridge"
+        cp "$SCRIPT_DIR/../whatsapp_bridge/package.json" "$SCRIPT_DIR/../whatsapp_bridge/server.js" "$CHINNA_HOME/whatsapp_bridge/" 2>/dev/null || true
+        [ -f "$SCRIPT_DIR/../whatsapp_bridge/package-lock.json" ] && cp "$SCRIPT_DIR/../whatsapp_bridge/package-lock.json" "$CHINNA_HOME/whatsapp_bridge/" 2>/dev/null || true
+    fi
+
     if command -v setsid >/dev/null 2>&1; then
         setsid python3 "$DASHBOARD_SERVER" "$port" >>"$DASHBOARD_LOG_FILE" 2>&1 < /dev/null &
     else

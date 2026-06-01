@@ -661,6 +661,24 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 .chatx-incoming-head{font-size:12px;font-weight:700;color:var(--t1)}
 .chatx-incoming-sub{margin-top:4px;font-size:11px;color:var(--t2)}
 .chatx-incoming-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.chatx-invite-card{display:grid;grid-template-columns:92px 1fr;gap:9px;align-items:center;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.025);padding:8px}
+.chatx-invite-card img{width:92px;height:92px;border-radius:8px;background:#fff;image-rendering:pixelated}
+.chatx-fingerprint{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:9px;color:var(--t3);word-break:break-all;line-height:1.35}
+.chatx-relay-line{font-size:10px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wa-grid{display:grid;grid-template-columns:280px 1fr;gap:10px;min-height:520px}
+.wa-panel{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03);min-height:0;display:flex;flex-direction:column}
+.wa-status{display:grid;grid-template-columns:128px 1fr;gap:12px;align-items:center;padding:12px;border-bottom:1px solid var(--line)}
+.wa-qr{width:128px;height:128px;border-radius:12px;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line)}
+.wa-qr img{width:100%;height:100%;image-rendering:pixelated}
+.wa-chat-list{overflow:auto;padding:8px;display:flex;flex-direction:column;gap:5px}
+.wa-chat-item{display:flex;gap:8px;align-items:center;padding:8px;border-radius:9px;cursor:pointer;border:1px solid transparent}
+.wa-chat-item:hover,.wa-chat-item.on{background:rgba(var(--accr),.12);border-color:rgba(var(--accr),.25)}
+.wa-avatar{width:32px;height:32px;border-radius:9px;background:rgba(var(--accr),.15);display:grid;place-items:center;color:var(--acc);font-weight:800;font-size:12px;flex:0 0 auto}
+.wa-thread{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:rgba(0,0,0,.08)}
+.wa-msg{max-width:78%;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:rgba(255,255,255,.055);font-size:12px;line-height:1.45}
+.wa-msg.mine{align-self:flex-end;background:rgba(var(--accr),.16)}
+.wa-msg-meta{font-size:10px;color:var(--t3);margin-bottom:3px}
+.wa-compose{display:flex;gap:8px;align-items:center;padding:10px;border-top:1px solid var(--line)}
 
 #chatx-preview{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:320;display:none;align-items:center;justify-content:center;padding:24px}
 #chatx-preview.on{display:flex}
@@ -679,6 +697,8 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
   #view-chatx #chatx-thread{min-height:260px;max-height:46vh}
   .chatx-call-stage{min-height:180px}
   .chatx-call-devices{grid-template-columns:1fr}
+  .wa-grid{grid-template-columns:1fr}
+  .wa-status{grid-template-columns:1fr}
 }
 
 @media (max-width: 640px){
@@ -951,13 +971,22 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
             </div>
             <div style="display:flex;gap:6px">
               <button type="button" class="bigbtn ghost smallbtn" onclick="chatxCopyId()">Copy ID</button>
+              <button type="button" class="bigbtn ghost smallbtn" onclick="chatxCopyInvite()">Copy Invite</button>
               <button type="button" class="bigbtn ghost smallbtn" onclick="chatxExportCurrent()">Export</button>
             </div>
+            <div class="chatx-invite-card">
+              <img id="chatx-invite-qr" alt="Secure Chat invite QR">
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--t1)">Private Invite</div>
+                <div class="chatx-relay-line" id="chatx-relay-label">Relay: this Mac</div>
+                <div class="chatx-fingerprint" id="chatx-fingerprint">fingerprint pending</div>
+              </div>
+            </div>
             <div style="display:flex;gap:6px">
-              <input id="chatx-add-id" class="field" placeholder="Friend ID" style="margin:0;font-size:12px;min-width:0">
+              <input id="chatx-add-id" class="field" placeholder="Paste invite link / JSON / Friend ID" style="margin:0;font-size:12px;min-width:0">
               <button type="button" class="bigbtn smallbtn" onclick="chatxAddContact()">Add</button>
             </div>
-            <div style="font-size:10px;color:var(--t3)">Share your unique ID to connect with friends.</div>
+            <div style="font-size:10px;color:var(--t3)">Share the invite QR or link. Bare IDs only work for legacy local users.</div>
             <div id="chatx-contacts" style="overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px;min-height:150px"></div>
             <div style="font-size:10px;color:var(--t3);margin-top:2px">Call log</div>
             <div id="chatx-call-log" class="chatx-call-log"><div style="font-size:10px;color:var(--t3);padding:4px">No call events yet.</div></div>
@@ -1067,6 +1096,8 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
           <input class="field" id="set-turn-urls" placeholder="turn:turn.example.com:3478?transport=udp, turns:turn.example.com:5349?transport=tcp">
           <input class="field" id="set-turn-user" placeholder="TURN username (optional)">
           <input class="field" id="set-turn-cred" type="password" autocomplete="new-password" placeholder="TURN credential (optional)">
+          <div class="navlabel" style="margin-left:0">Secure Chat relay URL (optional)</div>
+          <input class="field" id="set-chat-relay" placeholder="http://localhost:7777 or https://your-public-relay.example">
           <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
             <button type="button" class="bigbtn ghost smallbtn" id="turn-gen-btn" onclick="generateTurnCredentials()">Generate TURN Credentials</button>
             <button type="button" class="bigbtn ghost smallbtn" id="turn-test-btn" onclick="testTurnConnectivity()">Test TURN Relay</button>
@@ -1121,22 +1152,46 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 
       <!-- WHATSAPP -->
       <div class="view" id="view-whatsapp">
-        <div class="vhead"><h2>WhatsApp</h2><span class="sub">Open app · Send message via wa.me link</span></div>
-        <div class="vbody">
-          <div class="navlabel">Quick Open</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
-            <button type="button" class="bigbtn" onclick="waOpen()">💬 Open WhatsApp</button>
-            <button type="button" class="bigbtn" onclick="waOpenWeb()">🌐 WhatsApp Web</button>
+        <div class="vhead"><h2>WhatsApp</h2><span class="sub">Baileys QR mode · dashboard messaging</span></div>
+        <div class="vbody wa-grid">
+          <div class="wa-panel">
+            <div class="wa-status">
+              <div class="wa-qr"><img id="wa-qr-img" alt="WhatsApp QR"></div>
+              <div>
+                <div id="wa-state" style="font-size:13px;font-weight:800">Starting bridge...</div>
+                <div id="wa-detail" style="font-size:11px;color:var(--t3);line-height:1.5;margin-top:4px">Scan the QR with WhatsApp Linked Devices when it appears.</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+                  <button type="button" class="bigbtn ghost smallbtn" onclick="waRefresh()">Refresh</button>
+                  <button type="button" class="bigbtn ghost smallbtn" onclick="waReconnect()">Reconnect</button>
+                  <button type="button" class="bigbtn ghost smallbtn" onclick="waOpenWeb()">WhatsApp Web</button>
+                  <button type="button" class="bigbtn ghost smallbtn danger" onclick="waLogout()">Logout</button>
+                </div>
+              </div>
+            </div>
+            <div style="padding:8px;border-bottom:1px solid var(--line)">
+              <input class="field" id="wa-new-chat" placeholder="Phone number or jid" style="margin:0;font-size:12px" onkeydown="if(event.key==='Enter')waSelectManualChat()">
+              <button type="button" class="bigbtn smallbtn" style="margin-top:6px;width:100%" onclick="waSelectManualChat()">Open Chat</button>
+            </div>
+            <div class="wa-chat-list" id="wa-chats"><div style="font-size:11px;color:var(--t3);padding:8px">No chats loaded yet.</div></div>
           </div>
-          <div class="navlabel">Send Message via Link</div>
-          <div style="display:flex;flex-direction:column;gap:8px;max-width:520px;margin-bottom:18px">
-            <input class="field" id="wa-num" placeholder="Phone number e.g. 919876543210" style="margin:0">
-            <textarea class="field" id="wa-msg" placeholder="Message to send..." rows="3" style="margin:0;resize:vertical"></textarea>
-            <button type="button" class="bigbtn solid" onclick="waSend()">Send via WhatsApp</button>
+          <div class="wa-panel">
+            <div style="padding:10px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center">
+              <div style="min-width:0;flex:1">
+                <div id="wa-peer-title" style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Select a WhatsApp chat</div>
+                <div id="wa-peer-sub" style="font-size:10px;color:var(--t3)">Messages are sent through the local Baileys bridge.</div>
+              </div>
+              <button type="button" class="bigbtn ghost smallbtn" onclick="waHandoffCall('voice')">Call</button>
+              <button type="button" class="bigbtn ghost smallbtn" onclick="waHandoffCall('video')">Video</button>
+            </div>
+            <div class="wa-thread" id="wa-thread"><div style="font-size:12px;color:var(--t3)">Scan QR and select a chat.</div></div>
+            <div class="wa-compose">
+              <input type="file" id="wa-file" style="display:none">
+              <button type="button" class="bigbtn" onclick="$('wa-file').click()">📎</button>
+              <input class="field" id="wa-msg" placeholder="Message..." style="margin:0;flex:1" onkeydown="if(event.key==='Enter')waSend()">
+              <button type="button" class="bigbtn solid" onclick="waSend()">Send</button>
+            </div>
+            <div id="wa-out" class="outbox" style="display:none;margin:10px"></div>
           </div>
-          <div class="outbox" id="wa-out" style="display:none"></div>
-          <div class="navlabel" style="margin-top:14px">Webhook Log</div>
-          <div style="font-size:11px;color:var(--t3);line-height:1.6;margin-bottom:8px">Incoming webhooks are logged to <code style="color:var(--acc)">~/.chinna/logs/whatsapp-webhook.log</code></div>
         </div>
       </div>
       <!-- MACOS TOOLS -->
@@ -1385,6 +1440,7 @@ let chatxPeer = null;
 let chatxMessages = [];
 let chatxPollTimer = null;
 let chatxLastId = 0;
+let chatxRelayLastIds = {};
 let chatxPreview = { messageId: null, zoom: 1 };
 let chatxSeenIncoming = new Set();
 let chatxNotificationAsked = false;
@@ -1404,6 +1460,12 @@ let chatxLastStats = { at: 0, bytesSent: 0, bytesRecv: 0 };
 let chatxRtcConfig = { turnEnabled: false, turnUrls: '', turnUsername: '', turnCredential: '' };
 let chatxDevicePrefs = { micId: '', camId: '' };
 let chatxCallLog = [];
+let chatxInvitePayload = null;
+let chatxRelayConfig = { url: '', defaultUrl: '' };
+let waPollTimer = null;
+let waSelectedJid = '';
+let waChats = [];
+let waMessages = [];
 
 function applyTheme(theme, persist=true){
   const safe = ['dark','oled','light','macos'].includes(theme) ? theme : 'macos';
@@ -1885,6 +1947,7 @@ function go(v){
   if(v==='storage')loadStorage(HOME_PATH,false);
   if(v==='ai'){ loadAIStatus(); if(voiceEnabled) ensureVoiceUI(); setupAttachmentUI(); }
   if(v==='chatx'){ chatxInit(); }
+  if(v==='whatsapp'){ waInit(); }
   if(v==='settings'){ loadTelegramStatus(); loadKeySettings(); }
   if(v==='projects') loadProjectsView();
 }
@@ -2592,6 +2655,8 @@ async function loadKeySettings(){
   if($('set-turn-urls')) $('set-turn-urls').value = k.turn_urls || '';
   if($('set-turn-user')) $('set-turn-user').value = k.turn_username || '';
   if($('set-turn-cred')) $('set-turn-cred').value = k.turn_credential || '';
+  if($('set-chat-relay')) $('set-chat-relay').value = k.chat_relay_url || '';
+  chatxRelayConfig = { url: k.chat_relay_url || '', defaultUrl: k.chat_default_relay_url || location.origin };
   if($('turn-test-status')) $('turn-test-status').textContent = (k.turn_enabled && (k.turn_urls||'').trim()) ? 'TURN configured. Run test to verify relay.' : 'No TURN test yet.';
 }
 async function loadTelegramStatus(){
@@ -2608,6 +2673,7 @@ const CHATX_KEYS = {
   name: 'chinna_chatx_name',
   priv: 'chinna_chatx_priv_jwk',
   pub: 'chinna_chatx_pub_jwk',
+  invite: 'chinna_chatx_invite_token',
   contacts: 'chinna_chatx_contacts',
   mediaPrefs: 'chinna_chatx_media_prefs',
   callLog: 'chinna_chatx_call_log'
@@ -2623,6 +2689,56 @@ function chatxHash(str){
     h = Math.imul(h,16777619);
   }
   return h>>>0;
+}
+function chatxRandomId(){
+  const bytes = new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+  return 'u' + Array.from(bytes, b => (b % 36).toString(36)).join('');
+}
+function chatxRandomToken(){
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes)).replace(/[+/=]/g, c=>({'+':'-','/':'_','=':''}[c]));
+}
+async function chatxSha256Hex(text){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(text||'')));
+  return Array.from(new Uint8Array(buf), b=>b.toString(16).padStart(2,'0')).join('');
+}
+function chatxRelayBase(){
+  return (chatxRelayConfig.url || chatxRelayConfig.defaultUrl || location.origin).replace(/\/+$/,'');
+}
+function chatxRelayApi(path, opt){
+  const base = chatxRelayBase();
+  return chatxApiAt(base, path, opt);
+}
+function chatxApiAt(base, path, opt){
+  const url = `${base}/api/${path.replace(/^\/+/,'')}`;
+  return fetch(url, opt).then(r=>r.json());
+}
+function chatxEncodeInvite(payload){
+  return btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/[+/=]/g, c=>({'+':'-','/':'_','=':''}[c]));
+}
+function chatxDecodeInvite(raw){
+  const value = String(raw||'').trim();
+  if(!value) return null;
+  if(value.startsWith('chinna://chat-invite?')){
+    return Object.fromEntries(new URLSearchParams(value.split('?')[1]));
+  }
+  if(/^https?:\/\//i.test(value) && value.includes('chat_invite=')){
+    const u = new URL(value);
+    return chatxDecodeInvite(u.searchParams.get('chat_invite'));
+  }
+  if(value.startsWith('{')){
+    return JSON.parse(value);
+  }
+  if(value.startsWith('chx1.')){
+    const b64 = value.slice(5).replace(/-/g,'+').replace(/_/g,'/');
+    return JSON.parse(decodeURIComponent(escape(atob(b64))));
+  }
+  return null;
+}
+function chatxQrUrl(data, size=220){
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(data)}`;
 }
 function chatxAvatarData(id,size=64){
   const c=document.createElement('canvas');
@@ -2658,7 +2774,7 @@ async function chatxEnsureIdentity(){
   let priv = localStorage.getItem(CHATX_KEYS.priv);
   let pub = localStorage.getItem(CHATX_KEYS.pub);
   if(!id){
-    id = chatxUuid();
+    id = chatxRandomId();
     localStorage.setItem(CHATX_KEYS.id,id);
   }
   if(!name){
@@ -2674,13 +2790,44 @@ async function chatxEnsureIdentity(){
     localStorage.setItem(CHATX_KEYS.priv, priv);
     localStorage.setItem(CHATX_KEYS.pub, pub);
   }
-  chatxIdentity = { id, name, privJwk: JSON.parse(priv), pubJwk: JSON.parse(pub) };
-  await api('chat/register',{
+  let invite = localStorage.getItem(CHATX_KEYS.invite);
+  if(!invite){
+    invite = chatxRandomToken();
+    localStorage.setItem(CHATX_KEYS.invite, invite);
+  }
+  chatxIdentity = { id, name, privJwk: JSON.parse(priv), pubJwk: JSON.parse(pub), invite };
+  await chatxPublishInvite();
+  return chatxIdentity;
+}
+
+async function chatxPublishInvite(){
+  if(!chatxIdentity) return;
+  const pubRaw = JSON.stringify(chatxIdentity.pubJwk);
+  const fingerprint = (await chatxSha256Hex(pubRaw)).slice(0, 32);
+  const inviteHash = await chatxSha256Hex(chatxIdentity.invite);
+  chatxIdentity.fingerprint = fingerprint;
+  chatxInvitePayload = {
+    v: 1,
+    type: 'chinna_secure_chat_invite',
+    user_id: chatxIdentity.id,
+    display_name: chatxIdentity.name,
+    token: chatxIdentity.invite,
+    relay_url: chatxRelayBase(),
+    fingerprint
+  };
+  await chatxRelayApi('chat/register',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({user_id:id,display_name:name,public_key_jwk:chatxIdentity.pubJwk})
+    body:JSON.stringify({
+      user_id:chatxIdentity.id,
+      display_name:chatxIdentity.name,
+      public_key_jwk:chatxIdentity.pubJwk,
+      invite_token_hash:inviteHash,
+      relay_url:chatxRelayBase(),
+      fingerprint
+    })
   }).catch(()=>{});
-  return chatxIdentity;
+  chatxRenderInviteCard();
 }
 
 function chatxLoadContacts(){
@@ -2824,7 +2971,7 @@ async function testTurnConnectivity(){
   if(out) out.textContent = 'Testing TURN relay...';
   let pc = null;
   try{
-    pc = new RTCPeerConnection({iceServers:[{urls, username, credential}]});
+    pc = new RTCPeerConnection({iceServers:[{urls, username, credential}], iceTransportPolicy:'relay'});
     pc.createDataChannel('turn-probe');
     let relayFound = false;
     let candidateSeen = false;
@@ -2841,8 +2988,8 @@ async function testTurnConnectivity(){
       if(out) out.textContent = 'TURN test passed: relay candidate received.';
       toast('TURN relay reachable');
     }else if(candidateSeen){
-      if(out) out.textContent = 'TURN test failed: only non-relay candidates were gathered.';
-      toast('TURN relay unavailable (no relay candidate)');
+      if(out) out.textContent = 'TURN test failed: candidates were gathered, but none were usable relay candidates. Check TURN URL, username, credential, and firewall.';
+      toast('TURN relay unavailable');
     }else{
       if(out) out.textContent = 'TURN test failed: no ICE candidates gathered.';
       toast('TURN test failed: no candidates');
@@ -3184,7 +3331,7 @@ async function chatxSendSignal(peerId, signal){
     ts: Date.now()
   };
   const enc = await chatxEncrypt(peer.pub, payload);
-  await api('chat/send',{
+  await chatxApiAt(peer.relay_url || chatxRelayBase(), 'chat/send',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
@@ -3465,6 +3612,7 @@ async function chatxEndCall(notifyPeer=true, toastDone=true){
 }
 
 async function chatxInit(){
+  await loadKeySettings().catch(()=>{});
   const me = await chatxEnsureIdentity();
   await chatxLoadRtcConfig();
   chatxLoadDevicePrefs();
@@ -3497,6 +3645,20 @@ async function chatxInit(){
   if(fi){ fi.onchange=()=>toast(fi.files?.[0]?`Attached ${fi.files[0].name}`:''); }
 }
 
+function chatxInviteString(){
+  if(!chatxInvitePayload) return '';
+  return 'chx1.' + chatxEncodeInvite(chatxInvitePayload);
+}
+
+function chatxRenderInviteCard(){
+  if(!chatxInvitePayload) return;
+  const invite = chatxInviteString();
+  const qr = $('chatx-invite-qr');
+  if(qr) qr.src = chatxQrUrl(invite, 240);
+  if($('chatx-fingerprint')) $('chatx-fingerprint').textContent = `Key ${chatxInvitePayload.fingerprint}`;
+  if($('chatx-relay-label')) $('chatx-relay-label').textContent = `Relay: ${chatxInvitePayload.relay_url || 'this Mac'}`;
+}
+
 function renderChatxContacts(){
   const el=$('chatx-contacts');
   if(!el) return;
@@ -3514,25 +3676,46 @@ function renderChatxContacts(){
 
 async function chatxAddContact(){
   const me = await chatxEnsureIdentity();
-  const pid = ($('chatx-add-id').value||'').trim();
-  if(!pid){
-    toast('Enter friend ID');
+  const raw = ($('chatx-add-id').value||'').trim();
+  if(!raw){
+    toast('Paste an invite or friend ID');
     return;
   }
-  const d = await api(`chat/user?id=${encodeURIComponent(pid)}`).catch(()=>({error:'User not found'}));
+  let invite = null;
+  try{ invite = chatxDecodeInvite(raw); }catch{}
+  const pid = invite?.user_id || raw;
+  const relay = (invite?.relay_url || chatxRelayBase()).replace(/\/+$/,'');
+  const token = invite?.token || '';
+  const d = await chatxApiAt(relay, `chat/user?id=${encodeURIComponent(pid)}&token=${encodeURIComponent(token)}`).catch(()=>({error:'User not found'}));
   if(d.error){
-    if(String(d.error).toLowerCase().includes('user not found')){
-      toast('User not found. Ask your contact to open Secure Chat once, then try again.');
+    const err = String(d.error).toLowerCase();
+    if(err.includes('invite token')){
+      toast('Invite token required. Ask your contact to share their Secure Chat QR/link.');
+    }else if(err.includes('user not found')){
+      toast('User not found on this relay. Ask your contact to open Secure Chat and share the invite QR/link.');
     }else{
       toast(d.error);
     }
     return;
   }
   if(!chatxContacts.find(x=>x.id===d.id)){
-    chatxContacts.push({id:d.id,name:d.display_name||d.id,pub:d.public_key_jwk});
+    chatxContacts.push({id:d.id,name:d.display_name||d.id,pub:d.public_key_jwk,relay_url:relay,fingerprint:d.fingerprint||invite?.fingerprint||''});
     chatxSaveContacts();
   }
-  await api('chat/add-contact',{
+  const myPubRaw = JSON.stringify(me.pubJwk);
+  await chatxApiAt(relay, 'chat/register',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      user_id:me.id,
+      display_name:me.name,
+      public_key_jwk:me.pubJwk,
+      invite_token_hash:await chatxSha256Hex(me.invite),
+      relay_url:chatxRelayBase(),
+      fingerprint:(await chatxSha256Hex(myPubRaw)).slice(0,32)
+    })
+  }).catch(()=>{});
+  await chatxApiAt(relay, 'chat/add-contact',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({user_id:me.id,peer_id:d.id})
@@ -3608,7 +3791,7 @@ async function chatxSend(){
 
   const payload = { text, file, sender: me.name, ts: Date.now() };
   const enc = await chatxEncrypt(peer.pub, payload);
-  const s = await api('chat/send',{
+  const s = await chatxApiAt(peer.relay_url || chatxRelayBase(), 'chat/send',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({from_id:me.id,to_id:peer.id,iv_b64:enc.iv_b64,cipher_b64:enc.cipher_b64,meta:{has_file:!!file,file_name:file?.name||''}})
@@ -3622,37 +3805,45 @@ async function chatxSend(){
 
 async function chatxPoll(){
   if(!chatxIdentity) return;
-  const prevLastId = Number(chatxLastId||0);
-  const d = await api(`chat/poll?user_id=${encodeURIComponent(chatxIdentity.id)}&since_id=${chatxLastId}`).catch(()=>null);
-  if(!d || d.error) return;
+  const relays = [...new Set([chatxRelayBase(), ...chatxContacts.map(c=>c.relay_url).filter(Boolean).map(x=>x.replace(/\/+$/,''))])];
+  let plainIncoming = [];
+  let notifyIncoming = [];
+  for(const relay of relays){
+    const prevLastId = Number(chatxRelayLastIds[relay] || 0);
+    const d = await chatxApiAt(relay, `chat/poll?user_id=${encodeURIComponent(chatxIdentity.id)}&since_id=${prevLastId}`).catch(()=>null);
+    if(!d || d.error) continue;
 
-  const incoming = (d.messages||[]).filter(m=>{
-    const mid = Number(m?.id||0);
-    return mid > prevLastId && m.to_id===chatxIdentity.id && m.from_id!==chatxIdentity.id;
-  });
-  chatxLastId = Math.max(prevLastId, Number(d.last_id||0));
+    const incoming = (d.messages||[]).filter(m=>{
+      const mid = Number(m?.id||0);
+      return mid > prevLastId && m.to_id===chatxIdentity.id && m.from_id!==chatxIdentity.id;
+    });
+    chatxRelayLastIds[relay] = Math.max(prevLastId, Number(d.last_id||0));
+    chatxLastId = Math.max(chatxLastId, chatxRelayLastIds[relay]);
 
-  const plainIncoming = [];
-  for(const m of incoming){
-    const mid = Number(m?.id||0);
-    if(!mid || chatxSignalSeen.has(mid)) continue;
-    chatxSignalSeen.add(mid);
-    const peer = chatxContacts.find(c=>c.id===m.from_id);
-    if(!peer?.pub){
-      plainIncoming.push(m);
-      continue;
-    }
-    let payload = null;
-    try{ payload = await chatxDecrypt(peer.pub, m.iv_b64, m.cipher_b64); }catch{}
-    if(payload?.__chatx_call){
-      await chatxHandleCallSignal(m.from_id, payload);
-    }else{
-      plainIncoming.push(m);
+    for(const m of incoming){
+      const mid = Number(m?.id||0);
+      const signalKey = `${relay}:${mid}`;
+      if(!mid || chatxSignalSeen.has(signalKey)) continue;
+      chatxSignalSeen.add(signalKey);
+      const peer = chatxContacts.find(c=>c.id===m.from_id);
+      if(!peer?.pub){
+        plainIncoming.push(m);
+        if(prevLastId > 0) notifyIncoming.push(m);
+        continue;
+      }
+      let payload = null;
+      try{ payload = await chatxDecrypt(peer.pub, m.iv_b64, m.cipher_b64); }catch{}
+      if(payload?.__chatx_call){
+        await chatxHandleCallSignal(m.from_id, payload);
+      }else{
+        plainIncoming.push(m);
+        if(prevLastId > 0) notifyIncoming.push(m);
+      }
     }
   }
 
-  if(prevLastId > 0 && plainIncoming.length){
-    plainIncoming.slice(-6).forEach(chatxNotifyIncoming);
+  if(notifyIncoming.length){
+    notifyIncoming.slice(-6).forEach(chatxNotifyIncoming);
   }
   if(chatxPeer) await chatxLoadHistory();
 }
@@ -3661,7 +3852,7 @@ async function chatxLoadHistory(){
   if(!chatxPeer || !chatxIdentity) return;
   const peer = chatxContacts.find(x=>x.id===chatxPeer);
   if(!peer) return;
-  const d = await api(`chat/history?user_id=${encodeURIComponent(chatxIdentity.id)}&peer_id=${encodeURIComponent(chatxPeer)}&limit=240`).catch(()=>({messages:[]}));
+  const d = await chatxApiAt(peer.relay_url || chatxRelayBase(), `chat/history?user_id=${encodeURIComponent(chatxIdentity.id)}&peer_id=${encodeURIComponent(chatxPeer)}&limit=240`).catch(()=>({messages:[]}));
   const msgs=[];
   for(const m of (d.messages||[])){
     try{
@@ -3718,6 +3909,12 @@ function chatxCopyId(){
   navigator.clipboard.writeText(chatxIdentity.id).then(()=>toast('Chat ID copied'));
 }
 
+function chatxCopyInvite(){
+  const invite = chatxInviteString();
+  if(!invite) return;
+  navigator.clipboard.writeText(invite).then(()=>toast('Secure Chat invite copied'));
+}
+
 async function chatxForward(mid){
   const m = chatxMessages.find(x=>String(x.id)===String(mid));
   if(!m) return;
@@ -3735,7 +3932,7 @@ async function chatxForward(mid){
   }
   const payload = m.payload||{};
   const enc = await chatxEncrypt(peer.pub, payload);
-  await api('chat/send',{
+  await chatxApiAt(peer.relay_url || chatxRelayBase(), 'chat/send',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({from_id:chatxIdentity.id,to_id:peer.id,iv_b64:enc.iv_b64,cipher_b64:enc.cipher_b64,meta:{forwarded:true,has_file:!!payload.file}})
@@ -4172,12 +4369,15 @@ async function saveKeys(){
   b.turn_urls = $('set-turn-urls')?.value?.trim?.() || '';
   b.turn_username = $('set-turn-user')?.value?.trim?.() || '';
   b.turn_credential = $('set-turn-cred')?.value || '';
+  b.chat_relay_url = $('set-chat-relay')?.value?.trim?.() || '';
   const d=await api('save_keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
   toast(d.result||'Saved');
   $('set-or').value='';
   $('set-oa').value='';
   if($('turn-test-status')) $('turn-test-status').textContent = 'Settings saved. Run TURN test.';
+  await loadKeySettings().catch(()=>{});
   await chatxLoadRtcConfig().catch(()=>{});
+  if(chatxIdentity) await chatxPublishInvite().catch(()=>{});
 }
 async function saveTelegramToken(){
   const token=$('tg-token').value.trim();
@@ -4452,21 +4652,155 @@ renderRailProjects(); // initial load of tracked projects
 
 
 // ── WHATSAPP ─────────────────────────────────────────────────
-async function waOpen(){
-  await api('whatsapp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'open'})});
-  toast('Opening WhatsApp...');
-}
 function waOpenWeb(){ window.open('https://web.whatsapp.com','_blank'); }
+function waQrImage(qr){
+  return qr ? chatxQrUrl(qr, 256) : '';
+}
+function waSetStatus(d){
+  const state = $('wa-state');
+  const detail = $('wa-detail');
+  const img = $('wa-qr-img');
+  if(!state || !detail || !img) return;
+  if(d.connected){
+    state.textContent = 'Connected';
+    const me = d.me?.id || d.me?.name || 'WhatsApp linked';
+    detail.textContent = `${me} · ${d.chats||0} chats loaded`;
+    img.removeAttribute('src');
+    img.alt = 'WhatsApp connected';
+  }else if(d.qr || d.has_qr){
+    state.textContent = 'Scan WhatsApp QR';
+    detail.textContent = 'Open WhatsApp on your phone, go to Linked Devices, and scan this code.';
+    img.src = waQrImage(d.qr);
+  }else if(d.error || d.last_error){
+    state.textContent = 'Bridge needs attention';
+    detail.textContent = d.error || d.last_error;
+    img.removeAttribute('src');
+  }else{
+    state.textContent = 'Starting QR mode';
+    detail.textContent = 'Waiting for Baileys to produce a WhatsApp QR code.';
+    img.removeAttribute('src');
+  }
+}
+async function waInit(){
+  await waRefresh();
+  if(!waPollTimer) waPollTimer = setInterval(waRefresh, 2500);
+}
+async function waRefresh(){
+  const d = await api('whatsapp/status').catch(e=>({error:e?.message||'WhatsApp bridge unavailable'}));
+  waSetStatus(d);
+  if(d.connected) await waLoadChats();
+}
+async function waLoadChats(){
+  const d = await api('whatsapp/chats').catch(()=>({chats:[]}));
+  waChats = d.chats || [];
+  renderWaChats();
+}
+function waInitial(name){
+  return String(name||'?').trim().slice(0,1).toUpperCase() || '?';
+}
+function renderWaChats(){
+  const el = $('wa-chats');
+  if(!el) return;
+  if(!waChats.length){
+    el.innerHTML = '<div style="font-size:11px;color:var(--t3);padding:8px">No chats yet. Open a phone number manually or wait for WhatsApp sync.</div>';
+    return;
+  }
+  el.innerHTML = waChats.map(c=>{
+    const name = c.name || c.jid || 'Chat';
+    const last = c.last || c.jid || '';
+    return `<div class="wa-chat-item ${waSelectedJid===c.jid?'on':''}" onclick="waSelectChat('${esc(c.jid)}','${esc(name)}')">
+      <div class="wa-avatar">${escHtml(waInitial(name))}</div>
+      <div style="min-width:0;flex:1">
+        <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(name)}</div>
+        <div style="font-size:10px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(last)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function waNormalizeJid(value){
+  const raw = String(value||'').trim();
+  if(!raw) return '';
+  if(raw.includes('@')) return raw;
+  const digits = raw.replace(/\D/g,'');
+  return digits ? `${digits}@s.whatsapp.net` : '';
+}
+function waSelectManualChat(){
+  const raw = $('wa-new-chat')?.value || '';
+  const jid = waNormalizeJid(raw);
+  if(!jid){ toast('Enter a WhatsApp phone number or jid'); return; }
+  waSelectChat(jid, raw);
+}
+async function waSelectChat(jid, name=''){
+  waSelectedJid = jid;
+  $('wa-peer-title').textContent = name || jid;
+  $('wa-peer-sub').textContent = jid;
+  renderWaChats();
+  await waLoadMessages();
+}
+async function waLoadMessages(){
+  if(!waSelectedJid) return;
+  const d = await api(`whatsapp/messages?chat=${encodeURIComponent(waSelectedJid)}`).catch(()=>({messages:[]}));
+  waMessages = d.messages || [];
+  renderWaThread();
+}
+function renderWaThread(){
+  const el = $('wa-thread');
+  if(!el) return;
+  if(!waMessages.length){
+    el.innerHTML = '<div style="font-size:12px;color:var(--t3)">No cached messages yet. Send a message or wait for sync.</div>';
+    return;
+  }
+  el.innerHTML = waMessages.map(m=>{
+    const mine = m.fromMe;
+    const time = new Date(Number(m.timestamp||0)*1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    return `<div class="wa-msg ${mine?'mine':''}">
+      <div class="wa-msg-meta">${mine?'You':escHtml(m.pushName||m.participant||'Contact')} · ${escHtml(time)} · ${escHtml(m.type||'message')}</div>
+      <div style="white-space:pre-wrap">${escHtml(m.text || '[media/message]')}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
 async function waSend(){
-  const num=document.getElementById('wa-num')?.value?.trim();
-  const msg=document.getElementById('wa-msg')?.value?.trim();
-  if(!num){toast('Enter a phone number');return;}
-  if(!msg){toast('Enter a message');return;}
-  const d=await api('whatsapp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'send',number:num,message:msg})});
-  const out=document.getElementById('wa-out');
-  if(out){out.style.display='';out.textContent=d.ok?'Link opened: '+d.url:(d.error||'error');}
-  if(d.ok) toast('WhatsApp link opened!');
-  else toast('Error: '+d.error);
+  const msg=$('wa-msg')?.value?.trim() || '';
+  const file=$('wa-file')?.files?.[0];
+  if(!waSelectedJid){
+    waSelectManualChat();
+    if(!waSelectedJid) return;
+  }
+  if(!msg && !file){ toast('Enter a message or attach a file'); return; }
+  const body = {jid:waSelectedJid,text:msg};
+  if(file){
+    body.file_b64 = await fileToBase64(file);
+    body.mime = file.type || 'application/octet-stream';
+    body.name = file.name || 'file';
+  }
+  const d=await api('whatsapp/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const out=$('wa-out');
+  if(out){out.style.display='';out.textContent=d.ok?'Sent via WhatsApp bridge':(d.error||'error');}
+  if(d.ok){
+    $('wa-msg').value='';
+    if($('wa-file')) $('wa-file').value='';
+    toast('WhatsApp message sent');
+    await waLoadMessages();
+    await waLoadChats();
+  }else toast('WhatsApp error: '+d.error);
+}
+async function waReconnect(){
+  const d=await api('whatsapp/reconnect',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(e=>({error:e?.message||'failed'}));
+  waSetStatus(d);
+  toast(d.error ? d.error : 'WhatsApp bridge reconnecting');
+}
+async function waLogout(){
+  if(!confirm('Log out of WhatsApp on this Chinna dashboard? You will need to scan QR again.')) return;
+  const d=await api('whatsapp/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(e=>({error:e?.message||'failed'}));
+  waSelectedJid=''; waChats=[]; waMessages=[]; renderWaChats(); renderWaThread(); waSetStatus(d);
+  toast(d.error ? d.error : 'WhatsApp logged out');
+}
+async function waHandoffCall(mode){
+  if(!waSelectedJid){ toast('Select a WhatsApp chat first'); return; }
+  const d=await api('whatsapp/handoff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jid:waSelectedJid,mode})});
+  if(d.url) window.open(d.url, '_blank');
+  toast(d.note || 'Opening WhatsApp for call handoff');
 }
 // ── V6 INIT ──────────────────────────────────────────────────
 function initV6(){

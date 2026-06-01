@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Chinna V6 — Dashboard Server (Python stdlib only, zero deps)."""
-import base64, hashlib, http.server, json, os, plistlib, re, secrets, shutil, subprocess, sys, tempfile, threading, time, traceback, unicodedata, urllib.parse, urllib.request
+import base64, hashlib, http.server, json, os, plistlib, re, secrets, shutil, subprocess, sys, tempfile, threading, time, traceback, unicodedata, urllib.error, urllib.parse, urllib.request
 from datetime import datetime, timezone
 
 CHINNA_VERSION = "6.0.0"
@@ -11,6 +11,11 @@ HOME = os.path.expanduser('~')
 API_KEYS_FILE = os.path.join(CHINNA_HOME, 'api_keys.json')
 PAIR_STATE_FILE = os.path.join(CHINNA_HOME, 'telegram_pair.json')
 CHAT_DB_FILE = os.path.join(CHINNA_HOME, 'state/chat_db.json')
+WHATSAPP_DIR = os.path.join(CHINNA_HOME, 'whatsapp')
+WHATSAPP_BRIDGE_DIR = os.path.join(CHINNA_HOME, 'whatsapp_bridge')
+WHATSAPP_BRIDGE_PORT = int(os.environ.get('CHINNA_WHATSAPP_BRIDGE_PORT', str(PORT + 81)))
+WHATSAPP_BRIDGE_PID_FILE = os.path.join(WHATSAPP_DIR, 'bridge.pid')
+WHATSAPP_BRIDGE_LOG = os.path.join(WHATSAPP_DIR, 'bridge.log')
 
 # Shared TURN fallback for first-run users. Override via env if needed.
 DEFAULT_TURN_URLS = os.environ.get(
@@ -165,6 +170,7 @@ def load_keys():
         'TURN_URLS',
         'TURN_USERNAME',
         'TURN_CREDENTIAL',
+        'CHAT_RELAY_URL',
     ):
         if not keys.get(name) and shell_cfg.get(name):
             keys[name] = shell_cfg[name]
@@ -190,6 +196,31 @@ def generate_turn_credentials():
     uname = 'chinna-' + secrets.token_hex(4)
     cred = secrets.token_urlsafe(24)
     return uname, cred
+
+def token_hash(value):
+    value = safe_text(value)
+    return hashlib.sha256(value.encode()).hexdigest() if value else ''
+
+def normalize_relay_url(value):
+    value = safe_text(value).rstrip('/')
+    if not value:
+        return ''
+    if not re.match(r'^https?://', value, re.I):
+        value = 'http://' + value
+    return value.rstrip('/')
+
+def dashboard_origin():
+    return f"http://localhost:{PORT}"
+
+def find_executable(name):
+    found = shutil.which(name)
+    if found:
+        return found
+    for prefix in ('/opt/homebrew/bin', '/usr/local/bin', '/usr/bin'):
+        candidate = os.path.join(prefix, name)
+        if os.path.exists(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return ''
 
 def save_pair_state(state):
     write_json(PAIR_STATE_FILE, state)
@@ -1401,6 +1432,8 @@ class H(http.server.SimpleHTTPRequestHandler):
                 'turn_username': safe_text(k.get('TURN_USERNAME', '')),
                 'turn_credential': safe_text(k.get('TURN_CREDENTIAL', '')),
                 'turn_credential_set': bool(k.get('TURN_CREDENTIAL')),
+                'chat_relay_url': safe_text(k.get('CHAT_RELAY_URL', '')),
+                'chat_default_relay_url': dashboard_origin(),
             })
         elif p == '/api/version':
             self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6'})
@@ -1411,15 +1444,24 @@ class H(http.server.SimpleHTTPRequestHandler):
         elif p == '/api/projects':
             self.serve_projects()
         elif p == '/api/whatsapp/status':
-            self._json({'ok': True, 'app': 'WhatsApp', 'web': 'https://web.whatsapp.com'})
+            self.whatsapp_proxy('GET', '/status')
         elif p == '/api/telegram/status':
             self._json(telegram_status())
         elif p in ('/api/chat/user', '/chat/api/user'):
-            self.chat_get_user(q.get('id', ''))
+            self.chat_get_user(q.get('id', ''), q.get('token', ''))
+        elif p in ('/api/chat/invite', '/chat/api/invite'):
+            self.chat_get_invite(q)
         elif p in ('/api/chat/poll', '/chat/api/poll'):
             self.chat_poll(q)
         elif p in ('/api/chat/history', '/chat/api/history'):
             self.chat_history(q)
+        elif p == '/api/whatsapp/qr':
+            self.whatsapp_proxy('GET', '/qr')
+        elif p == '/api/whatsapp/chats':
+            self.whatsapp_proxy('GET', '/chats')
+        elif p == '/api/whatsapp/messages':
+            chat = urllib.parse.quote(q.get('chat', ''), safe='')
+            self.whatsapp_proxy('GET', f'/messages?chat={chat}')
         elif p in ('/',''):
             self.path = '/index.html'; super().do_GET()
         elif p.startswith('/api/'):
@@ -1443,6 +1485,7 @@ class H(http.server.SimpleHTTPRequestHandler):
             if b.get('turn_urls') is not None: d['TURN_URLS'] = safe_text(b.get('turn_urls', ''))[:800]
             if b.get('turn_username') is not None: d['TURN_USERNAME'] = safe_text(b.get('turn_username', ''))[:120]
             if b.get('turn_credential') is not None: d['TURN_CREDENTIAL'] = safe_text(b.get('turn_credential', ''))[:200]
+            if b.get('chat_relay_url') is not None: d['CHAT_RELAY_URL'] = normalize_relay_url(b.get('chat_relay_url', ''))[:300]
             save_keys(d); self._json({'result':'✅ Keys saved'})
         elif p == '/api/turn/generate':
             uname, cred = generate_turn_credentials()
@@ -1546,6 +1589,14 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.whatsapp_action(b)
         elif p == '/api/whatsapp-webhook':
             self.whatsapp_webhook(b)
+        elif p == '/api/whatsapp/send':
+            self.whatsapp_proxy('POST', '/send', b)
+        elif p == '/api/whatsapp/logout':
+            self.whatsapp_proxy('POST', '/logout', b)
+        elif p == '/api/whatsapp/reconnect':
+            self.whatsapp_proxy('POST', '/reconnect', b)
+        elif p == '/api/whatsapp/handoff':
+            self.whatsapp_proxy('POST', '/handoff', b)
         elif p == '/api/model-set':
             self._json(self.model_set_cmd(b.get('preset',''), b.get('custom','')))
         elif p == '/api/automation':
@@ -1717,6 +1768,9 @@ echo \"⬆️ Update Now | bash='{chinna_bin}' param1='update' param2='--apply' 
             return
         display = safe_text(b.get('display_name', uid))[:80]
         public_key = b.get('public_key_jwk') or {}
+        invite_hash = safe_text(b.get('invite_token_hash', ''))[:128]
+        relay_url = normalize_relay_url(b.get('relay_url', ''))[:300]
+        fingerprint = safe_text(b.get('fingerprint', ''))[:80]
 
         with chat_lock:
             db = load_chat_db()
@@ -1725,13 +1779,19 @@ echo \"⬆️ Update Now | bash='{chinna_bin}' param1='update' param2='--apply' 
             u['id'] = uid
             u['display_name'] = display
             u['public_key_jwk'] = public_key
+            if invite_hash:
+                u['invite_token_hash'] = invite_hash
+            if relay_url:
+                u['relay_url'] = relay_url
+            if fingerprint:
+                u['fingerprint'] = fingerprint
             u['updated'] = int(time.time())
             u.setdefault('contacts', [])
             save_chat_db(db)
 
         self._json({'ok': True, 'user': {'id': uid, 'display_name': display}})
 
-    def chat_get_user(self, uid):
+    def chat_get_user(self, uid, invite_token=''):
         uid = safe_id(uid)
         if not uid:
             self._json({'error': 'id required'}, 400)
@@ -1741,12 +1801,23 @@ echo \"⬆️ Update Now | bash='{chinna_bin}' param1='update' param2='--apply' 
         if not u:
             self._json({'error': 'user not found'}, 404)
             return
+        stored_invite_hash = safe_text(u.get('invite_token_hash', ''))
+        if stored_invite_hash and token_hash(invite_token) != stored_invite_hash:
+            self._json({'error': 'invite token required for this user'}, 403)
+            return
         self._json({
             'id': uid,
             'display_name': u.get('display_name', uid),
             'public_key_jwk': u.get('public_key_jwk') or {},
+            'fingerprint': u.get('fingerprint', ''),
+            'relay_url': u.get('relay_url', ''),
             'updated': u.get('updated', 0)
         })
+
+    def chat_get_invite(self, q):
+        uid = safe_id(q.get('id', ''))
+        invite_token = q.get('token', '')
+        self.chat_get_user(uid, invite_token)
 
     def chat_add_contact(self, b):
         uid = safe_id(b.get('user_id'))
@@ -2387,6 +2458,92 @@ echo \"⬆️ Update Now | bash='{chinna_bin}' param1='update' param2='--apply' 
         job_log(jid, "Audit complete."); job_done(jid)
 
 
+    def whatsapp_bridge_source_dir(self):
+        candidates = [
+            WHATSAPP_BRIDGE_DIR,
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'whatsapp_bridge'),
+            os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'whatsapp_bridge')),
+        ]
+        for path in candidates:
+            if os.path.exists(os.path.join(path, 'server.js')):
+                return path
+        return WHATSAPP_BRIDGE_DIR
+
+    def whatsapp_bridge_running(self):
+        try:
+            if os.path.exists(WHATSAPP_BRIDGE_PID_FILE):
+                with open(WHATSAPP_BRIDGE_PID_FILE) as f:
+                    pid = int((f.read() or '0').strip() or '0')
+                if pid > 0:
+                    os.kill(pid, 0)
+                    return True
+        except Exception:
+            pass
+        return False
+
+    def ensure_whatsapp_bridge(self):
+        if self.whatsapp_bridge_running():
+            return True, ''
+        node_bin = find_executable('node')
+        npm_bin = find_executable('npm')
+        if not node_bin:
+            return False, 'Node.js is required for WhatsApp QR mode. Install it with `chinna brew` or Homebrew.'
+        bridge_dir = self.whatsapp_bridge_source_dir()
+        server_js = os.path.join(bridge_dir, 'server.js')
+        if not os.path.exists(server_js):
+            return False, f'WhatsApp bridge missing at {server_js}'
+        os.makedirs(WHATSAPP_DIR, exist_ok=True)
+        env = os.environ.copy()
+        node_dir = os.path.dirname(node_bin)
+        env['PATH'] = node_dir + os.pathsep + env.get('PATH', '')
+        if not os.path.exists(os.path.join(bridge_dir, 'node_modules')) and npm_bin:
+            try:
+                subprocess.run([npm_bin, 'install', '--omit=dev'], cwd=bridge_dir, env=env, timeout=180, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception:
+                pass
+        env.update({
+            'CHINNA_HOME': CHINNA_HOME,
+            'PORT': str(WHATSAPP_BRIDGE_PORT),
+            'HOST': '127.0.0.1',
+        })
+        try:
+            log = open(WHATSAPP_BRIDGE_LOG, 'a')
+            proc = subprocess.Popen([node_bin, server_js], cwd=bridge_dir, env=env, stdout=log, stderr=log, stdin=subprocess.DEVNULL)
+            with open(WHATSAPP_BRIDGE_PID_FILE, 'w') as f:
+                f.write(str(proc.pid))
+            time.sleep(1.2)
+            if proc.poll() is not None:
+                return False, 'WhatsApp bridge failed to start. Check ~/.chinna/whatsapp/bridge.log'
+            return True, ''
+        except Exception as e:
+            return False, safe_text(str(e))
+
+    def whatsapp_proxy(self, method, path, payload=None):
+        ok, err = self.ensure_whatsapp_bridge()
+        if not ok:
+            self._json({'ok': False, 'error': err}, 503)
+            return
+        url = f'http://127.0.0.1:{WHATSAPP_BRIDGE_PORT}{path}'
+        try:
+            data = None
+            headers = {}
+            if method == 'POST':
+                data = json.dumps(payload or {}).encode()
+                headers['Content-Type'] = 'application/json'
+            req = urllib.request.Request(url, data=data, headers=headers, method=method)
+            with urllib.request.urlopen(req, timeout=25) as resp:
+                raw = resp.read()
+                code = resp.getcode()
+            self._json(json.loads(raw.decode() or '{}'), code)
+        except urllib.error.HTTPError as e:
+            try:
+                body = json.loads(e.read().decode() or '{}')
+            except Exception:
+                body = {'ok': False, 'error': safe_text(str(e))}
+            self._json(body, e.code)
+        except Exception as e:
+            self._json({'ok': False, 'error': safe_text(str(e))}, 502)
+
     def whatsapp_action(self, b):
         action = b.get('action', 'open')
         number = b.get('number', '')
@@ -2395,15 +2552,13 @@ echo \"⬆️ Update Now | bash='{chinna_bin}' param1='update' param2='--apply' 
             sh("open -a WhatsApp 2>/dev/null || open 'https://web.whatsapp.com' 2>/dev/null")
             self._json({'ok': True, 'action': 'opened WhatsApp'})
         elif action == 'send':
-            import urllib.parse
-            # Normalize number: strip non-digits
-            clean = ''.join(c for c in number if c.isdigit())
-            if not clean:
-                self._json({'error': 'valid number required'}); return
-            encoded = urllib.parse.quote(message)
-            url = f"https://wa.me/{clean}?text={encoded}"
-            sh(f"open '{url}' 2>/dev/null")
-            self._json({'ok': True, 'url': url, 'number': clean})
+            self.whatsapp_proxy('POST', '/send', {'jid': number, 'text': message})
+        elif action == 'status':
+            self.whatsapp_proxy('GET', '/status')
+        elif action == 'reconnect':
+            self.whatsapp_proxy('POST', '/reconnect', b)
+        elif action == 'logout':
+            self.whatsapp_proxy('POST', '/logout', b)
         else:
             self._json({'error': f'unknown action: {action}'})
 
