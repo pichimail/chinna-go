@@ -168,6 +168,80 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-s
 [data-theme="macos"] .modal{border-radius:24px}
 [data-theme="macos"] .toast{background:rgba(255,255,255,.68);border-color:rgba(255,255,255,.85)}
 [data-theme="macos"] .launch-card{background:rgba(255,255,255,.68);border-color:rgba(255,255,255,.86)}
+[data-theme="macos"] #v6overlay{
+  background:rgba(44,46,48,.86);
+  -webkit-backdrop-filter:blur(18px) saturate(120%);
+  backdrop-filter:blur(18px) saturate(120%);
+  padding:clamp(18px,7vw,96px);
+}
+[data-theme="macos"] .v6-card{
+  width:min(1004px,calc(100vw - 72px));
+  max-width:none;
+  background:rgba(178,178,178,.78);
+  -webkit-backdrop-filter:blur(44px) saturate(150%);
+  backdrop-filter:blur(44px) saturate(150%);
+  border:3px solid rgba(232,232,232,.70);
+  border-radius:40px;
+  box-shadow:0 52px 150px rgba(4,9,18,.34), inset 0 1px 0 rgba(255,255,255,.30);
+  color:#111821;
+}
+[data-theme="macos"] .v6-head{
+  min-height:178px;
+  padding:52px 48px 34px;
+  border-bottom:2px solid rgba(236,236,236,.72);
+}
+[data-theme="macos"] .v6-title-row{gap:24px;align-items:center;margin:0}
+[data-theme="macos"] .v6-rocket{font-size:56px;line-height:1;filter:drop-shadow(0 12px 18px rgba(0,0,0,.12))}
+[data-theme="macos"] .v6-title{font-size:38px;line-height:1.06;font-weight:800;letter-spacing:0;color:#0a84ff}
+[data-theme="macos"] .v6-subtitle{font-size:24px;line-height:1.25;color:rgba(17,24,33,.52);margin-top:8px;font-weight:500}
+[data-theme="macos"] .v6-body{
+  padding:38px 48px 36px;
+  font-size:25px;
+  line-height:1.82;
+  color:rgba(17,24,33,.72);
+  letter-spacing:0;
+}
+[data-theme="macos"] .v6-body b{
+  display:block;
+  color:#121922;
+  font-size:26px;
+  line-height:1.2;
+  margin-bottom:12px;
+  font-weight:800;
+}
+[data-theme="macos"] .v6-foot{
+  min-height:144px;
+  padding:28px 48px 40px;
+  border-top:2px solid rgba(236,236,236,.72);
+  justify-content:flex-end;
+  align-items:center;
+}
+[data-theme="macos"] .v6-primary{
+  min-width:250px;
+  min-height:76px;
+  padding:0 34px;
+  border-radius:29px;
+  background:rgba(245,245,245,.72);
+  border:2px solid rgba(255,255,255,.92);
+  color:#111821;
+  font-size:25px;
+  font-weight:800;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.90), 0 18px 42px rgba(0,0,0,.10);
+}
+[data-theme="macos"] .v6-primary:hover{
+  background:rgba(255,255,255,.86);
+  transform:translateY(-1px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.96), 0 22px 48px rgba(0,0,0,.14);
+}
+[data-theme="macos"] .onboard-hero,
+[data-theme="macos"] .onboard-side,
+[data-theme="macos"] .onboard-step{
+  background:rgba(255,255,255,.52);
+  border:1px solid rgba(255,255,255,.68);
+  -webkit-backdrop-filter:blur(30px) saturate(170%);
+  backdrop-filter:blur(30px) saturate(170%);
+  box-shadow:0 24px 70px rgba(24,36,55,.12), inset 0 1px 0 rgba(255,255,255,.55);
+}
 
 @media (max-width: 1180px){
   html[data-theme="macos"] #body{flex-direction:column;padding-bottom:calc(var(--dock-reserve) + 12px)}
@@ -185,6 +259,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-s
   html[data-theme="macos"] .vbody{padding:0 14px 14px}
   html[data-theme="macos"] .toolbar{padding:8px 14px}
   html[data-theme="macos"] #dock{max-width:96vw;overflow-x:auto}
+  html[data-theme="macos"] .v6-card{width:min(720px,calc(100vw - 28px));border-radius:30px}
+  html[data-theme="macos"] .v6-head{min-height:0;padding:32px 28px 24px}
+  html[data-theme="macos"] .v6-rocket{font-size:42px}
+  html[data-theme="macos"] .v6-title{font-size:30px}
+  html[data-theme="macos"] .v6-subtitle{font-size:18px}
+  html[data-theme="macos"] .v6-body{padding:28px;font-size:18px;line-height:1.7}
+  html[data-theme="macos"] .v6-body b{font-size:20px}
+  html[data-theme="macos"] .v6-foot{min-height:104px;padding:22px 28px 28px}
+  html[data-theme="macos"] .v6-primary{min-width:210px;min-height:60px;font-size:19px;border-radius:23px}
 }
 [data-theme="oled"] .glass{
   background:transparent;
@@ -619,6 +702,17 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 .stack{display:flex;flex-direction:column;gap:8px}
 .chiprow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .chip{padding:5px 10px;border-radius:999px;background:rgba(var(--accr),.12);color:var(--acc);font-size:11px;font-weight:700}
+.plugin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.plugin-card{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.plugin-head{display:flex;align-items:flex-start;gap:11px}
+.plugin-icon{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:rgba(var(--accr),.12);color:var(--acc);font-size:20px;flex-shrink:0}
+.plugin-title{font-size:14px;font-weight:800;color:var(--t1)}
+.plugin-desc{font-size:12px;line-height:1.45;color:var(--t2);margin-top:2px}
+.plugin-category{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:800}
+.plugin-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:auto}
+.plugin-form{display:grid;gap:7px;width:100%}
+.plugin-form-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;width:100%}
+.plugin-log{margin-top:12px;min-height:56px;max-height:220px}
 .muted{color:var(--t3)}
 .sourcebox{margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.24);border:1px solid var(--line);font-size:11px;color:var(--t2);white-space:pre-wrap}
 .loadmore{display:flex;justify-content:center;padding:10px 0 6px}
@@ -636,6 +730,16 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 .launch-dots i:nth-child(2){animation-delay:.14s}
 .launch-dots i:nth-child(3){animation-delay:.28s}
 @keyframes launchDot{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-4px);opacity:1}}
+.v6-overlay{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.72);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);align-items:center;justify-content:center;padding:20px}
+.v6-card{max-width:500px;width:100%;border-radius:20px;overflow:hidden}
+.v6-head{padding:24px 24px 16px;border-bottom:1px solid var(--line)}
+.v6-title-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.v6-rocket{font-size:32px}
+.v6-title{font-weight:800;font-size:18px;color:var(--acc)}
+.v6-subtitle{font-size:12px;color:var(--t3);margin-top:3px}
+.v6-body{padding:16px 24px;font-size:12px;line-height:1.9;color:var(--t2)}
+.v6-body b{color:var(--t1)}
+.v6-foot{padding:14px 24px 20px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--line)}
 
 #view-chatx .chatx-grid{display:grid;grid-template-columns:280px 1fr;gap:10px;min-height:420px}
 #view-chatx .chatx-col{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03);display:flex;flex-direction:column;min-height:0}
@@ -832,6 +936,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
       <div class="navlabel">Tools</div>
       <div class="navitem" data-v="onboarding" onclick="go('onboarding')"><span class="ic">✨</span> Get Started</div>
       <div class="navitem" data-v="whatsapp" onclick="go('whatsapp')"><span class="ic">💬</span> WhatsApp</div>
+      <div class="navitem" data-v="plugins" onclick="go('plugins')"><span class="ic">🧩</span> Plugins</div>
       <div class="navitem" data-v="macos" onclick="go('macos')"><span class="ic">🍎</span> macOS Tools</div>
       <div class="navitem" data-v="models" onclick="go('models')"><span class="ic">🤖</span> Models &amp; AI</div>
       <div class="navitem" data-v="ai" onclick="go('ai')"><span class="ic">✦</span> Chinna AI</div>
@@ -1292,6 +1397,19 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
         </div>
       </div>
 
+      <div class="view" id="view-plugins">
+        <div class="vhead"><h2>Plugins</h2><span class="sub">Local Chinna extensions · dashboard and SwiftBar actions</span></div>
+        <div class="toolbar">
+          <button type="button" class="bigbtn solid" onclick="loadPlugins()">Refresh Plugins</button>
+          <button type="button" class="bigbtn" onclick="installSwiftBarQuickActions()">Install SwiftBar Actions</button>
+          <span class="count" id="plugin-count">—</span>
+        </div>
+        <div class="vbody">
+          <div class="plugin-grid" id="plugin-grid"></div>
+          <div class="outbox plugin-log" id="plugin-log">Select a plugin action to run it.</div>
+        </div>
+      </div>
+
       <!-- MODELS AND AI CONFIG -->
       <div class="view" id="view-models">
         <div class="vhead"><h2>Models &amp; AI</h2><span class="sub">Switch AI model · Automation mode</span></div>
@@ -1346,6 +1464,7 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
     <div class="dapp" onclick="go('storage')"><span>▦</span><span class="tip">Disk</span></div>
     <div class="dapp" onclick="toggleVoiceMode()"><span>🎙</span><span class="tip">Voice</span></div>
     <div class="dapp" onclick="go('whatsapp')" title="WhatsApp"><span>💬</span><span class="tip">WhatsApp</span></div>
+    <div class="dapp" onclick="go('plugins')" title="Plugins"><span>🧩</span><span class="tip">Plugins</span></div>
     <div class="dapp" onclick="go('macos')" title="macOS Tools"><span>🍎</span><span class="tip">macOS Tools</span></div>
     <div class="dapp" onclick="go('models')" title="Models"><span>🤖</span><span class="tip">Models &amp; AI</span></div>
     <div class="dapp" onclick="go('ai')"><span>✦</span><span class="tip">Chinna AI</span></div>
@@ -1395,16 +1514,16 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
 </div>
 
 <!-- V6 WELCOME / UPDATE OVERLAY -->
-<div id="v6overlay" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.72);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);align-items:center;justify-content:center;padding:20px">
-  <div class="glass" style="max-width:500px;width:100%;border-radius:20px;overflow:hidden">
-    <div style="padding:24px 24px 16px;border-bottom:1px solid var(--line)">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-        <span style="font-size:32px">🚀</span>
-        <div><div style="font-weight:800;font-size:18px;color:var(--acc)">Chinna V6 is here!</div><div style="font-size:12px;color:var(--t3);margin-top:3px">A major upgrade from V5</div></div>
+<div id="v6overlay" class="v6-overlay">
+  <div class="glass v6-card">
+    <div class="v6-head">
+      <div class="v6-title-row">
+        <span class="v6-rocket">🚀</span>
+        <div><div class="v6-title">Chinna V6 is here!</div><div class="v6-subtitle">A major upgrade from V5</div></div>
       </div>
     </div>
-    <div style="padding:16px 24px;font-size:12px;line-height:1.9;color:var(--t2)">
-      <b style="color:var(--t1)">What's new in V6:</b><br>
+    <div class="v6-body">
+      <b>What's new in V6:</b>
       🤖 Model switcher — change AI model from the dashboard<br>
       🍎 macOS Tools — Apple Music, lock screen, screen share, kill ports<br>
       🔍 Project Audit — full project report saved to Desktop<br>
@@ -1412,8 +1531,8 @@ body.offline .brand::after{content:" offline";font-size:9px;letter-spacing:1px;o
       📋 Smarter Projects registry with history<br>
       🧬 Godspeed features — stack runner, plugin system, config sync<br>
     </div>
-    <div style="padding:14px 24px 20px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--line)">
-      <button type="button" class="bigbtn" onclick="dismissV6()">Got it, let's go!</button>
+    <div class="v6-foot">
+      <button type="button" class="bigbtn v6-primary" onclick="dismissV6()">Got it, let's go!</button>
     </div>
   </div>
 </div>
@@ -1433,6 +1552,7 @@ let deepCleanItems = [];
 let deepCleanSelected = new Set();
 let deepCleanVolume = null;
 let deepCleanForce = false;
+let chinnaPlugins = [];
 let deepCleanForceRequired = new Set();
 let chatxIdentity = null;
 let chatxContacts = [];
@@ -1935,6 +2055,7 @@ document.addEventListener('keyup',e=>{
 
 /* nav */
 function go(v){
+  if(!$('view-'+v)) v='overview';
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   $('view-'+v).classList.add('on');
   document.querySelectorAll('.navitem').forEach(x=>x.classList.toggle('on',x.dataset.v===v));
@@ -1948,8 +2069,10 @@ function go(v){
   if(v==='ai'){ loadAIStatus(); if(voiceEnabled) ensureVoiceUI(); setupAttachmentUI(); }
   if(v==='chatx'){ chatxInit(); }
   if(v==='whatsapp'){ waInit(); }
+  if(v==='plugins'){ loadPlugins(); }
   if(v==='settings'){ loadTelegramStatus(); loadKeySettings(); }
   if(v==='projects') loadProjectsView();
+  if(location.hash !== '#'+v) history.replaceState(null,'','#'+v);
 }
 
 /* themes */
@@ -4030,6 +4153,78 @@ async function chatxRefresh(){
   await chatxLoadHistory();
 }
 
+async function loadPlugins(){
+  const grid=$('plugin-grid'), count=$('plugin-count');
+  if(!grid) return;
+  grid.innerHTML='<div class="empty"><div class="spin"></div>Loading plugins…</div>';
+  const d=await api('plugins').catch(e=>({error:e?.message||'failed'}));
+  if(d.error){
+    grid.innerHTML='<div class="empty"><div class="big">🧩</div>Plugin backend unavailable</div>';
+    if(count) count.textContent='error';
+    return;
+  }
+  chinnaPlugins=d.plugins||[];
+  if(count) count.textContent=`${chinnaPlugins.length} plugins`;
+  renderPlugins();
+}
+
+function renderPlugins(){
+  const grid=$('plugin-grid');
+  if(!grid) return;
+  if(!chinnaPlugins.length){
+    grid.innerHTML='<div class="empty"><div class="big">🧩</div>No plugins found</div>';
+    return;
+  }
+  grid.innerHTML=chinnaPlugins.map(p=>{
+    const actions=(p.actions||[]).map(a=>renderPluginAction(p,a)).join('');
+    return `<div class="plugin-card">
+      <div class="plugin-head">
+        <div class="plugin-icon">${escHtml(p.icon||'◇')}</div>
+        <div class="info">
+          <div class="plugin-category">${escHtml(p.category||'General')}</div>
+          <div class="plugin-title">${escHtml(p.name||p.id)}</div>
+          <div class="plugin-desc">${escHtml(p.description||'Chinna plugin')}</div>
+        </div>
+      </div>
+      <div class="plugin-actions">${actions||'<span class="muted">No actions</span>'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderPluginAction(p,a){
+  const pid=esc(p.id), aid=esc(a.id);
+  if(a.kind==='form'){
+    const fields=(a.fields||[]).map(f=>{
+      const id=`plug-${p.id}-${a.id}-${f.name}`.replace(/[^a-zA-Z0-9_-]/g,'-');
+      return `<input class="field" id="${id}" data-plugin-input="${escHtml(f.name)}" placeholder="${escHtml(f.placeholder||f.label||f.name)}" type="${escHtml(f.type||'text')}" ${f.required?'required':''}>`;
+    }).join('');
+    return `<div class="plugin-form"><div class="plugin-form-row">${fields}<button type="button" class="bigbtn" onclick="runPluginAction('${pid}','${aid}',this)">${escHtml(a.name||a.id)}</button></div></div>`;
+  }
+  const cls=a.style==='solid'?'bigbtn solid':'bigbtn';
+  return `<button type="button" class="${cls}" onclick="runPluginAction('${pid}','${aid}',this)">${escHtml(a.name||a.id)}</button>`;
+}
+
+async function runPluginAction(plugin, action, btn){
+  const p=chinnaPlugins.find(x=>x.id===plugin);
+  const a=(p?.actions||[]).find(x=>x.id===action);
+  if(a?.confirm && !confirm(a.confirm)) return;
+  const payload={};
+  const card=btn.closest('.plugin-card');
+  if(card){
+    card.querySelectorAll('[data-plugin-input]').forEach(input=>{
+      payload[input.dataset.pluginInput]=input.value;
+    });
+  }
+  const log=$('plugin-log');
+  if(log) log.textContent=`Running ${p?.name||plugin} / ${a?.name||action}…`;
+  btn.disabled=true;
+  const d=await api('plugins/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plugin,action,payload})}).catch(e=>({error:e?.message||'failed'}));
+  btn.disabled=false;
+  const msg=d.error || d.result || JSON.stringify(d,null,2);
+  if(log) log.textContent=msg;
+  toast(d.error ? `Plugin failed: ${d.error}` : `${a?.name||action} complete`);
+}
+
 async function installMacApp(){
   const btn=$('install-app-btn');
   const note=$('install-app-note');
@@ -4809,7 +5004,9 @@ function initV6(){
   if(!localStorage.getItem('chinna_v6_welcomed')){
     document.getElementById('v6overlay').style.display='flex';
   }
-  window.setTimeout(()=>{ if(firstRun) go('onboarding'); }, 1150);
+  const initial=(window.location.hash||'').replace('#','');
+  if(initial && $('view-'+initial)) window.setTimeout(()=>go(initial), 250);
+  else window.setTimeout(()=>{ if(firstRun) go('onboarding'); }, 1150);
   loadModels();
 }
 function dismissV6(){

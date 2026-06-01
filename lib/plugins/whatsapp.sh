@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+source "${CHINNA_LIB:-$HOME/.chinna/lib}/plugins/_common.sh"
+gs_plugin_meta(){ echo '{"id":"whatsapp","name":"WhatsApp Bridge","icon":"💬","description":"Open WhatsApp QR mode and dashboard messaging.","category":"Communication"}'; }
+gs_plugin_actions(){ echo '[{"id":"open","name":"Open WhatsApp","kind":"button"},{"id":"reconnect","name":"Reconnect Bridge","kind":"button"},{"id":"logout","name":"Logout WhatsApp","kind":"button","confirm":"Clear WhatsApp session and show QR again?"}]'; }
+gs_plugin_run_action(){ case "$1" in open) gs_open_dashboard "/#whatsapp";; reconnect) curl -fsS -X POST -H 'Content-Type: application/json' -d '{}' "http://localhost:${CHINNA_DASHBOARD_PORT:-7777}/api/whatsapp/reconnect" >/dev/null && gs_ok "WhatsApp reconnect requested" || gs_fail "WhatsApp bridge unavailable";; logout) curl -fsS -X POST -H 'Content-Type: application/json' -d '{}' "http://localhost:${CHINNA_DASHBOARD_PORT:-7777}/api/whatsapp/logout" >/dev/null && gs_ok "WhatsApp logout requested" || gs_fail "WhatsApp bridge unavailable";; *) gs_fail "unknown action";; esac; }

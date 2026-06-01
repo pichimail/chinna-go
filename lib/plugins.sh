@@ -6,18 +6,25 @@ CHINNA_PLUGINS_DIR="$CHINNA_HOME/plugins"
 # Ensure plugins directory exists
 mkdir -p "$CHINNA_PLUGINS_DIR"
 
+_plugin_file() {
+    local name="$1"
+    local user_file="$CHINNA_PLUGINS_DIR/${name}.sh"
+    local builtin_file="$CHINNA_LIB/plugins/${name}.sh"
+    if [ -f "$user_file" ]; then
+        printf '%s\n' "$user_file"
+    elif [ -f "$builtin_file" ]; then
+        printf '%s\n' "$builtin_file"
+    else
+        return 1
+    fi
+}
+
 load_plugin() {
     local name="$1"
-    local plugin_file="$CHINNA_PLUGINS_DIR/${name}.sh"
-
-    if [ ! -f "$plugin_file" ]; then
-        # Also check the installed lib/plugins if user hasn't copied yet
-        if [ -f "$CHINNA_LIB/plugins/${name}.sh" ]; then
-            plugin_file="$CHINNA_LIB/plugins/${name}.sh"
-        else
-            fail "Plugin '$name' not found in $CHINNA_PLUGINS_DIR or $CHINNA_LIB/plugins"
-            return 1
-        fi
+    local plugin_file
+    if ! plugin_file="$(_plugin_file "$name")"; then
+        fail "Plugin '$name' not found in $CHINNA_PLUGINS_DIR or $CHINNA_LIB/plugins"
+        return 1
     fi
 
     # Basic security: check for obvious dangerous patterns (can be expanded)
@@ -37,10 +44,54 @@ load_plugin() {
     fi
 }
 
+plugin_meta() {
+    local name="$1" plugin_file
+    plugin_file="$(_plugin_file "$name")" || return 1
+    (
+        # shellcheck disable=SC1090
+        source "$plugin_file"
+        if declare -f gs_plugin_meta >/dev/null; then
+            gs_plugin_meta
+        else
+            printf '{"id":"%s","name":"%s","icon":"◇","description":"Chinna plugin","category":"General"}\n' "$name" "$name"
+        fi
+    )
+}
+
+plugin_actions() {
+    local name="$1" plugin_file
+    plugin_file="$(_plugin_file "$name")" || return 1
+    (
+        # shellcheck disable=SC1090
+        source "$plugin_file"
+        if declare -f gs_plugin_actions >/dev/null; then
+            gs_plugin_actions
+        else
+            printf '[]\n'
+        fi
+    )
+}
+
+plugin_run_action() {
+    local name="$1" action="$2" payload="${3:-{}}" plugin_file
+    plugin_file="$(_plugin_file "$name")" || return 1
+    (
+        export GS_PLUGIN_PAYLOAD="$payload"
+        # shellcheck disable=SC1090
+        source "$plugin_file"
+        if declare -f gs_plugin_run_action >/dev/null; then
+            gs_plugin_run_action "$action" "$payload"
+        else
+            printf '{"error":"plugin has no action handler"}\n'
+            return 1
+        fi
+    )
+}
+
 plugins_list() {
     echo "Installed plugins in $CHINNA_PLUGINS_DIR:"
     if [ -d "$CHINNA_PLUGINS_DIR" ]; then
-        find "$CHINNA_PLUGINS_DIR" -name "*.sh" -exec basename {} .sh \; | sort | sed 's/^/  • /'
+        find "$CHINNA_PLUGINS_DIR" -name "*.sh" ! -name '_*.sh' -exec basename {} .sh \; | sort | sed 's/^/  • /'
     else
         echo "  (no plugins directory)"
     fi
@@ -48,7 +99,7 @@ plugins_list() {
     echo ""
     echo "Built-in plugins (from lib):"
     if [ -d "$CHINNA_LIB/plugins" ]; then
-        find "$CHINNA_LIB/plugins" -name "*.sh" -exec basename {} .sh \; 2>/dev/null | sort | sed 's/^/  • /'
+        find "$CHINNA_LIB/plugins" -name "*.sh" ! -name '_*.sh' -exec basename {} .sh \; 2>/dev/null | sort | sed 's/^/  • /'
     else
         echo "  (none)"
     fi

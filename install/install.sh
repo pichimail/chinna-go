@@ -121,6 +121,7 @@ step_install_node_tools() {
 step_write_server() {
     echo "    ↻ Force-refreshing server (dashboard_server.py)..."
     copy_or_fetch "lib/server.py" "${CHINNA}/dashboard_server.py"
+    copy_or_fetch "lib/server.py" "${CHINNA}/lib/server.py"
     echo "    ✓ server.py updated"
 }
 
@@ -145,10 +146,16 @@ step_write_whatsapp_bridge() {
 
 step_write_libs() {
     echo "    ↻ Force-refreshing lib files..."
-    for lib in config clean stack registry notify daemon server plugins voice lang; do
+    for lib in config clean stack registry notify daemon server plugins swiftbar voice lang; do
         copy_or_fetch "lib/${lib}.sh" "${CHINNA}/lib/${lib}.sh" 2>/dev/null && \
             echo "      ✓ lib/${lib}.sh" || \
             echo "      ⚠ lib/${lib}.sh (skipped)"
+    done
+    mkdir -p "${CHINNA}/lib/plugins"
+    for plugin in _common system-health deep-clean ports-network app-control project-audit git-tools secure-chat whatsapp music-control automation storage-tools dev-runner node python; do
+        copy_or_fetch "lib/plugins/${plugin}.sh" "${CHINNA}/lib/plugins/${plugin}.sh" 2>/dev/null && \
+            echo "      ✓ lib/plugins/${plugin}.sh" || \
+            echo "      ⚠ lib/plugins/${plugin}.sh (skipped)"
     done
 }
 

@@ -118,17 +118,20 @@ APPLESCRIPT
 }
 
 install_notch_quick_actions() {
-    local plugin_dir="$HOME/Library/Application Support/SwiftBar/Plugins"
-    local plugin_path="$plugin_dir/chinna.1m.sh"
-    local chinna_bin
-    chinna_bin="$(command -v chinna 2>/dev/null || echo "$CHINNA_HOME/bin/chinna")"
-
-    if ! command -v swiftbar >/dev/null 2>&1; then
+    if command -v install_chinna_swiftbar_actions >/dev/null 2>&1; then
+        install_chinna_swiftbar_actions >/dev/null || return 1
+        log "SwiftBar quick actions installed"
+        return 0
+    fi
+    if ! command -v swiftbar >/dev/null 2>&1 && [ ! -d "/Applications/SwiftBar.app" ]; then
         log "SwiftBar not installed; notch/menu quick actions unavailable"
         return 1
     fi
-
-    local dash_url="http://localhost:${CHINNA_DASHBOARD_PORT:-7777}"
+    local plugin_dir="$HOME/Library/Application Support/SwiftBar/Plugins"
+    local plugin_path="$plugin_dir/chinna.1m.sh"
+    local chinna_bin dash_url
+    chinna_bin="$(command -v chinna 2>/dev/null || echo "$CHINNA_HOME/bin/chinna")"
+    dash_url="http://localhost:${CHINNA_DASHBOARD_PORT:-7777}"
     mkdir -p "$plugin_dir"
     cat > "$plugin_path" <<PLUGIN
 #!/usr/bin/env bash
@@ -136,9 +139,13 @@ echo "CH"
 echo "---"
 echo "Open Dashboard | bash='open' param1='${dash_url}' terminal=false refresh=false"
 echo "Install / Refresh Mac App | bash='${chinna_bin}' param1='app-install' terminal=false refresh=false"
+echo "🧩 Plugins | bash='open' param1='${dash_url}/#plugins' terminal=false refresh=false"
+echo "💬 WhatsApp | bash='open' param1='${dash_url}/#whatsapp' terminal=false refresh=false"
+echo "🛡 Secure Chat | bash='open' param1='${dash_url}/#chatx' terminal=false refresh=false"
 echo "⚡ Purge RAM | bash='${chinna_bin}' param1='purge' terminal=false refresh=true"
 echo "🧹 Deep Clean | bash='${chinna_bin}' param1='clean' terminal=false refresh=true"
 echo "⬆️ Update Now | bash='${chinna_bin}' param1='update' param2='--apply' terminal=false refresh=true"
+echo "⛔ Quit Chinna | bash='${chinna_bin}' param1='stop' terminal=false refresh=true"
 PLUGIN
     chmod +x "$plugin_path"
     log "SwiftBar quick actions installed at $plugin_path"

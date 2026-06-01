@@ -39,7 +39,7 @@ safe_source_lib() {
     source "$lib_path"
 }
 
-for lib in notify lang stack voice daemon config clean registry plugins; do
+for lib in notify lang stack voice daemon config clean registry plugins swiftbar; do
     safe_source_lib "$CHINNA_LIB/${lib}.sh"
 done
 
@@ -800,12 +800,29 @@ cmd_plugins() {
             shift
             load_plugin "$@"
             ;;
+        meta)
+            shift
+            plugin_meta "$@"
+            ;;
+        actions)
+            shift
+            plugin_actions "$@"
+            ;;
+        run)
+            shift
+            local plugin_name="${1:-}" action_name="${2:-}" payload="${3:-{}}"
+            if [ -z "$plugin_name" ] || [ -z "$action_name" ]; then
+                echo "Usage: chinna plugins run <plugin> <action> [json-payload]"
+                return 1
+            fi
+            plugin_run_action "$plugin_name" "$action_name" "$payload"
+            ;;
         bootstrap)
             shift
             bootstrap_here "${1:-.}"
             ;;
         *)
-            echo "Usage: chinna plugins [list | load <name> | bootstrap [dir]]"
+            echo "Usage: chinna plugins [list | load <name> | meta <name> | actions <name> | run <name> <action> [json] | bootstrap [dir]]"
             ;;
     esac
 }

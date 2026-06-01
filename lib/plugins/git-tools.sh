@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+source "${CHINNA_LIB:-$HOME/.chinna/lib}/plugins/_common.sh"
+gs_plugin_meta(){ echo '{"id":"git-tools","name":"Git Tools","icon":"⑂","description":"Inspect git state and open the current repository folder.","category":"Developer"}'; }
+gs_plugin_actions(){ echo '[{"id":"status","name":"Git Status","kind":"form","fields":[{"name":"path","label":"Repo path","type":"text","placeholder":".","required":true}]},{"id":"log","name":"Recent Log","kind":"form","fields":[{"name":"path","label":"Repo path","type":"text","placeholder":".","required":true}]},{"id":"open","name":"Open Repo Folder","kind":"form","fields":[{"name":"path","label":"Repo path","type":"text","placeholder":".","required":true}]}]'; }
+gs_plugin_run_action(){ path="$(gs_payload_value path ".")"; case "$1" in status) out="$(cd "$path" 2>/dev/null && git status --short 2>&1)"; gs_ok "${out:-clean}";; log) out="$(cd "$path" 2>/dev/null && git --no-pager log --oneline -8 2>&1)"; gs_ok "${out:-no commits}";; open) open "$path" >/dev/null 2>&1 && gs_ok "Opened $path" || gs_fail "Could not open $path";; *) gs_fail "unknown action";; esac; }

@@ -16,6 +16,8 @@ WHATSAPP_BRIDGE_DIR = os.path.join(CHINNA_HOME, 'whatsapp_bridge')
 WHATSAPP_BRIDGE_PORT = int(os.environ.get('CHINNA_WHATSAPP_BRIDGE_PORT', str(PORT + 81)))
 WHATSAPP_BRIDGE_PID_FILE = os.path.join(WHATSAPP_DIR, 'bridge.pid')
 WHATSAPP_BRIDGE_LOG = os.path.join(WHATSAPP_DIR, 'bridge.log')
+SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SERVER_DIR, '..'))
 
 # Shared TURN fallback for first-run users. Override via env if needed.
 DEFAULT_TURN_URLS = os.environ.get(
@@ -90,6 +92,9 @@ def save_chat_db(data):
 def safe_id(value):
     return re.sub(r'[^a-zA-Z0-9_.-]', '', str(value or ''))[:64]
 
+def safe_plugin_id(value):
+    return re.sub(r'[^a-z0-9_.-]', '', str(value or '').lower())[:80]
+
 def build_icns_from_svg(svg_path, icns_path):
     if not os.path.exists(svg_path):
         return False, 'icon asset missing'
@@ -131,8 +136,10 @@ def style_mac_app_bundle(app_path):
             info = plistlib.load(f)
         info['CFBundleDisplayName'] = 'Chinna'
         info['CFBundleName'] = 'Chinna'
-        info['CFBundleIdentifier'] = 'com.pichimail.chinna'
-        info['CFBundleIconFile'] = 'applet'
+        info['CFBundleIdentifier'] = 'com.chinna.dashboard'
+        info['CFBundleExecutable'] = 'Chinna'
+        info['CFBundlePackageType'] = 'APPL'
+        info['CFBundleIconFile'] = 'Chinna'
         info['CFBundleShortVersionString'] = CHINNA_VERSION
         info['CFBundleVersion'] = CHINNA_VERSION
         info['LSApplicationCategoryType'] = 'public.app-category.productivity'
@@ -142,6 +149,102 @@ def style_mac_app_bundle(app_path):
         return True, ''
     except Exception as e:
         return False, safe_text(str(e))
+
+def plugin_search_dirs():
+    dirs = [
+        os.path.join(CHINNA_HOME, 'plugins'),
+        os.path.join(CHINNA_HOME, 'lib', 'plugins'),
+        os.path.join(SERVER_DIR, 'plugins'),
+        os.path.join(REPO_ROOT, 'lib', 'plugins'),
+    ]
+    out = []
+    seen = set()
+    for d in dirs:
+        d = os.path.abspath(os.path.expanduser(d))
+        if d not in seen and os.path.isdir(d):
+            seen.add(d)
+            out.append(d)
+    return out
+
+def plugin_file(plugin_id):
+    pid = safe_plugin_id(plugin_id)
+    if not pid:
+        return None
+    for d in plugin_search_dirs():
+        path = os.path.join(d, f'{pid}.sh')
+        if os.path.isfile(path):
+            return path
+    return None
+
+def plugin_lib_dir_for(path):
+    parent = os.path.dirname(os.path.dirname(os.path.abspath(path)))
+    if os.path.exists(os.path.join(parent, 'plugins.sh')) or os.path.exists(os.path.join(parent, 'plugins', '_common.sh')):
+        return parent
+    if os.path.exists(os.path.join(CHINNA_HOME, 'lib', 'plugins', '_common.sh')):
+        return os.path.join(CHINNA_HOME, 'lib')
+    return SERVER_DIR
+
+def run_plugin_function(path, mode, action='', payload=None, timeout=35):
+    env = os.environ.copy()
+    env['CHINNA_HOME'] = CHINNA_HOME
+    env['CHINNA_LIB'] = plugin_lib_dir_for(path)
+    env['CHINNA_DASHBOARD_PORT'] = str(PORT)
+    env['PLUGIN_FILE'] = path
+    env['PLUGIN_MODE'] = mode
+    env['PLUGIN_ACTION'] = safe_plugin_id(action)
+    env['GS_PLUGIN_PAYLOAD'] = json.dumps(payload or {})
+    script = r'''
+set -uo pipefail
+source "$PLUGIN_FILE"
+case "$PLUGIN_MODE" in
+  meta) declare -f gs_plugin_meta >/dev/null && gs_plugin_meta || echo '{}';;
+  actions) declare -f gs_plugin_actions >/dev/null && gs_plugin_actions || echo '[]';;
+  run) declare -f gs_plugin_run_action >/dev/null && gs_plugin_run_action "$PLUGIN_ACTION" "$GS_PLUGIN_PAYLOAD" || echo '{"error":"plugin action handler missing"}';;
+  *) echo '{"error":"bad plugin mode"}'; exit 2;;
+esac
+'''
+    proc = subprocess.run(['bash', '-lc', script], env=env, text=True, capture_output=True, timeout=timeout)
+    out = (proc.stdout or '').strip()
+    if not out:
+        out = json.dumps({'error': (proc.stderr or 'plugin returned no output').strip()[:500]})
+    return out, proc.returncode
+
+def load_plugin_json(path, mode):
+    out, code = run_plugin_function(path, mode, timeout=10)
+    try:
+        data = json.loads(out)
+    except Exception:
+        data = {} if mode == 'meta' else []
+    if code != 0 and mode == 'meta':
+        data.setdefault('error', 'metadata failed')
+    return data
+
+def list_dashboard_plugins():
+    found = {}
+    for d in plugin_search_dirs():
+        for name in os.listdir(d):
+            if not name.endswith('.sh') or name.startswith('_'):
+                continue
+            pid = safe_plugin_id(name[:-3])
+            found.setdefault(pid, os.path.join(d, name))
+    plugins = []
+    for pid, path in sorted(found.items()):
+        meta = load_plugin_json(path, 'meta')
+        actions = load_plugin_json(path, 'actions')
+        if not isinstance(meta, dict):
+            meta = {}
+        if not isinstance(actions, list):
+            actions = []
+        meta.setdefault('id', pid)
+        meta.setdefault('name', pid.replace('-', ' ').title())
+        meta.setdefault('icon', '◇')
+        meta.setdefault('description', 'Chinna plugin')
+        meta.setdefault('category', 'General')
+        meta['path'] = path
+        meta['builtin'] = path.startswith(os.path.join(CHINNA_HOME, 'lib')) or path.startswith(SERVER_DIR) or path.startswith(REPO_ROOT)
+        meta['actions'] = actions
+        plugins.append(meta)
+    return plugins
 
 def read_shell_config():
     cfg = {}
@@ -1443,6 +1546,18 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json(self.list_models())
         elif p == '/api/projects':
             self.serve_projects()
+        elif p == '/api/plugins':
+            self._json({'plugins': list_dashboard_plugins()})
+        elif p.startswith('/api/plugins/'):
+            pid = safe_plugin_id(p.split('/')[-1])
+            path = plugin_file(pid)
+            if not path:
+                self._json({'error': 'plugin not found'}, 404)
+            else:
+                meta = load_plugin_json(path, 'meta')
+                meta['actions'] = load_plugin_json(path, 'actions')
+                meta['path'] = path
+                self._json(meta)
         elif p == '/api/whatsapp/status':
             self.whatsapp_proxy('GET', '/status')
         elif p == '/api/telegram/status':
@@ -1585,6 +1700,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.export_projects(q.get('format', 'json'))
         elif p == '/api/project':
             self.handle_project_action(q, b)
+        elif p == '/api/plugins/action':
+            self.plugin_action(b)
         elif p == '/api/whatsapp':
             self.whatsapp_action(b)
         elif p == '/api/whatsapp-webhook':
@@ -1700,28 +1817,101 @@ class H(http.server.SimpleHTTPRequestHandler):
         except:
             return {'result': rpt, 'saved': None}
 
+    def plugin_action(self, b):
+        pid = safe_plugin_id(b.get('plugin') or b.get('plugin_id') or '')
+        action = safe_plugin_id(b.get('action') or '')
+        payload = b.get('payload') if isinstance(b.get('payload'), dict) else {}
+        if not pid or not action:
+            self._json({'error': 'plugin and action required'}, 400)
+            return
+        path = plugin_file(pid)
+        if not path:
+            self._json({'error': 'plugin not found'}, 404)
+            return
+        try:
+            out, code = run_plugin_function(path, 'run', action=action, payload=payload, timeout=60)
+            try:
+                data = json.loads(out)
+            except Exception:
+                data = {'ok': code == 0, 'result': out}
+            if code != 0 and 'error' not in data:
+                data['error'] = 'plugin action failed'
+            self._json(data, 200 if code == 0 and not data.get('error') else 400)
+        except subprocess.TimeoutExpired:
+            self._json({'error': 'plugin action timed out'}, 504)
+        except Exception as e:
+            self._json({'error': safe_text(str(e))}, 500)
+
     def install_dashboard_app(self):
         port = int(os.environ.get('CHINNA_DASHBOARD_PORT', PORT))
         url = f"http://localhost:{port}"
         app_dir = os.path.join(HOME, 'Applications')
         app_path = os.path.join(app_dir, 'Chinna.app')
+        contents_dir = os.path.join(app_path, 'Contents')
+        macos_dir = os.path.join(contents_dir, 'MacOS')
+        resources_dir = os.path.join(contents_dir, 'Resources')
         os.makedirs(app_dir, exist_ok=True)
         try:
             if os.path.exists(app_path):
                 shutil.rmtree(app_path)
-            script = f'open location "{url}"'
-            subprocess.run(['osacompile', '-o', app_path, '-e', script], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            os.makedirs(macos_dir, exist_ok=True)
+            os.makedirs(resources_dir, exist_ok=True)
+            launcher_path = os.path.join(macos_dir, 'Chinna')
+            launcher = f'''#!/usr/bin/env bash
+export CHINNA_HOME="${{CHINNA_HOME:-$HOME/.chinna}}"
+export CHINNA_DASHBOARD_PORT="${{CHINNA_DASHBOARD_PORT:-{port}}}"
+URL="http://localhost:${{CHINNA_DASHBOARD_PORT}}"
+find_chinna() {{
+  if command -v chinna >/dev/null 2>&1; then command -v chinna; return; fi
+  for p in "$HOME/.local/bin/chinna" "$CHINNA_HOME/bin/chinna" "/usr/local/bin/chinna" "/opt/homebrew/bin/chinna"; do
+    [ -x "$p" ] && {{ printf '%s\\n' "$p"; return; }}
+  done
+}}
+CHINNA_BIN="$(find_chinna)"
+if ! /usr/bin/curl -fsS "$URL/api/version" >/dev/null 2>&1; then
+  if [ -n "$CHINNA_BIN" ]; then
+    /bin/mkdir -p "$CHINNA_HOME/logs"
+    /usr/bin/nohup "$CHINNA_BIN" dashboard >> "$CHINNA_HOME/logs/app-launch.log" 2>&1 &
+  fi
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    /usr/bin/curl -fsS "$URL/api/version" >/dev/null 2>&1 && break
+    /bin/sleep 0.5
+  done
+fi
+/usr/bin/open "$URL"
+'''
+            with open(launcher_path, 'w') as f:
+                f.write(launcher)
+            os.chmod(launcher_path, 0o755)
+            info = {
+                'CFBundleDisplayName': 'Chinna',
+                'CFBundleName': 'Chinna',
+                'CFBundleIdentifier': 'com.chinna.dashboard',
+                'CFBundleExecutable': 'Chinna',
+                'CFBundlePackageType': 'APPL',
+                'CFBundleIconFile': 'Chinna',
+                'CFBundleShortVersionString': CHINNA_VERSION,
+                'CFBundleVersion': CHINNA_VERSION,
+                'LSApplicationCategoryType': 'public.app-category.productivity',
+                'LSMinimumSystemVersion': '13.0',
+            }
+            with open(os.path.join(contents_dir, 'Info.plist'), 'wb') as f:
+                plistlib.dump(info, f)
             style_ok, style_err = style_mac_app_bundle(app_path)
             icon_svg = os.path.join(DASHBOARD_DIR, 'assets', 'chinna-icon.svg')
-            icon_path = os.path.join(app_path, 'Contents', 'Resources', 'applet.icns')
+            if not os.path.exists(icon_svg):
+                icon_svg = os.path.join(REPO_ROOT, 'dashboard', 'assets', 'chinna-icon.svg')
+            icon_path = os.path.join(resources_dir, 'Chinna.icns')
             icon_ok, icon_err = build_icns_from_svg(icon_svg, icon_path)
             sh(f"xattr -dr com.apple.quarantine {shq(app_path)} 2>/dev/null || true")
-            subprocess.run(['open', '-a', app_path], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(['open', app_path], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self._json({
                 'ok': True,
                 'app_path': app_path,
                 'url': url,
                 'result': 'installed',
+                'bundle_type': 'native-shell-launcher',
+                'executable': launcher_path,
                 'icon_installed': icon_ok,
                 'style_applied': style_ok,
                 'icon_note': icon_err,
@@ -1732,29 +1922,34 @@ class H(http.server.SimpleHTTPRequestHandler):
 
     def install_swiftbar_quick_actions(self):
         try:
-            plugin_dir = os.path.join(HOME, 'Library', 'Application Support', 'SwiftBar', 'Plugins')
-            plugin_path = os.path.join(plugin_dir, 'chinna.1m.sh')
-            dash_url = f"http://localhost:{int(os.environ.get('CHINNA_DASHBOARD_PORT', PORT))}"
-            chinna_bin = shutil.which('chinna') or os.path.join(CHINNA_HOME, 'bin', 'chinna')
-            os.makedirs(plugin_dir, exist_ok=True)
-            plugin = f"""#!/usr/bin/env bash
-echo \"CH\"
-echo \"---\"
-echo \"Open Dashboard | bash='open' param1='{dash_url}' terminal=false refresh=false\"
-echo \"Install / Refresh Mac App | bash='{chinna_bin}' param1='app-install' terminal=false refresh=false\"
-echo \"Install / Refresh SwiftBar Actions | bash='{chinna_bin}' param1='notch' terminal=false refresh=false\"
-echo \"⚡ Purge RAM | bash='{chinna_bin}' param1='purge' terminal=false refresh=true\"
-echo \"🧹 Deep Clean | bash='{chinna_bin}' param1='clean' terminal=false refresh=true\"
-echo \"⬆️ Update Now | bash='{chinna_bin}' param1='update' param2='--apply' terminal=false refresh=true\"
-"""
-            with open(plugin_path, 'w') as f:
-                f.write(plugin)
-            os.chmod(plugin_path, 0o755)
+            swiftbar_exists = bool(shutil.which('swiftbar')) or os.path.exists('/Applications/SwiftBar.app')
+            if not swiftbar_exists and shutil.which('brew'):
+                subprocess.run(['brew', 'install', '--cask', 'swiftbar'], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=180)
+                swiftbar_exists = bool(shutil.which('swiftbar')) or os.path.exists('/Applications/SwiftBar.app')
+            if not swiftbar_exists:
+                return {'error': 'SwiftBar is not installed. Install SwiftBar or Homebrew, then try again.'}
+            helper_candidates = [
+                os.path.join(CHINNA_HOME, 'lib', 'swiftbar.sh'),
+                os.path.join(SERVER_DIR, 'swiftbar.sh'),
+                os.path.join(REPO_ROOT, 'lib', 'swiftbar.sh'),
+            ]
+            helper = next((x for x in helper_candidates if os.path.exists(x)), '')
+            if not helper:
+                return {'error': 'swiftbar helper not found'}
+            env = os.environ.copy()
+            env['CHINNA_HOME'] = CHINNA_HOME
+            env['CHINNA_LIB'] = os.path.dirname(helper)
+            env['CHINNA_DASHBOARD_PORT'] = str(PORT)
+            cmd = f"source {shq(helper)}; install_chinna_swiftbar_actions"
+            proc = subprocess.run(['bash', '-lc', cmd], env=env, text=True, capture_output=True, timeout=30)
+            if proc.returncode != 0:
+                return {'error': safe_text(proc.stderr or proc.stdout or 'SwiftBar install failed')}
+            plugin_path = (proc.stdout or '').strip().splitlines()[-1] if proc.stdout.strip() else os.path.join(HOME, 'Library', 'Application Support', 'SwiftBar', 'Plugins', 'chinna.1m.sh')
             subprocess.run(['open', '-a', 'SwiftBar'], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             return {
                 'ok': True,
                 'plugin_path': plugin_path,
-                'swiftbar_app': os.path.exists('/Applications/SwiftBar.app'),
+                'swiftbar_app': swiftbar_exists,
                 'result': 'SwiftBar quick actions installed'
             }
         except Exception as e:

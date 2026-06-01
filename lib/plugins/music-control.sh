@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+source "${CHINNA_LIB:-$HOME/.chinna/lib}/plugins/_common.sh"
+gs_plugin_meta(){ echo '{"id":"music-control","name":"Music Control","icon":"♫","description":"Control Apple Music from Chinna or SwiftBar.","category":"macOS"}'; }
+gs_plugin_actions(){ echo '[{"id":"play","name":"Play","kind":"button"},{"id":"pause","name":"Pause","kind":"button"},{"id":"next","name":"Next","kind":"button"},{"id":"prev","name":"Previous","kind":"button"},{"id":"info","name":"Now Playing","kind":"button"}]'; }
+gs_plugin_run_action(){ case "$1" in play) osascript -e 'tell application "Music" to play' >/dev/null 2>&1; gs_ok "Play";; pause) osascript -e 'tell application "Music" to pause' >/dev/null 2>&1; gs_ok "Pause";; next) osascript -e 'tell application "Music" to next track' >/dev/null 2>&1; gs_ok "Next";; prev) osascript -e 'tell application "Music" to previous track' >/dev/null 2>&1; gs_ok "Previous";; info) out="$(osascript -e 'tell application "Music" to return (name of current track) & " - " & (artist of current track)' 2>/dev/null)"; gs_ok "${out:-No current track}";; *) gs_fail "unknown action";; esac; }
