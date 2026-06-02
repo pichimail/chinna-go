@@ -152,7 +152,7 @@ step_write_libs() {
             echo "      ⚠ lib/${lib}.sh (skipped)"
     done
     mkdir -p "${CHINNA}/lib/plugins"
-    for plugin in _common system-health deep-clean ports-network app-control project-audit git-tools secure-chat whatsapp music-control automation storage-tools dev-runner node python; do
+    for plugin in _common system-health deep-clean ports-network app-control project-audit git-tools secure-chat whatsapp music-control automation storage-tools dev-runner node python godspeed-runner network-toolkit focus-power quick-serve capture-clip; do
         copy_or_fetch "lib/plugins/${plugin}.sh" "${CHINNA}/lib/plugins/${plugin}.sh" 2>/dev/null && \
             echo "      ✓ lib/plugins/${plugin}.sh" || \
             echo "      ⚠ lib/plugins/${plugin}.sh (skipped)"
