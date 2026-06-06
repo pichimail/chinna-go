@@ -53,10 +53,11 @@ if [ -t 1 ]; then
     M=$'\033[0;35m'; C=$'\033[0;36m'; W=$'\033[1;37m'; D=$'\033[2m'
     BOLD=$'\033[1m'; RESET=$'\033[0m'
     ORANGE=$'\033[38;5;208m'; PINK=$'\033[38;5;205m'; TEAL=$'\033[38;5;51m'
-    GREEN=$'\033[38;5;46m'
+    GREEN=$'\033[38;5;46m'; VIOLET=$'\033[38;5;141m'; SKY=$'\033[38;5;81m'
+    LIME=$'\033[38;5;154m'; ROSE=$'\033[38;5;210m'
 else
     R='' G='' Y='' B='' M='' C='' W='' D='' BOLD='' RESET=''
-    ORANGE='' PINK='' TEAL='' GREEN=''
+    ORANGE='' PINK='' TEAL='' GREEN='' VIOLET='' SKY='' LIME='' ROSE=''
 fi
 
 # ─── UI helpers ───────────────────────────────────────────────
@@ -112,6 +113,26 @@ disk_usage() {
     || df -h / | awk 'NR==2{print $3" used · "$4" free · "$5" full"}'
 }
 
+ui_line() {
+    echo -e "   ${SKY}━${TEAL}━${VIOLET}━${PINK}━${ORANGE}━${ROSE}━${ORANGE}━${PINK}━${VIOLET}━${TEAL}━${SKY}━${RESET}${D}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+}
+
+mission_meter() {
+    local label="$1" pct="${2:-50}" color="$GREEN" width=18
+    local filled=$(( pct * width / 100 ))
+    local bar=""
+    [ "$pct" -lt 55 ] && color="$ROSE"
+    [ "$pct" -ge 55 ] && [ "$pct" -lt 80 ] && color="$ORANGE"
+    for ((i=0;i<filled;i++)); do bar+="▰"; done
+    for ((i=filled;i<width;i++)); do bar+="▱"; done
+    printf "   %-12s ${color}%s${RESET} %3d%%\n" "$label" "$bar" "$pct"
+}
+
+mission_card() {
+    local key="$1" icon="$2" title="$3" desc="$4" accent="${5:-$TEAL}"
+    printf "   ${D}╭─${RESET} ${accent}%3s${RESET} %s  ${BOLD}%-17s${RESET} ${D}%s${RESET}\n" "$key" "$icon" "$title" "$desc"
+}
+
 # ─── Sarcastic commentary ─────────────────────────────────────
 SARCASM=(
     "Your disk was crying. I heard it from Hyderabad."
@@ -137,11 +158,10 @@ taunt() { echo -e "  ${D}${SARCASM[$RANDOM % ${#SARCASM[@]}]}${RESET}"; }
 banner() {
     clear
     echo ""
-    echo -e "   ${ORANGE}╔═══════════════════════════════════════╗${RESET}"
-    echo -e "   ${ORANGE}║${RESET}  ${BOLD}C H I N N A${RESET}  ${D}v${CHINNA_VERSION}${RESET}                    ${ORANGE}║${RESET}"
-    echo -e "   ${ORANGE}║${RESET}  ${D}your sarcastic mac sidekick${RESET}           ${ORANGE}║${RESET}"
-    echo -e "   ${ORANGE}║${RESET}  ${D}telugu · hindi · english · tinglish${RESET}   ${ORANGE}║${RESET}"
-    echo -e "   ${ORANGE}╚═══════════════════════════════════════╝${RESET}"
+    ui_line
+    echo -e "   ${BOLD}${SKY}C${TEAL}H${VIOLET}I${PINK}N${ORANGE}N${ROSE}A${RESET} ${D}v${CHINNA_VERSION}${RESET}  ${BOLD}Mac Mission Control${RESET}"
+    echo -e "   ${D}natural language · project fix · browser scanner · dashboard · voice${RESET}"
+    ui_line
     echo ""
     echo -ne "   ${D}Disk: ${RESET}"
     disk_bar
@@ -703,6 +723,138 @@ cmd_preview() {
     python3 -m http.server 8765
 }
 
+cmd_extension() {
+    banner
+    echo -e "   ${BOLD}${VIOLET}🧩 BROWSER EXTENSION${RESET}"; echo ""
+
+    local repo_root ext_dir
+    repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    ext_dir="$repo_root/extension/dist"
+    [ -d "$ext_dir" ] || ext_dir="$CHINNA_HOME/extension/dist"
+
+    if [ ! -f "$ext_dir/manifest.json" ]; then
+        fail "Extension dist folder not found."
+        info "Run the latest installer, then try: chinna extension"
+        return 1
+    fi
+
+    ok "Unpacked extension ready"
+    echo -e "   ${D}Folder:${RESET} $ext_dir"
+    echo ""
+    echo "   Load it in Chrome / Edge / Brave:"
+    echo "     1. Open chrome://extensions"
+    echo "     2. Enable Developer mode"
+    echo "     3. Click Load unpacked"
+    echo "     4. Select: $ext_dir"
+    echo ""
+    info "The extension talks only to local Chinna at http://localhost:${CHINNA_DASHBOARD_PORT:-7777}"
+    open -a "Google Chrome" "chrome://extensions" 2>/dev/null || open "chrome://extensions" 2>/dev/null || true
+}
+
+cmd_talk() {
+    cmd_listen "$@"
+}
+
+cmd_fix_project() {
+    local target="${1:-$(pwd)}"
+    target="$(cd "$target" 2>/dev/null && pwd || printf '%s' "$target")"
+    banner
+    echo -e "   ${BOLD}${TEAL}🛠️  PROJECT FIX MODE${RESET}\n"
+
+    if [ ! -d "$target" ]; then
+        fail "Project path not found: $target"
+        return 1
+    fi
+
+    local stack pm report git_status package_hint
+    stack="$(detect_stack "$target" 2>/dev/null || echo unknown)"
+    pm="$(detect_pm "$target" 2>/dev/null || echo npm)"
+    report="$CHINNA_HOME/audits/fix-$(date +%Y%m%d-%H%M%S).txt"
+    mkdir -p "$(dirname "$report")"
+
+    echo -e "   ${D}Project:${RESET} $target"
+    echo -e "   ${D}Stack:${RESET}   ${BOLD}$stack${RESET}"
+    echo -e "   ${D}PM:${RESET}      ${BOLD}$pm${RESET}"
+    echo ""
+
+    {
+        echo "CHINNA V6 PROJECT FIX REPORT"
+        echo "Generated: $(date)"
+        echo "Path: $target"
+        echo "Stack: $stack"
+        echo "Package manager: $pm"
+        echo "========================================"
+        echo ""
+        echo "=== FILES ==="
+        (cd "$target" && find . -maxdepth 2 -type f \
+            -not -path './node_modules/*' \
+            -not -path './.git/*' \
+            -not -path './.venv/*' | sort | head -120)
+        echo ""
+        echo "=== GIT STATUS ==="
+        (cd "$target" && git status --short 2>/dev/null || echo "Not a git repo")
+        echo ""
+        echo "=== PACKAGE SCRIPTS ==="
+        if [ -f "$target/package.json" ] && command -v python3 >/dev/null 2>&1; then
+            python3 - "$target/package.json" <<'PY'
+import json, sys
+try:
+    data=json.load(open(sys.argv[1]))
+    for k,v in (data.get("scripts") or {}).items():
+        print(f"{k}: {v}")
+except Exception as e:
+    print(f"package.json parse failed: {e}")
+PY
+        else
+            echo "No package.json scripts"
+        fi
+        echo ""
+        echo "=== TODO/FIXME ==="
+        if command -v rg >/dev/null 2>&1; then
+            (cd "$target" && rg -n --glob '!node_modules/**' --glob '!.git/**' --glob '!.venv/**' '(TODO|FIXME|HACK|XXX|throw new Error|console\\.error)' . 2>/dev/null | head -80 || true)
+        else
+            echo "ripgrep unavailable"
+        fi
+        echo ""
+        echo "=== RECENT ERROR LOGS ==="
+        find "$target" -maxdepth 3 -type f \( -name '*.log' -o -name 'npm-debug.log*' -o -name 'yarn-error.log*' \) \
+            -not -path '*/node_modules/*' -print 2>/dev/null | head -12 | while read -r f; do
+                echo "--- $f ---"
+                tail -60 "$f" 2>/dev/null
+            done
+    } > "$report"
+
+    ok "Fix report saved: $report"
+
+    if [ -f "$target/package.json" ] && [ ! -d "$target/node_modules" ]; then
+        warn "Dependencies are missing for this Node project."
+        if [ -t 0 ]; then
+            echo -ne "   ${Y}Install with ${pm} install now? [y/N]:${RESET} "
+            read -r yn
+            if [[ "$yn" =~ ^[Yy]$ ]]; then
+                (cd "$target" && "$pm" install) || warn "Dependency install had errors. Check terminal output above."
+            fi
+        else
+            info "Run manually: cd '$target' && $pm install"
+        fi
+    fi
+
+    echo ""
+    if [ -n "${OPENROUTER_API_KEY:-}" ]; then
+        local context
+        context="$(tail -220 "$report")"
+        cmd_pro "Analyze this Chinna V6 project fix report and give exact terminal commands and code prompts. Do not recommend destructive commands. Project: $target"$'\n\n'"$context"
+    else
+        warn "AI key not set. Run: chinna config openrouter"
+        echo ""
+        echo "   Fast local next steps:"
+        echo "     chinna run \"$target\""
+        echo "     chinna audit"
+        echo "     tail -f /tmp/chinna-run-*.log"
+        [ -f "$target/package.json" ] && echo "     cd \"$target\" && $pm install && $pm run dev"
+    fi
+}
+
 # ═══════════════════════════════════════════════════════════════
 # COMMAND: config
 # ═══════════════════════════════════════════════════════════════
@@ -1043,7 +1195,7 @@ cmd_audit() {
     local report="$audit_dir/audit-$timestamp.txt"
 
     {
-        echo "CHINNA V5 AUDIT REPORT"
+        echo "CHINNA V6 AUDIT REPORT"
         echo "Generated: $(date)"
         echo "Path: $(pwd)"
         echo "Stack: $(detect_stack .)"
@@ -1298,9 +1450,11 @@ dispatch_intent() {
         brew)           cmd_brew ;;
         free_ai)        cmd_free "$original" ;;
         pro_ai)         cmd_pro "$original" ;;
-        voice)          cmd_listen ;;
+        voice)          cmd_talk ;;
         bot)            cmd_bot ;;
         preview)        cmd_preview ;;
+        fix|debug)      cmd_fix_project ;;
+        extension)      cmd_extension ;;
         status)         cmd_status ;;
         ports)          cmd_ports ;;
         wifi)           cmd_wifi ;;
@@ -1329,35 +1483,25 @@ dispatch_intent() {
 # ═══════════════════════════════════════════════════════════════
 show_menu() {
     banner
-    echo -e "   ${BOLD}What do you need? (type anything, I understand)${RESET}"
+    echo -e "   ${BOLD}Type a mission number or natural language.${RESET} ${D}Example: fix this project, run stack, scan browser${RESET}"
     echo ""
-    echo -e "   ${ORANGE}1${RESET})  🧹  ${BOLD}Deep Clean${RESET}        ${D}Heavy cleanup (current powerful version)${RESET}"
-    echo -e "   ${ORANGE}1a${RESET}) 🧼  ${BOLD}Clean Mac${RESET}         ${D}Godspeed-style full system clean${RESET}"
-    echo -e "   ${ORANGE}1b${RESET}) 📦  ${BOLD}Clean Nodes${RESET}       ${D}Nuke all node_modules in ~/Documents & Downloads${RESET}"
-    echo -e "   ${ORANGE}1c${RESET}) 🐳  ${BOLD}Clean Docker${RESET}      ${D}Prune everything${RESET}"
-    echo -e "   ${ORANGE}1d${RESET}) 📁  ${BOLD}Clean Project${RESET}     ${D}Clean current dir build artifacts${RESET}"
-    echo -e "   ${ORANGE}2${RESET})  🧠  ${BOLD}Purge RAM${RESET}         ${D}Free inactive memory${RESET}"
-    echo -e "   ${ORANGE}3${RESET})  🔬  ${BOLD}Scan${RESET}              ${D}What's eating your disk${RESET}"
-    echo -e "   ${ORANGE}4${RESET})  🔍  ${BOLD}Find Duplicates${RESET}   ${D}Hunt & kill duplicate files${RESET}"
-    echo -e "   ${ORANGE}5${RESET})  🍺  ${BOLD}Dev Setup${RESET}         ${D}Homebrew + node + python + tools${RESET}"
-    echo -e "   ${ORANGE}6${RESET})  🚀  ${BOLD}Run Project${RESET}       ${D}Auto-detect stack & run${RESET}"
-    echo -e "   ${ORANGE}7${RESET})  🌐  ${BOLD}Deploy${RESET}            ${D}Vercel / Netlify / Railway${RESET}"
-    echo -e "   ${ORANGE}8${RESET})  🤖  ${BOLD}Free AI Chat${RESET}      ${D}Llama 3.3 via OpenRouter${RESET}"
-    echo -e "   ${ORANGE}9${RESET})  💎  ${BOLD}Pro AI Chat${RESET}       ${D}Claude / GPT via OpenRouter${RESET}"
-    echo -e "   ${ORANGE}10${RESET}) 🎤  ${BOLD}Voice Mode${RESET}        ${D}Double-space=toggle, ENTER=record${RESET}"
-    echo -e "   ${ORANGE}11${RESET}) 📡  ${BOLD}Telegram Bot${RESET}      ${D}Control Mac from phone${RESET}"
-    echo -e "   ${ORANGE}12${RESET}) 📊  ${BOLD}Status${RESET}            ${D}Live disk/RAM/CPU dashboard${RESET}"
-    echo -e "   ${ORANGE}13${RESET}) 💀  ${BOLD}Kill RAM Hogs${RESET}     ${D}Find & kill memory eaters${RESET}"
-    echo -e "   ${ORANGE}14${RESET}) 🔌  ${BOLD}Ports${RESET}             ${D}What's running where${RESET}"
-    echo -e "   ${ORANGE}15${RESET}) 📶  ${BOLD}WiFi Check${RESET}        ${D}Diagnostics + speed test${RESET}"
-    echo -e "   ${ORANGE}16${RESET}) 🌿  ${BOLD}Git Commit${RESET}        ${D}AI-generated commit message${RESET}"
-    echo -e "   ${ORANGE}17${RESET}) 🌐  ${BOLD}Preview HTML${RESET}      ${D}Local preview server${RESET}"
-    echo -e "   ${ORANGE}18${RESET}) ⚙️   ${BOLD}Config${RESET}            ${D}API keys & settings${RESET}"
-    echo -e "   ${ORANGE}19${RESET}) 🩺  ${BOLD}Doctor${RESET}            ${D}Health check${RESET}"
-    echo -e "   ${ORANGE}20${RESET}) 🚀  ${BOLD}Start Daemon${RESET}      ${D}Run Chinna in background${RESET}"
-    echo -e "   ${ORANGE}21${RESET}) 🌐  ${BOLD}Dashboard${RESET}         ${D}Premium web UI in browser${RESET}"
-    echo -e "   ${ORANGE}22${RESET}) 🧩  ${BOLD}Plugins${RESET}           ${D}List / load / bootstrap plugins${RESET}"
-    echo -e "   ${ORANGE}23${RESET}) 📍  ${BOLD}Notch Actions${RESET}     ${D}Menu-bar quick icons near camera area${RESET}"
+    mission_meter "System" 78
+    mission_meter "Project" 64
+    mission_meter "AI Link" $([ -n "${OPENROUTER_API_KEY:-}" ] && echo 92 || echo 38)
+    echo ""
+    mission_card "01" "🚀" "Run Project"      "detect stack, install deps, preview localhost" "$TEAL"
+    mission_card "02" "🛠️" "Fix Project"      "audit, dependency check, AI code prompts" "$VIOLET"
+    mission_card "03" "🧩" "Browser Scanner"  "load unpacked extension/dist" "$PINK"
+    mission_card "04" "🌐" "Dashboard"        "open local Chinna control room" "$SKY"
+    mission_card "05" "🤖" "AI Chat"          "ask anything with local context" "$ORANGE"
+    mission_card "06" "🎤" "Talk Mode"        "natural voice command flow" "$ROSE"
+    mission_card "07" "🧹" "Deep Clean"       "system cache, dev cache, disk reclaim" "$LIME"
+    mission_card "08" "📊" "Status"           "disk, RAM, CPU, battery, ports" "$TEAL"
+    mission_card "09" "🌿" "Git Commit"       "AI commit message and git workflow" "$GREEN"
+    mission_card "10" "⚙️" "Config"           "API keys, models, automation" "$ORANGE"
+    mission_card "11" "🩺" "Doctor"           "toolchain and Chinna health check" "$SKY"
+    mission_card "12" "📍" "Notch"            "menu-bar quick actions" "$VIOLET"
+    echo -e "   ${D}╰──────────────────────────────────────────────${RESET}"
     echo -e "   ${ORANGE}q${RESET})  ${D}Quit${RESET}"
     echo ""
     echo -ne "   ${BOLD}>${RESET} "
@@ -1369,33 +1513,29 @@ show_menu() {
 
     # Try numeric menu first
     case "$input" in
-        1) cmd_clean ;;
-        1a) cmd_clean_mac ;;
-        1b) cmd_clean_nodes ;;
-        1c) cmd_clean_docker ;;
-        1d) cmd_clean_project ;;
-        2) cmd_purge ;;
-        3) cmd_scan ;;
-        4) cmd_dupes ;;
-        5) cmd_brew ;;
-        6) run_project ;;
-        7) deploy_project ;;
-        8) echo -ne "  ${C}Prompt:${RESET} "; read -r p; cmd_free "$p" ;;
-        9) echo -ne "  ${C}Prompt:${RESET} "; read -r p; cmd_pro "$p" ;;
-        10) cmd_listen ;;
-        11) cmd_bot ;;
-        12) cmd_status ;;
-        13) cmd_kill ;;
-        14) cmd_ports ;;
-        15) cmd_wifi ;;
-        16) cmd_git ;;
-        17) echo -ne "  File/dir (ENTER for pwd): "; read -r f; cmd_preview "$f" ;;
-        18) cmd_config ;;
-        19) cmd_doctor ;;
-        20) cmd_start ;;
-        21) cmd_dashboard ;;
-        22) cmd_plugins ;;
-        23) cmd_notch ;;
+        1|01) run_project ;;
+        2|02) cmd_fix_project ;;
+        3|03) cmd_extension ;;
+        4|04) cmd_dashboard ;;
+        5|05) echo -ne "  ${C}Prompt:${RESET} "; read -r p; cmd_pro "$p" ;;
+        6|06) cmd_talk ;;
+        7|07) cmd_clean ;;
+        8|08) cmd_status ;;
+        9|09) cmd_git ;;
+        10) cmd_config ;;
+        11) cmd_doctor ;;
+        12) cmd_notch ;;
+        clean-mac) cmd_clean_mac ;;
+        clean-nodes) cmd_clean_nodes ;;
+        clean-docker) cmd_clean_docker ;;
+        clean-project) cmd_clean_project ;;
+        scan) cmd_scan ;;
+        dupes) cmd_dupes ;;
+        brew) cmd_brew ;;
+        ports) cmd_ports ;;
+        wifi) cmd_wifi ;;
+        preview) echo -ne "  File/dir (ENTER for pwd): "; read -r f; cmd_preview "$f" ;;
+        plugins) cmd_plugins ;;
         q|Q) echo -e "  ${ORANGE}Later 👋${RESET}"; exit 0 ;;
         "")  show_menu ;;
         *)
@@ -1432,11 +1572,13 @@ show_help() {
      ${C}wifi${RESET}                   WiFi diagnostics + speed test
      ${C}brew${RESET}                   Install Homebrew + dev tools
      ${C}run${RESET} [dir]              Auto-detect stack & run project
+     ${C}fix${RESET} [dir]              Project issue scan + AI fix prompts
+     ${C}extension${RESET}              Show unpacked browser extension folder
      ${C}deploy${RESET} [dir]           Deploy to Vercel/Netlify/Railway
      ${C}git${RESET}                    AI-generated git commit + push
      ${C}free${RESET} <prompt>          Free AI chat (Llama 3.3)
      ${C}pro${RESET} <prompt>           Paid AI chat (Claude/GPT)
-     ${C}listen${RESET}                 Voice mode
+     ${C}talk${RESET} / ${C}listen${RESET}        Voice mode
      ${C}bot${RESET}                    Telegram remote control
      ${C}preview${RESET} [file/dir]     HTML preview server
      ${C}remind${RESET} <time> <msg>    Set reminder (5m, 2h, 30s)
@@ -1454,6 +1596,7 @@ show_help() {
    ${BOLD}NATURAL LANGUAGE EXAMPLES${RESET}
      chinna "na mac slow aindhi"         → purge RAM + diagnostics
      chinna "stack build chei"           → detect stack + run project
+     chinna "fix this project"           → audit + exact fix commands
      chinna "git lo pettu"               → AI commit + push
      chinna "deploy cheyyi"              → deploy to Vercel/Netlify
      chinna "duplicate files unnaya"     → find & delete dupes
@@ -1491,6 +1634,7 @@ main() {
         scan)                       cmd_scan ;;
         status|stats)               cmd_status ;;
         dashboard|web|ui|panel)     cmd_dashboard ;;
+        extension|ext|browser-ext)  cmd_extension ;;
         dupes|duplicates)           shift; cmd_dupes "$@" ;;
         kill)                       cmd_kill ;;
         ports)                      cmd_ports ;;
@@ -1503,7 +1647,8 @@ main() {
         git|commit)                 cmd_git ;;
         free)                       shift; cmd_free "$@" ;;
         pro)                        shift; cmd_pro "$@" ;;
-        listen|voice)               cmd_listen ;;
+        fix|resolve|inspect)        shift; cmd_fix_project "${1:-.}" ;;
+        listen|voice|talk)          cmd_talk ;;
         bot|telegram)               cmd_bot ;;
         preview|serve)              shift; cmd_preview "$@" ;;
         remind)                     shift; cmd_remind "$@" ;;

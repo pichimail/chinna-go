@@ -62,6 +62,9 @@ detect_stack() {
             if jq -e '.dependencies.next // .devDependencies.next' package.json >/dev/null 2>&1; then
                 popd >/dev/null; echo "node-next"; return 0
             fi
+            if jq -e '.dependencies.expo // .devDependencies.expo' package.json >/dev/null 2>&1; then
+                popd >/dev/null; echo "expo"; return 0
+            fi
             if jq -e '.dependencies["@sveltejs/kit"] // .devDependencies["@sveltejs/kit"]' package.json >/dev/null 2>&1; then
                 popd >/dev/null; echo "sveltekit"; return 0
             fi
@@ -172,53 +175,6 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 ENV
         ok "Created minimal .env with mock keys"
     fi
-}
-
-# ─── Detect project stack ──────────────────────────────────────
-detect_stack() {
-    local dir="${1:-.}"
-
-    # Next.js
-    if [ -f "$dir/package.json" ] && grep -q '"next"' "$dir/package.json" 2>/dev/null; then
-        echo "nextjs"; return 0
-    fi
-    # Expo / React Native
-    if [ -f "$dir/package.json" ] && grep -q '"expo"' "$dir/package.json" 2>/dev/null; then
-        echo "expo"; return 0
-    fi
-    # Vite / React
-    if [ -f "$dir/package.json" ] && grep -q '"vite"' "$dir/package.json" 2>/dev/null; then
-        echo "vite"; return 0
-    fi
-    # Plain Node
-    if [ -f "$dir/package.json" ]; then
-        echo "node"; return 0
-    fi
-    # Flutter
-    if [ -f "$dir/pubspec.yaml" ]; then
-        echo "flutter"; return 0
-    fi
-    # FastAPI / Python
-    if [ -f "$dir/requirements.txt" ] && grep -qi "fastapi" "$dir/requirements.txt" 2>/dev/null; then
-        echo "fastapi"; return 0
-    fi
-    # Django
-    if [ -f "$dir/requirements.txt" ] && grep -qi "django" "$dir/requirements.txt" 2>/dev/null; then
-        echo "django"; return 0
-    fi
-    # Generic Python
-    if [ -f "$dir/requirements.txt" ] || [ -f "$dir/pyproject.toml" ] || [ -f "$dir/setup.py" ]; then
-        echo "python"; return 0
-    fi
-    # Go
-    if [ -f "$dir/go.mod" ]; then echo "go"; return 0; fi
-    # Rust
-    if [ -f "$dir/Cargo.toml" ]; then echo "rust"; return 0; fi
-    # Ruby
-    if [ -f "$dir/Gemfile" ]; then echo "ruby"; return 0; fi
-
-    echo "unknown"
-    return 1
 }
 
 # ─── Stack runners ─────────────────────────────────────────────
@@ -398,7 +354,7 @@ run_project() {
         gs_plugin_prepare "$dir"
     else
         case "$stack" in
-            node-next|node-vite|node-express|node|electron)
+            node-next|node-vite|node-express|node|electron|sveltekit|remix|astro|solidstart|node-nuxt|expo)
                 echo "  → Installing dependencies with $pm..."
                 (cd "$dir" && $pm install --silent 2>/dev/null) &
                 spinner $! "Installing dependencies"
@@ -472,8 +428,9 @@ PY
         local cmd=""
         case "$stack" in
             node-next)          cmd="$pm run dev -- --port $port" ;;
-            node-vite|sveltekit|remix|astro) cmd="$pm run dev -- --port $port --host" ;;
-            node-express|node)  cmd="$pm run dev" ;;
+            node-vite|sveltekit|remix|astro|solidstart|node-nuxt) cmd="$pm run dev -- --port $port --host" ;;
+            expo)               cmd="npx expo start --web --port $port" ;;
+            node-express|node|electron)  cmd="$pm run dev" ;;
             python-fastapi)     cmd=".venv/bin/uvicorn main:app --reload --port $port --host 0.0.0.0" ;;
             python-flask)       cmd=".venv/bin/flask --app app run --port $port --reload" ;;
             python-streamlit)   cmd=".venv/bin/streamlit run app.py --server.port $port --server.headless true" ;;

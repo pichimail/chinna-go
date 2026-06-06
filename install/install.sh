@@ -138,6 +138,7 @@ step_strict_cleanup() {
     echo "    Clearing stale app code and caches..."
     rm -f "${CHINNA}/dashboard_server.py" "${CHINNA}/lib/server.py"
     rm -rf "${CHINNA}/dashboard"
+    rm -rf "${CHINNA}/extension"
     rm -rf "${CHINNA}/__pycache__" "${CHINNA}/lib/__pycache__"
     rm -f "${CHINNA}/install/chinna_v5.py" "${CHINNA}/server_v4.py"
     find "${CHINNA}" -name '*.pyc' -delete 2>/dev/null || true
@@ -171,6 +172,17 @@ step_write_whatsapp_bridge() {
     copy_or_fetch "whatsapp_bridge/server.js" "${CHINNA}/whatsapp_bridge/server.js"
     copy_or_fetch "whatsapp_bridge/package-lock.json" "${CHINNA}/whatsapp_bridge/package-lock.json" 2>/dev/null || true
     echo "    ✓ WhatsApp bridge updated"
+}
+
+step_write_extension() {
+    echo "    ↻ Force-refreshing browser extension..."
+    mkdir -p "${CHINNA}/extension/dist"
+    for file in manifest.json icon.svg background.js content.js popup.html popup.css popup.js; do
+        copy_or_fetch "extension/dist/${file}" "${CHINNA}/extension/dist/${file}" 2>/dev/null && \
+            echo "      ✓ extension/dist/${file}" || \
+            echo "      ⚠ extension/dist/${file} (skipped)"
+    done
+    echo "    ✓ browser extension updated → ${CHINNA}/extension/dist"
 }
 
 step_write_libs() {
@@ -281,6 +293,7 @@ run_refresh_step "strict_cleanup"        step_strict_cleanup
 run_refresh_step "write_server"          step_write_server
 run_refresh_step "write_dashboard"       step_write_dashboard
 run_refresh_step "write_whatsapp_bridge" step_write_whatsapp_bridge
+run_refresh_step "write_extension"       step_write_extension
 run_refresh_step "write_libs"            step_write_libs
 run_refresh_step "write_bin"             step_write_bin
 run_refresh_step "write_defaults"        step_write_defaults
@@ -299,6 +312,7 @@ echo "  ✅  CHINNA V6 READY!"
 echo "  ══════════════════════════════════════════════════════"
 echo ""
 echo "  🌐  Dashboard   →  http://localhost:${PORT}"
+echo "  🧩  Extension   →  ${CHINNA}/extension/dist  (load unpacked)"
 echo "  📦  Share URL   →  curl -fsSL -H \"Cache-Control: no-cache\" https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash"
 echo ""
 echo "  Quick commands (in a new terminal tab):"
@@ -306,6 +320,7 @@ echo "    chinna doctor         → full system health check"
 echo "    chinna run            → smart project runner"
 echo "    chinna ai <prompt>    → AI chat"
 echo "    chinna dashboard      → open dashboard"
+echo "    chinna extension      → open Chrome extensions + show unpacked folder"
 echo "    chinna model-set free → switch AI model"
 echo "    chinna clean          → deep Mac clean"
 echo "    chinna audit          → project audit"

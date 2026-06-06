@@ -1221,6 +1221,166 @@ def process_attachments(attachments):
 
     return results, vision_images
 
+def compact_scan_for_prompt(scan):
+    page = scan.get('page') or {}
+    counts = scan.get('counts') or {}
+    errors = scan.get('errors') or []
+    console = scan.get('console') or []
+    resources = scan.get('resources') or {}
+    return {
+        'url': safe_text(page.get('url', ''))[:500],
+        'title': safe_text(page.get('title', ''))[:180],
+        'counts': counts,
+        'errors': errors[:12],
+        'console': console[:20],
+        'resource_failures': (resources.get('failed') or [])[:12],
+        'performance': scan.get('performance') or {},
+        'meta': scan.get('meta') or {},
+        'accessibility': scan.get('accessibility') or {},
+    }
+
+def extension_local_findings(scan):
+    scan = scan if isinstance(scan, dict) else {}
+    page = scan.get('page') or {}
+    counts = scan.get('counts') or {}
+    meta = scan.get('meta') or {}
+    accessibility = scan.get('accessibility') or {}
+    performance = scan.get('performance') or {}
+    errors = scan.get('errors') or []
+    console = scan.get('console') or []
+    resources = scan.get('resources') or {}
+    failed_resources = resources.get('failed') or []
+    findings = []
+    commands = []
+    code_prompts = []
+
+    def add(severity, title, detail, fix, command=''):
+        findings.append({
+            'severity': severity,
+            'title': safe_text(title)[:120],
+            'detail': safe_text(detail, keep_newlines=True)[:800],
+            'fix': safe_text(fix, keep_newlines=True)[:900],
+        })
+        if command:
+            commands.append(command)
+
+    if not page.get('title'):
+        add('high', 'Missing page title', 'The active tab did not expose a document title.', 'Add a concise, unique <title> for this route.')
+    if not meta.get('description'):
+        add('medium', 'Missing meta description', 'No meta description was found.', 'Add <meta name="description" content="..."> with route-specific copy.')
+    h1_count = int(counts.get('h1') or 0)
+    if h1_count == 0:
+        add('high', 'Missing H1', 'The page has no H1 heading.', 'Add exactly one visible H1 that names the page purpose.')
+    elif h1_count > 1:
+        add('medium', 'Multiple H1 headings', f'The page has {h1_count} H1 elements.', 'Keep one primary H1 and demote section headings to H2/H3.')
+    missing_alt = int(accessibility.get('images_missing_alt') or 0)
+    if missing_alt:
+        add('medium', 'Images missing alt text', f'{missing_alt} image(s) have no alt text.', 'Add useful alt text for meaningful images and alt="" for decorative images.')
+    unlabeled = int(accessibility.get('inputs_unlabeled') or 0)
+    if unlabeled:
+        add('high', 'Unlabeled form controls', f'{unlabeled} input/control(s) appear to be unlabeled.', 'Connect every input to a <label>, aria-label, or aria-labelledby.')
+    if failed_resources:
+        add('high', 'Failed resources detected', f'{len(failed_resources)} failed resource(s) were captured after scan injection.', 'Fix the broken asset/API URLs and re-run the scan.')
+    if errors:
+        add('high', 'Runtime errors captured', f'{len(errors)} runtime error(s) were captured after scan injection.', 'Open DevTools, reproduce once, then fix the first stack trace before lower-priority UI issues.')
+    long_tasks = int(performance.get('long_tasks') or 0)
+    if long_tasks:
+        add('medium', 'Main thread long tasks', f'{long_tasks} long task(s) were observed.', 'Split heavy work, lazy-load non-critical code, and defer analytics/third-party scripts.')
+
+    combined_logs = '\n'.join(
+        safe_text(x.get('message') or x.get('text') or x, keep_newlines=True)
+        for x in (errors + console)[:40]
+    )
+    for pkg in sorted(set(re.findall(r"(?:Cannot find module|Can't resolve|Module not found).*?['\"](@?[\w./-]+)['\"]", combined_logs)))[:5]:
+        if pkg and not pkg.startswith(('.', '/')):
+            commands.append(f"npm install {pkg}")
+    if 'vite' in combined_logs.lower():
+        commands.append('npm run dev -- --host 0.0.0.0')
+    if 'next' in combined_logs.lower():
+        commands.append('npm run dev')
+
+    code_prompts.append(
+        "Using the scan JSON and console errors, identify the root cause, name the exact files likely involved, "
+        "and provide a minimal patch plan. Do not guess file contents that are not present."
+    )
+    if combined_logs:
+        code_prompts.append("Debug this browser console/runtime error and provide exact code changes:\n" + combined_logs[:3500])
+
+    severity_weight = {'high': 14, 'medium': 8, 'low': 3}
+    score = max(0, 100 - sum(severity_weight.get(f.get('severity'), 4) for f in findings))
+    return {
+        'ok': True,
+        'score': score,
+        'status': 'critical' if score < 60 else ('needs-work' if score < 82 else 'healthy'),
+        'summary': f"{len(findings)} finding(s) on {safe_text(page.get('url', 'this page'))[:160]}",
+        'findings': findings[:20],
+        'commands': list(dict.fromkeys(commands))[:10],
+        'code_prompts': code_prompts[:6],
+        'scan': compact_scan_for_prompt(scan),
+        'limits': [
+            'The extension captures live console/runtime events after injection.',
+            'Historic DevTools console entries from before the scan are not available to normal content scripts.'
+        ]
+    }
+
+def extension_ai_analysis(scan, user_prompt='', attachments=None):
+    local = extension_local_findings(scan)
+    if not load_keys().get('OPENROUTER_API_KEY') and not load_keys().get('OPENAI_API_KEY'):
+        local['ai_reply'] = 'No AI key configured. Returning deterministic scan findings only.'
+        local['model'] = 'local-rules'
+        return local
+
+    attachment_context, _ = process_attachments(attachments or [])
+    attach_text = ''
+    for a in attachment_context[:5]:
+        if a.get('type') == 'text':
+            attach_text += f"\n--- {a.get('name')} ---\n{a.get('content','')[:5000]}\n"
+        else:
+            attach_text += f"\n[{a.get('name')} uploaded: {a.get('type','file')}]\n"
+
+    prompt = (
+        "You are Chinna's browser extension analyzer. Diagnose the live browser scan below.\n"
+        "Return concise sections: Summary, Root Cause, Fix Steps, Terminal Commands, Code Prompt.\n"
+        "Prefer exact, safe commands. Never recommend destructive commands. If the issue needs project files, say which files to inspect.\n\n"
+        f"User request: {safe_text(user_prompt or 'Scan this page and give exact fixes', keep_newlines=True)}\n\n"
+        f"Local deterministic findings:\n{json.dumps(local, ensure_ascii=True)[:7000]}\n\n"
+        f"Scan JSON:\n{json.dumps(compact_scan_for_prompt(scan), ensure_ascii=True)[:9000]}\n"
+        f"{attach_text[:7000]}"
+    )
+    messages = [
+        {'role': 'system', 'content': 'You produce accurate web debugging instructions for a local Mac developer. Be brief, exact, and safety-conscious.'},
+        {'role': 'user', 'content': prompt}
+    ]
+    msg, used_model = openrouter_chat(messages, model='meta-llama/llama-3.3-70b-instruct:free')
+    if not msg and load_keys().get('OPENAI_API_KEY'):
+        msg, used_model = openai_chat(messages, model='gpt-4o-mini')
+    local['ai_reply'] = (msg or {}).get('content') or 'AI analysis failed. Local findings are still available.'
+    local['model'] = used_model
+    local['attachments_processed'] = len(attachment_context)
+    return local
+
+def run_confirmed_terminal_command(command, cwd=None):
+    cmd = safe_text(command, keep_newlines=True).splitlines()[0][:500].strip()
+    if not cmd:
+        return {'error': 'command required'}
+    if not is_safe_terminal_command(cmd):
+        return {'error': 'Command blocked for safety. Chinna only runs confirmed, non-destructive commands here.', 'command': cmd}
+    run_cwd = os.path.abspath(os.path.expanduser(cwd or HOME))
+    if not os.path.isdir(run_cwd):
+        run_cwd = HOME
+    try:
+        proc = subprocess.run(['bash', '-lc', cmd], cwd=run_cwd, text=True, capture_output=True, timeout=90)
+        return {
+            'ok': proc.returncode == 0,
+            'command': cmd,
+            'cwd': run_cwd,
+            'returncode': proc.returncode,
+            'stdout': (proc.stdout or '')[-5000:],
+            'stderr': (proc.stderr or '')[-3000:],
+        }
+    except subprocess.TimeoutExpired:
+        return {'error': 'command timed out', 'command': cmd, 'cwd': run_cwd}
+
 # Tool: list previously uploaded files
 TOOLS.append({
     "type": "function",
@@ -1540,6 +1700,18 @@ class H(http.server.SimpleHTTPRequestHandler):
             })
         elif p == '/api/version':
             self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6'})
+        elif p == '/api/extension/health':
+            self._json({
+                'ok': True,
+                'name': 'Chinna V6 Extension Bridge',
+                'version': CHINNA_VERSION,
+                'ai_ready': bool(load_keys().get('OPENROUTER_API_KEY') or load_keys().get('OPENAI_API_KEY')),
+                'mode': 'confirm-then-run',
+                'limits': [
+                    'Live console capture starts after extension injection.',
+                    'Historic DevTools console logs require a DevTools panel and cannot be read retroactively.'
+                ]
+            })
         elif p == '/api/check-update':
             self._json(self.check_update())
         elif p == '/api/models':
@@ -1672,6 +1844,52 @@ class H(http.server.SimpleHTTPRequestHandler):
             else: self._json({'error':'no pid'},400)
         elif p == '/api/chat':
             self.chat(b)
+        elif p == '/api/extension/scan':
+            scan = b.get('scan') if isinstance(b.get('scan'), dict) else b
+            self._json(extension_local_findings(scan))
+        elif p == '/api/extension/analyze':
+            scan = b.get('scan') if isinstance(b.get('scan'), dict) else {}
+            prompt = b.get('prompt') or b.get('message') or ''
+            attachments = b.get('attachments') or []
+            self._json(extension_ai_analysis(scan, prompt, attachments))
+        elif p == '/api/extension/upload':
+            attachments = b.get('attachments') or []
+            processed, _ = process_attachments(attachments)
+            self._json({'ok': True, 'files': [
+                {
+                    'id': x.get('id'),
+                    'name': x.get('name'),
+                    'mime': x.get('mime'),
+                    'size': x.get('size'),
+                    'type': x.get('type'),
+                    'path': x.get('path')
+                } for x in processed
+            ], 'count': len(processed)})
+        elif p == '/api/extension/command-plan':
+            scan = b.get('scan') if isinstance(b.get('scan'), dict) else {}
+            issue = safe_text(b.get('issue') or b.get('prompt') or '', keep_newlines=True)
+            command = safe_text(b.get('command') or '', keep_newlines=True)
+            confirmed = bool(b.get('confirmed'))
+            cwd = b.get('cwd') or HOME
+            local = extension_local_findings(scan)
+            commands = []
+            if command:
+                commands.append(command.splitlines()[0])
+            commands.extend(local.get('commands') or [])
+            commands = list(dict.fromkeys([c for c in commands if c]))[:10]
+            if confirmed and command:
+                result = run_confirmed_terminal_command(command, cwd=cwd)
+                self._json(result, 200 if result.get('ok') else 400)
+            else:
+                self._json({
+                    'ok': True,
+                    'requires_confirmation': True,
+                    'mode': 'confirm-then-run',
+                    'issue': issue[:1000],
+                    'commands': commands,
+                    'code_prompts': local.get('code_prompts', []),
+                    'note': 'Pick a command and confirm before Chinna runs it. Unsafe commands are blocked.'
+                })
         elif p == '/api/telegram/pair':
             self.telegram_pair(b)
         elif p == '/api/telegram/test':

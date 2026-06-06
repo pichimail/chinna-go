@@ -1,6 +1,7 @@
 # Chinna V6
 
 Chinna is a local Mac sidekick for cleanup, system checks, disk exploration, AI chat, Telegram control, and voice actions.
+It also includes a local Chrome/Edge/Brave extension for live website scanning and console-error fix prompts.
 
 ## One-Touch Install
 
@@ -20,6 +21,7 @@ What it does:
 - Stops old Chinna services
 - Clears stale Chinna app code and local app caches
 - Installs the latest Chinna V6 app files from GitHub
+- Refreshes the unpacked browser extension in `~/.chinna/extension/dist`
 - Replaces older installed Chinna code with V6
 - Sets up the local command in your shell path
 - Keeps your user data and API keys separate from app code
@@ -46,9 +48,29 @@ After install, use these commands:
 chinna --version
 chinna help
 chinna dashboard
+chinna extension
+chinna fix
 chinna start
 chinna config
 ```
+
+## Browser Extension
+
+The installer refreshes the unpacked extension here:
+
+```bash
+~/.chinna/extension/dist
+```
+
+Load it in Chrome, Edge, or Brave:
+
+1. Open `chrome://extensions`
+2. Enable Developer mode
+3. Click **Load unpacked**
+4. Select `~/.chinna/extension/dist`
+
+The extension scans the active tab, captures live runtime errors after injection, supports log/code file upload, and sends results only to the local Chinna server at `http://localhost:7777`.
+Normal content scripts cannot read historic DevTools logs from before injection; re-run the scan and reproduce the issue once for fresh console capture.
 
 Optional commands:
 
@@ -119,6 +141,13 @@ chinna uninstall --purge
 
   ```bash
   chinna dashboard
+  ```
+
+- If the extension cannot connect, run:
+
+  ```bash
+  chinna dashboard
+  chinna extension
   ```
 
 - If AI chat or Telegram is not working, verify keys in:

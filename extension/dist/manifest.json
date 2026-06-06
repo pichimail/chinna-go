@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Chinna Live Site Scanner",
+  "description": "Scan the active site, capture live browser issues, upload logs, and send exact fixes to local Chinna.",
+  "version": "6.0.0",
+  "action": {
+    "default_title": "Chinna Scanner",
+    "default_popup": "popup.html",
+    "default_icon": "icon.svg"
+  },
+  "icons": {
+    "16": "icon.svg",
+    "48": "icon.svg",
+    "128": "icon.svg"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "http://localhost:7777/*",
+    "http://127.0.0.1:7777/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
