@@ -177,7 +177,7 @@ step_write_whatsapp_bridge() {
 step_write_extension() {
     echo "    ↻ Force-refreshing browser extension..."
     mkdir -p "${CHINNA}/extension/dist"
-    for file in manifest.json icon.svg background.js content.js popup.html popup.css popup.js; do
+    for file in manifest.json icon.svg background.js content.js popup.html sidepanel.html popup.css popup.js; do
         copy_or_fetch "extension/dist/${file}" "${CHINNA}/extension/dist/${file}" 2>/dev/null && \
             echo "      ✓ extension/dist/${file}" || \
             echo "      ⚠ extension/dist/${file} (skipped)"

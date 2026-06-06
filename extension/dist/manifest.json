@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Chinna Live Site Scanner",
-  "description": "Scan the active site, capture live browser issues, upload logs, and send exact fixes to local Chinna.",
-  "version": "6.0.0",
+  "name": "Chinna Smart Site Assistant",
+  "description": "A calm, site-aware assistant with popup, side panel, and attach-to-page modes.",
+  "version": "7.0.0",
   "action": {
-    "default_title": "Chinna Scanner",
+    "default_title": "Chinna",
     "default_popup": "popup.html",
     "default_icon": "icon.svg"
   },
@@ -18,13 +18,24 @@
     "scripting",
     "storage",
     "tabs",
-    "clipboardWrite"
+    "clipboardWrite",
+    "sidePanel"
   ],
   "host_permissions": [
+    "<all_urls>",
     "http://localhost:7777/*",
     "http://127.0.0.1:7777/*"
   ],
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icon.svg"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

@@ -1,304 +1,271 @@
-let lastScan = null;
-let lastLocal = null;
-let attachments = [];
+(() => {
+  const THINKING_STATES = [
+    "Thinking through this page…",
+    "Reading the structure…",
+    "Pulling the important details together…",
+    "Shaping a clean answer…"
+  ];
 
-const $ = (id) => document.getElementById(id);
-const msg = (payload) => chrome.runtime.sendMessage(payload);
+  const state = {
+    shell: document.body.dataset.shell || "popup",
+    tab: null,
+    profile: null,
+    lastScan: null,
+    lastLocal: null,
+    attachments: [],
+    thinkingTimer: null,
+    pollTimer: null
+  };
 
-function toast(text) {
-  const el = $("toast");
-  el.textContent = text;
-  el.classList.add("show");
-  clearTimeout(window.__chinnaToast);
-  window.__chinnaToast = setTimeout(() => el.classList.remove("show"), 1800);
-}
+  const $ = (id) => document.getElementById(id);
+  const msg = (payload) => chrome.runtime.sendMessage(payload);
 
-function setHealth(ok, text) {
-  $("health").classList.toggle("ok", ok);
-  $("health").classList.toggle("bad", !ok);
-  $("healthText").textContent = text;
-}
-
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  }[ch]));
-}
-
-function copy(text) {
-  navigator.clipboard.writeText(text).then(() => toast("Copied"));
-}
-
-function addBubble(role, html) {
-  const root = $("conversation");
-  const article = document.createElement("article");
-  article.className = `bubble ${role}`;
-  article.innerHTML = html;
-  root.appendChild(article);
-  root.scrollTop = root.scrollHeight;
-  return article;
-}
-
-function resetConversation() {
-  $("conversation").innerHTML = "";
-}
-
-function setContext(scan) {
-  const title = scan?.title || scan?.url || "Current tab";
-  const clean = title.length > 42 ? `${title.slice(0, 39)}...` : title;
-  $("contextText").textContent = `Sharing "${clean}"`;
-}
-
-async function loadTabContext() {
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab?.title) setContext({ title: tab.title });
-  } catch {
-    setContext(null);
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[ch]));
   }
-}
 
-function updateScore(data) {
-  $("scoreValue").textContent = data?.score ?? "--";
-  $("issueCount").textContent = (data?.findings || []).length;
-  $("errorCount").textContent = (lastScan?.errors || []).length;
-}
-
-function findingsHtml(data) {
-  const findings = data?.findings || [];
-  if (!findings.length) {
-    return '<span class="label">Scan</span><p>No major findings from the local scanner.</p>';
+  function toast(text) {
+    const el = $("toast");
+    el.textContent = text;
+    el.classList.add("show");
+    clearTimeout(window.__chinnaToast);
+    window.__chinnaToast = setTimeout(() => el.classList.remove("show"), 1900);
   }
-  return `
-    <span class="label">Findings</span>
-    ${findings.slice(0, 5).map((f) => `
-      <div class="finding">
-        <span class="sev ${escapeHtml(f.severity || "low")}">${escapeHtml(f.severity || "info")}</span>
-        <strong>${escapeHtml(f.title)}</strong>
-        <p>${escapeHtml(f.detail)}</p>
-        <code>${escapeHtml(f.fix)}</code>
-      </div>
-    `).join("")}
-  `;
-}
 
-function commandsHtml(data) {
-  const commands = data?.commands || [];
-  if (!commands.length) return "";
-  return `
-    <span class="label">Commands</span>
-    ${commands.map((command) => `
-      <div class="command-card">
-        <strong>Terminal</strong>
-        <code>${escapeHtml(command)}</code>
-        <div class="command-row">
-          <button data-copy="${escapeHtml(command)}">Copy</button>
-          <button data-run="${escapeHtml(command)}">Confirm Run</button>
-        </div>
-      </div>
-    `).join("")}
-  `;
-}
-
-function wireCommandButtons(root = document) {
-  root.querySelectorAll("[data-copy]").forEach((button) => {
-    button.addEventListener("click", () => copy(button.dataset.copy));
-  });
-  root.querySelectorAll("[data-run]").forEach((button) => {
-    button.addEventListener("click", () => runCommand(button.dataset.run, button));
-  });
-}
-
-function renderLocalResult(data) {
-  const findings = addBubble("assistant", findingsHtml(data));
-  wireCommandButtons(findings);
-  const commands = commandsHtml(data);
-  if (commands) {
-    const commandBubble = addBubble("system", commands);
-    wireCommandButtons(commandBubble);
+  function setThinking(active, label) {
+    const wrap = $("thinking");
+    const text = $("thinkingText");
+    if (!active) {
+      wrap.hidden = true;
+      clearInterval(state.thinkingTimer);
+      return;
+    }
+    let index = 0;
+    wrap.hidden = false;
+    text.textContent = label || THINKING_STATES[0];
+    clearInterval(state.thinkingTimer);
+    state.thinkingTimer = setInterval(() => {
+      index = (index + 1) % THINKING_STATES.length;
+      text.textContent = THINKING_STATES[index];
+    }, 1400);
   }
-}
 
-function renderAnswer(data) {
-  const text = data?.ai_reply || data?.summary || "Analysis ready.";
-  const model = data?.model || $("modeSelect").value || "local";
-  const html = `
-    <span class="label">${escapeHtml(model)}</span>
-    <p>${escapeHtml(text).replace(/\n/g, "<br>")}</p>
-  `;
-  addBubble("assistant", html);
-}
-
-async function checkHealth() {
-  const res = await msg({ type: "health" });
-  if (res?.ok) {
-    setHealth(true, res.data.ai_ready ? "AI ready" : "Local ready");
-  } else {
-    setHealth(false, "Offline");
-    addBubble("assistant", '<span class="label">Offline</span><p>Start Chinna first: chinna dashboard</p>');
+  function addBubble(role, text, meta) {
+    const root = $("conversation");
+    const article = document.createElement("article");
+    article.className = `bubble ${role}`;
+    article.innerHTML = `
+      <span class="meta">${escapeHtml(meta || (role === "user" ? "You" : role === "system" ? "Workspace" : "Chinna"))}</span>
+      <p>${escapeHtml(text)}</p>
+    `;
+    root.appendChild(article);
+    root.scrollTop = root.scrollHeight;
   }
-}
 
-async function runScan(options = {}) {
-  const button = $("scanBtn");
-  button.disabled = true;
-  button.textContent = "Scanning";
-  if (options.reset !== false) {
-    resetConversation();
-    addBubble("user", '<span class="label">You</span><p>Scan this tab.</p>');
+  function clearConversation() {
+    $("conversation").innerHTML = "";
+    addBubble("assistant", "Hey Buddy. I’m watching this tab and I’ll keep the prompts relevant to what’s open.");
   }
-  try {
-    const res = await msg({ type: "scan" });
-    if (!res?.ok) throw new Error(res?.error || "Scan failed");
-    lastScan = res.scan;
-    lastLocal = res.local;
-    setContext(lastScan);
-    updateScore(lastLocal);
-    if (options.render !== false) renderLocalResult(lastLocal);
-    toast("Scan complete");
-  } catch (error) {
-    const text = error.message || String(error);
-    toast(text);
-    addBubble("assistant", `<span class="label">Scan failed</span><p>${escapeHtml(text)}</p>`);
-  } finally {
-    button.disabled = false;
-    button.textContent = "Scan";
-  }
-}
 
-function fileToAttachment(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(reader.error);
-    reader.onload = () => {
-      const dataUrl = String(reader.result || "");
-      resolve({
-        name: file.name,
-        mime: file.type || "application/octet-stream",
-        size: file.size,
-        data_b64: dataUrl.split(",")[1] || ""
+  function currentHost() {
+    try {
+      return new URL(state.tab?.url || "").hostname.replace(/^www\./, "") || "this site";
+    } catch {
+      return "this site";
+    }
+  }
+
+  function renderMetrics() {
+    $("scoreValue").textContent = state.lastLocal?.score ?? "--";
+    $("issueCount").textContent = Array.isArray(state.lastLocal?.findings) ? state.lastLocal.findings.length : 0;
+    $("errorCount").textContent = Array.isArray(state.lastScan?.errors) ? state.lastScan.errors.length : 0;
+    $("nodeCount").textContent = state.lastScan?.counts?.nodes ?? "--";
+    $("siteBrief").textContent = state.profile?.summary || "Open a page and I’ll shape the suggestions around it.";
+  }
+
+  function renderSiteContext() {
+    $("greeting").textContent = "Hey Buddy";
+    $("subGreeting").textContent = state.profile?.summary || "I’ll stay calm, clear, and tuned to this tab.";
+    $("hostPill").textContent = currentHost();
+    $("modePill").textContent = state.shell === "sidepanel" ? "Side panel mode" : "Popup mode";
+    $("memoryPill").textContent = `Smart prompts • ${state.profile?.vibe || "general"}`;
+  }
+
+  function renderSuggestions() {
+    const wrap = $("suggestions");
+    wrap.innerHTML = "";
+    (state.profile?.suggestions || [
+      "What matters most on this page?",
+      "What should be improved here first?"
+    ]).forEach((text) => {
+      const button = document.createElement("button");
+      button.className = "suggestion-btn";
+      button.type = "button";
+      button.textContent = text;
+      button.addEventListener("click", () => {
+        $("prompt").value = text;
+        analyze(text);
       });
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-async function handleFiles(event) {
-  const files = Array.from(event.target.files || []);
-  if (!files.length) return;
-  attachments = await Promise.all(files.map(fileToAttachment));
-  const res = await msg({ type: "upload", attachments });
-  if (!res?.ok) {
-    toast(res?.error || "Upload failed");
-    return;
-  }
-  const names = attachments.map((file) => file.name).join(", ");
-  addBubble("user", `<span class="label">Upload</span><p>${escapeHtml(names)}</p>`);
-  addBubble("assistant", `<span class="label">Files</span><p>${attachments.length} file(s) ready for analysis.</p>`);
-  toast(`${attachments.length} file(s) uploaded`);
-}
-
-async function analyze() {
-  const prompt = $("prompt").value.trim() || "Analyze this page and give exact fix commands.";
-  resetConversation();
-  addBubble("user", `<span class="label">You</span><p>${escapeHtml(prompt)}</p>`);
-  if (!lastScan) {
-    await runScan({ reset: false, render: false });
-  }
-  if (!lastScan) return;
-  const button = $("analyzeBtn");
-  button.disabled = true;
-  button.textContent = "...";
-  try {
-    const res = await msg({
-      type: "analyze",
-      scan: lastScan,
-      prompt,
-      attachments
+      wrap.appendChild(button);
     });
-    if (!res?.ok) throw new Error(res?.error || "Analysis failed");
-    lastLocal = res.data;
-    updateScore(lastLocal);
-    renderLocalResult(lastLocal);
-    renderAnswer(lastLocal);
-    toast("Chinna answered");
-  } catch (error) {
-    const text = error.message || String(error);
-    toast(text);
-    addBubble("assistant", `<span class="label">Error</span><p>${escapeHtml(text)}</p>`);
-  } finally {
-    button.disabled = false;
-    button.textContent = "▶";
   }
-}
 
-async function runCommand(command, button) {
-  if (!confirm(`Run this through local Chinna?\n\n${command}`)) return;
-  button.disabled = true;
-  button.textContent = "Running";
-  try {
-    const res = await msg({
-      type: "command-plan",
-      body: {
-        command,
-        scan: lastScan || {},
-        confirmed: true
+  async function refreshContext(announce) {
+    try {
+      const res = await msg({ type: "get-tab-context" });
+      if (!res?.ok) return;
+      const changed = state.tab && state.tab.url !== res.tab.url;
+      state.tab = res.tab;
+      state.profile = res.site;
+      renderSiteContext();
+      renderSuggestions();
+      renderMetrics();
+      if (announce && changed) {
+        addBubble("system", "I refreshed the suggestions for the new tab.");
+        state.lastScan = null;
+        state.lastLocal = null;
+        renderMetrics();
+      }
+    } catch {}
+  }
+
+  async function runScan(silent = false) {
+    const button = $("scanBtn");
+    button.disabled = true;
+    if (!silent) addBubble("user", "Scan this page and show me what stands out.");
+    setThinking(true, "Reading the page…");
+    try {
+      const res = await msg({ type: "scan" });
+      if (!res?.ok) throw new Error(res?.error || "Scan failed");
+      state.lastScan = res.scan;
+      state.lastLocal = res.local;
+      renderMetrics();
+      if (!silent) addBubble("assistant", `I scanned ${currentHost()} and pulled out the key things that look worth fixing.`);
+      toast("Scan complete");
+    } catch (error) {
+      addBubble("assistant", error.message || String(error));
+      toast(error.message || String(error));
+    } finally {
+      setThinking(false);
+      button.disabled = false;
+    }
+  }
+
+  async function analyze(prefilled) {
+    const prompt = String(prefilled || $("prompt").value || "").trim() || state.profile?.suggestions?.[0] || "Give me the clearest next steps for this page.";
+    $("prompt").value = "";
+    addBubble("user", prompt);
+
+    if (!state.lastScan) await runScan(true);
+    if (!state.lastScan) return;
+
+    const analyzeBtn = $("analyzeBtn");
+    analyzeBtn.disabled = true;
+    setThinking(true);
+
+    try {
+      const fullPrompt = `${prompt}\n\nStyle: ${$("styleSelect").value}. Keep it natural and conversational.`;
+      const res = await msg({
+        type: "analyze",
+        prompt: fullPrompt,
+        scan: state.lastScan,
+        attachments: state.attachments
+      });
+      if (!res?.ok) throw new Error(res?.error || "Analysis failed");
+      state.lastLocal = res.data;
+      renderMetrics();
+      addBubble("assistant", res.data?.answer || res.data?.summary || res.data?.message || "I reviewed the page and turned it into calm next steps.");
+      toast("Answer ready");
+    } catch (error) {
+      addBubble("assistant", error.message || String(error));
+      toast(error.message || String(error));
+    } finally {
+      analyzeBtn.disabled = false;
+      setThinking(false);
+    }
+  }
+
+  function initSplitter() {
+    const splitter = $("splitter");
+    let startX = 0;
+    let startWidth = 250;
+
+    splitter.addEventListener("mousedown", (event) => {
+      startX = event.clientX;
+      startWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--rail-size")) || 250;
+      const onMove = (moveEvent) => {
+        const delta = moveEvent.clientX - startX;
+        const next = Math.max(190, Math.min(360, startWidth + delta));
+        document.documentElement.style.setProperty("--rail-size", `${next}px`);
+      };
+      const onUp = () => {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+      };
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    });
+  }
+
+  function wire() {
+    clearConversation();
+    initSplitter();
+
+    $("composer").addEventListener("submit", (event) => {
+      event.preventDefault();
+      analyze();
+    });
+
+    $("scanBtn").addEventListener("click", () => runScan(false));
+    $("clearBtn").addEventListener("click", clearConversation);
+    $("sidePanelBtn").addEventListener("click", async () => {
+      const res = await msg({ type: "open-sidepanel" });
+      toast(res?.ok ? "Side panel opened" : res?.error || "Could not open side panel");
+    });
+    $("panelModeBtn").addEventListener("click", async () => {
+      const res = await msg({ type: "open-sidepanel" });
+      toast(res?.ok ? "Side panel opened" : res?.error || "Could not open side panel");
+    });
+    $("attachBtn").addEventListener("click", async () => {
+      const res = await msg({ type: "toggle-overlay" });
+      toast(res?.ok ? "Attached to tab" : res?.error || "Could not attach");
+    });
+    $("overlayModeBtn").addEventListener("click", async () => {
+      const res = await msg({ type: "toggle-overlay" });
+      toast(res?.ok ? "Attached to tab" : res?.error || "Could not attach");
+    });
+    $("modeToggleBtn").addEventListener("click", async () => {
+      if (state.shell === "popup") {
+        const res = await msg({ type: "open-sidepanel" });
+        toast(res?.ok ? "Switched to side panel" : res?.error || "Could not switch");
+      } else {
+        const res = await msg({ type: "toggle-overlay" });
+        toast(res?.ok ? "Attached to tab" : res?.error || "Could not attach");
       }
     });
-    if (!res?.ok) throw new Error(res?.error || "Command failed");
-    const data = res.data || {};
-    const output = [
-      `$ ${data.command || command}`,
-      data.stdout || "",
-      data.stderr ? `stderr:\n${data.stderr}` : "",
-      data.error ? `error: ${data.error}` : ""
-    ].filter(Boolean).join("\n\n");
-    addBubble("system", `<span class="label">Terminal</span><code>${escapeHtml(output)}</code>`);
-    toast(data.ok ? "Command finished" : "Command returned output");
-  } catch (error) {
-    toast(error.message || String(error));
-  } finally {
-    button.disabled = false;
-    button.textContent = "Confirm Run";
-  }
-}
+    $("copyScanBtn").addEventListener("click", async () => {
+      await navigator.clipboard.writeText(JSON.stringify(state.lastScan || {}, null, 2));
+      toast("Copied");
+    });
+    $("pageBriefBtn").addEventListener("click", async () => {
+      const text = [
+        `Site: ${currentHost()}`,
+        state.profile?.summary || "",
+        state.lastScan?.title ? `Page: ${state.lastScan.title}` : ""
+      ].filter(Boolean).join("\n");
+      await navigator.clipboard.writeText(text);
+      toast("Copied");
+    });
 
-function quick(action) {
-  if (action === "scan") {
-    $("prompt").value = "";
-    runScan();
-    return;
+    refreshContext();
+    state.pollTimer = setInterval(() => refreshContext(true), 1800);
   }
-  if (action === "errors") {
-    $("prompt").value = "Find console and runtime errors on this page and give exact fixes.";
-    analyze();
-    return;
-  }
-  if (action === "commands") {
-    $("prompt").value = "Give only the safest terminal commands and code prompts to fix this page.";
-    analyze();
-  }
-}
 
-$("scanBtn").addEventListener("click", () => runScan());
-$("analyzeBtn").addEventListener("click", analyze);
-$("fileInput").addEventListener("change", handleFiles);
-$("copyScanBtn").addEventListener("click", () => copy(JSON.stringify(lastScan || {}, null, 2)));
-$("openDashboard").addEventListener("click", () => chrome.tabs.create({ url: "http://localhost:7777" }));
-$("clearBtn").addEventListener("click", () => {
-  resetConversation();
-  addBubble("assistant", '<span class="label">Chinna</span><p>Ready.</p>');
-});
-document.querySelectorAll("[data-quick]").forEach((button) => {
-  button.addEventListener("click", () => quick(button.dataset.quick));
-});
-$("prompt").addEventListener("keydown", (event) => {
-  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") analyze();
-});
-
-loadTabContext();
-checkHealth().catch(() => setHealth(false, "Offline"));
+  wire();
+})();

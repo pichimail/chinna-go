@@ -4,3 +4,4 @@
 __pycache__/
 *.pyc
 .chinna/
+extension/dist/*.zip

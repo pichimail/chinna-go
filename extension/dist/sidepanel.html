@@ -3,10 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Chinna</title>
+  <title>Chinna Side Panel</title>
   <link rel="stylesheet" href="popup.css" />
+  <style>
+    html,
+    body {
+      width: 100%;
+      min-width: 320px;
+      height: 100%;
+      min-height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      background: #101012;
+    }
+
+    .shell {
+      width: 100%;
+      min-height: 100vh;
+    }
+  </style>
 </head>
-<body data-shell="popup">
+<body data-shell="sidepanel">
   <main class="shell">
     <header class="app-header">
       <div class="brand-wrap">
@@ -17,8 +34,8 @@
         </div>
       </div>
       <div class="header-actions">
-        <button id="modeToggleBtn" class="icon-btn" title="Switch view" data-tooltip="Switch view">A</button>
-        <button id="sidePanelBtn" class="icon-btn" title="Open side panel" data-tooltip="Open side panel">⇢</button>
+        <button id="modeToggleBtn" class="icon-btn" title="Attach to tab" data-tooltip="Attach to tab">⊞</button>
+        <button id="sidePanelBtn" class="icon-btn" title="Side panel active" data-tooltip="Side panel active">⇢</button>
         <button id="attachBtn" class="icon-btn" title="Attach to tab" data-tooltip="Attach to tab">⊞</button>
         <button id="clearBtn" class="icon-btn" title="Clear chat" data-tooltip="Clear chat">⟲</button>
       </div>
@@ -28,7 +45,7 @@
       <p id="subGreeting">I’ll stay calm, clear, and tuned to this tab.</p>
       <div class="site-pills">
         <span class="pill" id="hostPill">Current site</span>
-        <span class="pill" id="modePill">Popup mode</span>
+        <span class="pill" id="modePill">Side panel mode</span>
         <span class="pill" id="memoryPill">Smart prompts</span>
       </div>
     </section>
@@ -63,7 +80,7 @@
           </div>
           <div class="mode-actions">
             <button id="overlayModeBtn" class="ghost-btn">Attach in tab</button>
-            <button id="panelModeBtn" class="ghost-btn">Open side panel</button>
+            <button id="panelModeBtn" class="ghost-btn">Refresh panel</button>
           </div>
         </section>
       </aside>
@@ -74,11 +91,11 @@
         <div id="conversation" class="conversation"></div>
         <div id="thinking" class="thinking" hidden>
           <span class="thinking-dot"></span>
-          <span id="thinkingText">Thinking…</span>
+          <span id="thinkingText">Thinking...</span>
         </div>
         <form id="composer" class="composer">
-          <label for="fileInput" class="icon-btn upload-btn" title="Add files" data-tooltip="Add files">＋</label>
-          <textarea id="prompt" placeholder="Ask naturally about this page…"></textarea>
+          <label for="fileInput" class="icon-btn upload-btn" title="Add files" data-tooltip="Add files">+</label>
+          <textarea id="prompt" placeholder="Ask naturally about this page..."></textarea>
           <div class="composer-actions">
             <select id="styleSelect" title="Response style">
               <option value="gentle">Gentle</option>
