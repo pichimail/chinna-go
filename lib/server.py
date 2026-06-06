@@ -72,7 +72,7 @@ def read_json(path, default=None):
 def write_json(path, payload):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w') as f:
-        json.dump(payload, f, indent=2, ensure_ascii=False)
+        json.dump(payload, f, indent=2, ensure_ascii=True)
 
 def _chat_default():
     return {'users': {}, 'messages': [], 'last_id': 0}
@@ -798,7 +798,7 @@ def openrouter_chat(messages, model='meta-llama/llama-3.3-70b-instruct:free', to
             '-H', 'HTTP-Referer: https://chinna.local',
             '-H', 'X-Title: Chinna Dashboard',
             '--data-binary', '@-'
-        ], input=json.dumps(payload, ensure_ascii=False).encode('utf-8'), capture_output=True)
+        ], input=json.dumps(payload, ensure_ascii=True).encode('utf-8'), capture_output=True)
         if proc.returncode != 0 or not proc.stdout:
             return None, f'curl_failed:{proc.returncode}'
         data = json.loads(proc.stdout.decode('utf-8', errors='replace'))
@@ -822,7 +822,7 @@ def openai_chat(messages, model='gpt-4o-mini', tools=None):
             '-H', f'Authorization: Bearer {key}',
             '-H', 'Content-Type: application/json; charset=utf-8',
             '--data-binary', '@-'
-        ], input=json.dumps(payload, ensure_ascii=False).encode('utf-8'), capture_output=True)
+        ], input=json.dumps(payload, ensure_ascii=True).encode('utf-8'), capture_output=True)
         if proc.returncode != 0 or not proc.stdout:
             return None, f'curl_failed:{proc.returncode}'
         data = json.loads(proc.stdout.decode('utf-8', errors='replace'))
@@ -1063,7 +1063,7 @@ def load_memory():
 def save_memory(memories):
     os.makedirs(os.path.dirname(AI_MEMORY_FILE), exist_ok=True)
     with open(AI_MEMORY_FILE, 'w') as f:
-        json.dump(memories, f, indent=2, ensure_ascii=False)
+        json.dump(memories, f, indent=2, ensure_ascii=True)
 
 def add_memory_fact(fact, category="general", importance=5):
     mem = load_memory()
@@ -1126,7 +1126,7 @@ def load_uploaded_files_index():
 def save_uploaded_files_index(index):
     os.makedirs(os.path.dirname(UPLOADED_FILES_INDEX), exist_ok=True)
     with open(UPLOADED_FILES_INDEX, 'w') as f:
-        json.dump(index, f, indent=2, ensure_ascii=False)
+        json.dump(index, f, indent=2, ensure_ascii=True)
 
 def register_uploaded_file(name, mime, size, saved_path):
     """Persistently register an uploaded file so AI can reference it later."""
@@ -1470,7 +1470,7 @@ class H(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k): super().__init__(*a, directory=DASHBOARD_DIR, **k)
     def log_message(self, *a): pass
     def _json(self, d, code=200):
-        b = json.dumps(d, ensure_ascii=False).encode()
+        b = json.dumps(d, ensure_ascii=True).encode()
         self.send_response(code); self.send_header('Content-Type','application/json'); self.send_header('Access-Control-Allow-Origin','*'); self.send_header('Content-Length',str(len(b))); self.end_headers(); self.wfile.write(b)
     def _bd(self):
         l = int(self.headers.get('Content-Length',0)); return json.loads(self.rfile.read(l)) if l else {}

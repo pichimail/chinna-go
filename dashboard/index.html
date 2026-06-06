@@ -624,6 +624,228 @@ html[data-theme="synth"] .bigbtn.solid{color:#190a2b}
 }
 .cx-reduce-fx #fx-bg{opacity:.18}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ===================== SHADCN-STYLE PRODUCT POLISH ===================== */
+html[data-theme="aurora"]{
+  color-scheme:light;
+  --bg:#fafafa; --bg2:#f4f4f5;
+  --panel:#ffffff; --panel2:#ffffff; --panelSolid:#ffffff;
+  --line:#e4e4e7; --line2:#d4d4d8;
+  --t1:#09090b; --t2:#52525b; --t3:#71717a;
+  --acc:#18181b; --accd:#09090b; --accr:24,24,27;
+  --red:#dc2626; --amber:#d97706; --green:#16a34a; --blue:#2563eb; --purple:#7c3aed;
+  --r:8px; --r-sm:6px; --r-lg:10px;
+  --blur:0px; --sat:100%;
+  --shadow:0 1px 2px rgba(0,0,0,.04);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.04);
+  --glow:0 0 0 transparent;
+  --tracking:0;
+}
+html[data-theme="aurora"] body::before{
+  background:linear-gradient(180deg,#fafafa,#f4f4f5);
+}
+html[data-theme="aurora"] #fx-bg,
+html[data-theme="aurora"] #fx-spot{display:none}
+html[data-theme="aurora"] .glass{
+  background:#fff;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+}
+html[data-theme="aurora"] #app{padding:12px;gap:10px}
+html[data-theme="aurora"] .topbar{height:52px;padding:8px 12px;border-radius:8px}
+html[data-theme="aurora"] .brand{color:var(--t1);letter-spacing:0;font-weight:700}
+html[data-theme="aurora"] .brand span{font-size:12px;color:var(--t3);font-weight:600}
+html[data-theme="aurora"] .themes,
+html[data-theme="aurora"] .tabs{
+  background:#f4f4f5;
+  border-color:#e4e4e7;
+  border-radius:8px;
+  padding:3px;
+}
+html[data-theme="aurora"] .themes button,
+html[data-theme="aurora"] .tabs button{
+  border-radius:6px;
+  color:#71717a;
+  font-weight:600;
+  letter-spacing:0;
+}
+html[data-theme="aurora"] .themes button.on,
+html[data-theme="aurora"] .tabs button.on{
+  background:#fff;
+  color:#09090b;
+  box-shadow:0 1px 2px rgba(0,0,0,.06);
+}
+#body{--nav-w:232px;--right-w:272px;gap:0}
+#nav{width:var(--nav-w)}
+#right{width:var(--right-w)}
+.panel-resizer{
+  width:10px;
+  flex:0 0 10px;
+  cursor:col-resize;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  touch-action:none;
+}
+.panel-resizer::before{
+  content:"";
+  width:1px;
+  align-self:stretch;
+  background:var(--line);
+}
+.panel-resizer::after{
+  content:"";
+  position:absolute;
+  width:3px;
+  height:34px;
+  border-radius:999px;
+  background:var(--line2);
+  opacity:0;
+  transition:opacity .14s var(--ease), background .14s var(--ease);
+}
+.panel-resizer:hover::after,
+.panel-resizer.dragging::after{opacity:1;background:var(--acc)}
+html[data-theme="aurora"] .navitem{
+  border-radius:6px;
+  font-weight:500;
+  letter-spacing:0;
+}
+html[data-theme="aurora"] .navitem:hover{
+  background:#f4f4f5;
+  transform:none;
+}
+html[data-theme="aurora"] .navitem.on{
+  background:#18181b;
+  border-color:#18181b;
+  color:#fff;
+}
+html[data-theme="aurora"] .navitem.on .ic{
+  background:rgba(255,255,255,.14);
+  box-shadow:none;
+}
+html[data-theme="aurora"] .navitem.on::before{display:none}
+html[data-theme="aurora"] .vhead{padding:14px 18px;border-bottom:1px solid var(--line)}
+html[data-theme="aurora"] .vhead h2{font-size:18px;letter-spacing:0}
+html[data-theme="aurora"] .vbody{padding:16px 18px 18px}
+html[data-theme="aurora"] .gauge,
+html[data-theme="aurora"] .infocard,
+html[data-theme="aurora"] .plugin-card,
+html[data-theme="aurora"] .paircard,
+html[data-theme="aurora"] .statuscard,
+html[data-theme="aurora"] .onboard-hero,
+html[data-theme="aurora"] .onboard-side,
+html[data-theme="aurora"] .onboard-step,
+html[data-theme="aurora"] .wa-panel{
+  background:#fff;
+  border-color:#e4e4e7;
+  border-radius:8px;
+  box-shadow:none;
+}
+html[data-theme="aurora"] .gauge:hover,
+html[data-theme="aurora"] .infocard:hover,
+html[data-theme="aurora"] .plugin-card:hover{transform:none;border-color:#d4d4d8;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+html[data-theme="aurora"] .bigbtn,
+html[data-theme="aurora"] .miniA,
+html[data-theme="aurora"] .iconbtn{
+  border-radius:6px;
+  border-color:#e4e4e7;
+  background:#fff;
+  color:#18181b;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);
+  font-weight:500;
+  letter-spacing:0;
+}
+html[data-theme="aurora"] .bigbtn:hover,
+html[data-theme="aurora"] .miniA:hover,
+html[data-theme="aurora"] .iconbtn:hover{
+  background:#f4f4f5;
+  color:#09090b;
+  border-color:#d4d4d8;
+  transform:none;
+}
+html[data-theme="aurora"] .bigbtn.solid,
+html[data-theme="aurora"] .btn-go{
+  background:#18181b;
+  border-color:#18181b;
+  color:#fff;
+  box-shadow:none;
+}
+html[data-theme="aurora"] .field,
+html[data-theme="aurora"] .search,
+html[data-theme="aurora"] .sortsel{
+  background:#fff;
+  border-color:#e4e4e7;
+  border-radius:6px;
+  box-shadow:0 1px 2px rgba(0,0,0,.03);
+}
+html[data-theme="aurora"] .field:focus,
+html[data-theme="aurora"] .search:focus-within{
+  border-color:#18181b;
+  box-shadow:0 0 0 2px rgba(24,24,27,.12);
+}
+html[data-theme="aurora"] .outbox,
+html[data-theme="aurora"] .proglog,
+html[data-theme="aurora"] .sourcebox{
+  background:#f9fafb;
+  border-color:#e4e4e7;
+  color:#27272a;
+}
+html[data-theme="aurora"] #dock{
+  background:#fff;
+  border-color:#e4e4e7;
+  border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.08);
+}
+html[data-theme="aurora"] .dapp{
+  border-radius:8px;
+  background:#fff;
+  border-color:#e4e4e7;
+  font-size:20px;
+}
+html[data-theme="aurora"] .dapp:hover{
+  background:#f4f4f5;
+  transform:translateY(-2px);
+}
+#toasts{
+  top:18px;
+  right:auto;
+  left:50%;
+  transform:translateX(-50%);
+  align-items:center;
+  width:min(420px,calc(100vw - 32px));
+}
+.toast{
+  width:max-content;
+  max-width:100%;
+  text-align:center;
+  border-radius:8px;
+}
+html[data-theme="aurora"] .toast{
+  background:#18181b;
+  color:#fff;
+  border-color:#18181b;
+  box-shadow:0 8px 24px rgba(0,0,0,.12);
+}
+@keyframes tin{from{opacity:0;transform:translateY(-8px) scale(.98)}}
+html[data-theme="aurora"] #scrim,
+html[data-theme="aurora"] #cx-palette{
+  background:rgba(24,24,27,.42);
+  -webkit-backdrop-filter:blur(4px);
+  backdrop-filter:blur(4px);
+}
+html[data-theme="aurora"] .modal,
+html[data-theme="aurora"] .cx-pal-card{
+  border-radius:10px;
+  border-color:#e4e4e7;
+  box-shadow:0 24px 64px rgba(0,0,0,.18);
+}
+@media (max-width: 1180px){
+  .panel-resizer{display:none}
+  #nav,#right{width:auto}
+}
 </style>
 </head>
 <body>
@@ -668,6 +890,7 @@ html[data-theme="synth"] .bigbtn.solid{color:#190a2b}
       <div class="navitem" data-v="storage" onclick="go('storage')"><span class="ic">▦</span> Disk Explorer</div>
       <div class="navlabel">System</div>
       <div class="navitem" data-v="apps" onclick="go('apps')"><span class="ic">🗑</span> App Uninstaller</div>
+      <div class="navitem" data-v="loginitems" onclick="go('loginitems')"><span class="ic">↪</span> Login Items</div>
       <div class="navitem" data-v="battery" onclick="go('battery')"><span class="ic">🔋</span> Battery Health</div>
       <div class="navitem" data-v="doctor" onclick="go('doctor')"><span class="ic">🩺</span> Doctor</div>
 
@@ -681,6 +904,8 @@ html[data-theme="synth"] .bigbtn.solid{color:#190a2b}
       <div class="navitem" data-v="chatx" onclick="go('chatx')"><span class="ic">🛡</span> Secure Chat</div>
       <div class="navitem" data-v="projects" onclick="go('projects')"><span class="ic">📁</span> Projects</div>
     </div>
+
+    <div class="panel-resizer" data-panel="nav" role="separator" aria-orientation="vertical" aria-label="Resize navigation panel" tabindex="0"></div>
 
     <!-- CENTER -->
     <div id="center" class="glass">
@@ -761,6 +986,16 @@ html[data-theme="synth"] .bigbtn.solid{color:#190a2b}
           <span class="count" id="app-count"></span>
         </div>
         <div class="vbody"><div class="list" id="app-list"></div></div>
+      </div>
+
+      <!-- LOGIN ITEMS -->
+      <div class="view" id="view-loginitems">
+        <div class="vhead"><h2>Login Items</h2><span class="sub">Startup apps and launch agents</span></div>
+        <div class="toolbar">
+          <button type="button" class="bigbtn" onclick="loadLoginItems()">Refresh</button>
+          <span class="count">Read-only view from macOS System Events</span>
+        </div>
+        <div class="vbody"><div class="outbox" id="loginitems-out">Loading...</div></div>
       </div>
 
       <!-- BATTERY -->
@@ -1179,6 +1414,8 @@ html[data-theme="synth"] .bigbtn.solid{color:#190a2b}
         </div>
       </div>
     </div>
+
+    <div class="panel-resizer" data-panel="right" role="separator" aria-orientation="vertical" aria-label="Resize status rail" tabindex="0"></div>
 
     <!-- RIGHT RAIL -->
     <div id="right" class="glass">
@@ -1802,6 +2039,7 @@ function go(v){
   if(v==='files')loadFiles();
   if(v==='dupes'&&!allDupes.length){}
   if(v==='apps')loadApps();
+  if(v==='loginitems')loadLoginItems();
   if(v==='battery')loadBattery();
   if(v==='doctor')loadDoctor();
   if(v==='network')loadNet();
@@ -2315,7 +2553,7 @@ function exportProjectsPDF() {
     </tr>`;
   });
 
-  content += `</table><p>Generated by Chinna V5</p>`;
+  content += `</table><p>Generated by Chinna V6</p>`;
 
   win.document.write(`
     <html><head><title>Chinna Projects</title>
@@ -2460,6 +2698,12 @@ function renderApps(){
   const L=$('app-list');
   if(!a.length){L.innerHTML='<div class="empty"><div class="big">📦</div>No apps</div>';return;}
   L.innerHTML=a.map(x=>`<div class="row"><div class="fic">📦</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><div class="sz">${x.size}</div><div class="acts"><button type="button" class="miniA danger" onclick="confirmUninstall('${esc(x.path)}','${esc(x.name)}')">Uninstall</button></div></div>`).join('');
+}
+async function loadLoginItems(){
+  const out=$('loginitems-out');
+  if(out) out.textContent='Loading startup items...';
+  const d=await api('loginitems');
+  if(out) out.textContent=d.result||'No login items found.';
 }
 
 /* battery / doctor / network */
@@ -5158,6 +5402,64 @@ initV6();
     qsa('.view').forEach(v=>{ v.setAttribute('role','region'); const h=v.querySelector('.vhead h2'); if(h&&!v.getAttribute('aria-label')) v.setAttribute('aria-label',h.textContent.trim()); });
   }
 
+  /* resizable side panels */
+  function setupResizablePanels(){
+    const body=qs('#body'), nav=qs('#nav'), right=qs('#right');
+    if(!body||!nav||!right) return;
+    const savedNav=localStorage.getItem('chinna_nav_w');
+    const savedRight=localStorage.getItem('chinna_right_w');
+    if(savedNav) body.style.setProperty('--nav-w', savedNav+'px');
+    if(savedRight) body.style.setProperty('--right-w', savedRight+'px');
+
+    const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+    qsa('.panel-resizer').forEach(handle=>{
+      const panel=handle.dataset.panel;
+      let dragging=false;
+      const setSize=(clientX)=>{
+        const r=body.getBoundingClientRect();
+        if(panel==='nav'){
+          const w=clamp(clientX-r.left,180,360);
+          body.style.setProperty('--nav-w', w+'px');
+          localStorage.setItem('chinna_nav_w', String(w));
+        }else{
+          const w=clamp(r.right-clientX,220,420);
+          body.style.setProperty('--right-w', w+'px');
+          localStorage.setItem('chinna_right_w', String(w));
+        }
+      };
+      handle.addEventListener('pointerdown', e=>{
+        dragging=true;
+        handle.classList.add('dragging');
+        handle.setPointerCapture(e.pointerId);
+        setSize(e.clientX);
+      });
+      handle.addEventListener('pointermove', e=>{ if(dragging) setSize(e.clientX); });
+      handle.addEventListener('pointerup', e=>{
+        dragging=false;
+        handle.classList.remove('dragging');
+        try{handle.releasePointerCapture(e.pointerId);}catch(_){}
+      });
+      handle.addEventListener('keydown', e=>{
+        if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight') return;
+        e.preventDefault();
+        const delta=e.key==='ArrowRight'?16:-16;
+        const current=panel==='nav'
+          ? parseInt(getComputedStyle(body).getPropertyValue('--nav-w'),10)||232
+          : parseInt(getComputedStyle(body).getPropertyValue('--right-w'),10)||272;
+        const next=panel==='nav'?current+delta:current-delta;
+        if(panel==='nav'){
+          const w=clamp(next,180,360);
+          body.style.setProperty('--nav-w', w+'px');
+          localStorage.setItem('chinna_nav_w', String(w));
+        }else{
+          const w=clamp(next,220,420);
+          body.style.setProperty('--right-w', w+'px');
+          localStorage.setItem('chinna_right_w', String(w));
+        }
+      });
+    });
+  }
+
   /* ============================================================
      COMMAND PALETTE (Cmd/Ctrl+K)
      ============================================================ */
@@ -5309,7 +5611,7 @@ initV6();
      INIT
      ============================================================ */
   function init(){
-    setLandmarks(); setupViews(); setupNav(); setupDock(); backfillAria(); setupWidgets();
+    setLandmarks(); setupViews(); setupNav(); setupDock(); setupResizablePanels(); backfillAria(); setupWidgets();
     resize(); startFX();
     W.addEventListener('resize', ()=>{ resize(); });
     D.addEventListener('visibilitychange', ()=>{ if(D.hidden) stopFX(); else startFX(); });

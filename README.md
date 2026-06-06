@@ -1,13 +1,13 @@
-# Chinna V5
+# Chinna V6
 
 Chinna is a local Mac sidekick for cleanup, system checks, disk exploration, AI chat, Telegram control, and voice actions.
 
 ## One-Touch Install
 
-Copy and paste this into Terminal on macOS to install or replace any older Chinna version with V5:
+Copy and paste this into Terminal on macOS to strictly replace any older Chinna version with the latest V6:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
+curl -fsSL -H "Cache-Control: no-cache" https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
 ```
 
 Alternative form (also supported):
@@ -17,8 +17,10 @@ bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/ins
 ```
 
 What it does:
-- Installs the latest Chinna V5 app files
-- Replaces older installed Chinna code with V5
+- Stops old Chinna services
+- Clears stale Chinna app code and local app caches
+- Installs the latest Chinna V6 app files from GitHub
+- Replaces older installed Chinna code with V6
 - Sets up the local command in your shell path
 - Keeps your user data and API keys separate from app code
 
@@ -27,11 +29,12 @@ What it does:
 If you already have any older Chinna install, run the same one-touch install command again:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
+curl -fsSL -H "Cache-Control: no-cache" https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
 ```
 
 This will:
-- Replace the old app code with V5
+- Stop the old server and replace the old app code with V6
+- Clear stale local app caches
 - Preserve your local data, config, and API keys
 - Refresh the command so `chinna` points to the new version
 
@@ -58,8 +61,8 @@ chinna uninstall --purge
 
 Where files live:
 - App and local state: `~/.chinna`
-- API keys: `~/.chinna/api_keys.json`
-- Config: `~/.chinna/config`
+- API keys and config: `~/.chinna/env`
+- Model presets: `~/.chinna/models`
 
 ## Auto Update
 
@@ -128,7 +131,7 @@ chinna uninstall --purge
 
   ```bash
   chinna uninstall
-  bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh)
+  bash <(curl -fsSL -H "Cache-Control: no-cache" https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh)
   ```
 
 ## Notes

@@ -11,6 +11,7 @@ RAW="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 CHINNA="${CHINNA_HOME:-$HOME/.chinna}"
 PORT="${CHINNA_DASHBOARD_PORT:-7777}"
 STATE_FILE="${CHINNA}/.installstate"
+CACHE_BUST="$(date +%s)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -46,7 +47,11 @@ copy_or_fetch() {
         return 0
     fi
 
-    curl -fsSL "${RAW}/${rel}" -o "${dest}"
+    curl -fsSL \
+        -H "Cache-Control: no-cache, no-store, must-revalidate" \
+        -H "Pragma: no-cache" \
+        -H "Expires: 0" \
+        "${RAW}/${rel}?v=${CACHE_BUST}" -o "${dest}"
 }
 
 # ── One-time-setup resumable step system ─────────────────────
@@ -63,6 +68,11 @@ run_step()  {
         echo "  → Running: $name"
         "$@" && mark_done "$name"
     fi
+}
+run_refresh_step() {
+    local name="$1"; shift
+    echo "  → Refreshing: $name"
+    "$@" && mark_done "refresh:${name}:$(date +%Y%m%d%H%M%S)"
 }
 
 # ── Step implementations ───────────────────────────────────
@@ -116,6 +126,25 @@ step_install_node_tools() {
     local tools=(node pnpm yarn bun)
     echo "    Installing node tools: ${tools[*]}"
     brew install "${tools[@]}" 2>/dev/null | grep -E "✓|already|Pouring" | head -4 || true
+}
+
+step_strict_cleanup() {
+    echo "    Stopping old Chinna services..."
+    pkill -9 -f dashboard_server 2>/dev/null || true
+    pkill -9 -f 'dashboard_server.py' 2>/dev/null || true
+    pkill -9 -f 'server.py 7777' 2>/dev/null || true
+    pkill -9 -f 'whatsapp_bridge/server.js' 2>/dev/null || true
+
+    echo "    Clearing stale app code and caches..."
+    rm -f "${CHINNA}/dashboard_server.py" "${CHINNA}/lib/server.py"
+    rm -rf "${CHINNA}/dashboard"
+    rm -rf "${CHINNA}/__pycache__" "${CHINNA}/lib/__pycache__"
+    rm -f "${CHINNA}/install/chinna_v5.py" "${CHINNA}/server_v4.py"
+    find "${CHINNA}" -name '*.pyc' -delete 2>/dev/null || true
+    rm -rf "${HOME}/Library/Caches/com.chinna.Chinna" 2>/dev/null || true
+    rm -rf "${HOME}/Library/Saved Application State/com.chinna.Chinna.savedState" 2>/dev/null || true
+    mkdir -p "${CHINNA}/dashboard" "${CHINNA}/lib" "${CHINNA}/logs"
+    echo "    ✓ old app code and caches cleared"
 }
 
 step_write_server() {
@@ -248,17 +277,18 @@ run_step "zshrc_block"        step_zshrc_block
 # ──────────────────────────────────────────────────────────────
 echo ""
 echo "  ↻ Pulling latest V6 app files from GitHub..."
-step_write_server
-step_write_dashboard
-step_write_whatsapp_bridge
-step_write_libs
-step_write_bin
-step_write_defaults
+run_refresh_step "strict_cleanup"        step_strict_cleanup
+run_refresh_step "write_server"          step_write_server
+run_refresh_step "write_dashboard"       step_write_dashboard
+run_refresh_step "write_whatsapp_bridge" step_write_whatsapp_bridge
+run_refresh_step "write_libs"            step_write_libs
+run_refresh_step "write_bin"             step_write_bin
+run_refresh_step "write_defaults"        step_write_defaults
 
 # ──────────────────────────────────────────────────────────────
 # RESTART SERVER
 # ──────────────────────────────────────────────────────────────
-step_start_server
+run_refresh_step "start_server" step_start_server
 
 # ── macOS notification ─────────────────────────────────────
 osascript -e 'display notification "Models, Music, WhatsApp & 15 Godspeed features ready!" with title "🟢 Chinna V6 installed"' 2>/dev/null || true
@@ -269,7 +299,7 @@ echo "  ✅  CHINNA V6 READY!"
 echo "  ══════════════════════════════════════════════════════"
 echo ""
 echo "  🌐  Dashboard   →  http://localhost:${PORT}"
-echo "  📦  Share URL   →  curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash"
+echo "  📦  Share URL   →  curl -fsSL -H \"Cache-Control: no-cache\" https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash"
 echo ""
 echo "  Quick commands (in a new terminal tab):"
 echo "    chinna doctor         → full system health check"
@@ -280,7 +310,7 @@ echo "    chinna model-set free → switch AI model"
 echo "    chinna clean          → deep Mac clean"
 echo "    chinna audit          → project audit"
 echo ""
-echo "  Re-run anytime — one-time setup is skipped, app code is always refreshed."
+echo "  Re-run anytime — setup is skipped, old app code/cache is cleared, and app files are refreshed from GitHub."
 echo ""
 
 open "http://localhost:${PORT}" 2>/dev/null || true
