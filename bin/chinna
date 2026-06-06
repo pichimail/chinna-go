@@ -114,7 +114,7 @@ disk_usage() {
 }
 
 ui_line() {
-    echo -e "   ${SKY}━${TEAL}━${VIOLET}━${PINK}━${ORANGE}━${ROSE}━${ORANGE}━${PINK}━${VIOLET}━${TEAL}━${SKY}━${RESET}${D}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo -e "   ${SKY}━━${TEAL}━━${VIOLET}━━${PINK}━━${ORANGE}━━${RESET}${D}━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 }
 
 mission_meter() {
@@ -131,6 +131,21 @@ mission_meter() {
 mission_card() {
     local key="$1" icon="$2" title="$3" desc="$4" accent="${5:-$TEAL}"
     printf "   ${D}╭─${RESET} ${accent}%3s${RESET} %s  ${BOLD}%-17s${RESET} ${D}%s${RESET}\n" "$key" "$icon" "$title" "$desc"
+}
+
+status_chip() {
+    local label="$1" value="$2" accent="${3:-$TEAL}"
+    printf "${D}[${RESET}${accent}%s${RESET} ${BOLD}%s${RESET}${D}]${RESET}" "$label" "$value"
+}
+
+quick_chip() {
+    local key="$1" label="$2" accent="${3:-$TEAL}"
+    printf " ${D}[${RESET}${accent}%s${RESET} ${BOLD}%s${RESET}${D}]${RESET}" "$key" "$label"
+}
+
+compact_disk() {
+    df -h /System/Volumes/Data 2>/dev/null | awk 'NR==2{print $5" full · "$4" free"}' \
+    || df -h / | awk 'NR==2{print $5" full · "$4" free"}'
 }
 
 # ─── Sarcastic commentary ─────────────────────────────────────
@@ -159,13 +174,9 @@ banner() {
     clear
     echo ""
     ui_line
-    echo -e "   ${BOLD}${SKY}C${TEAL}H${VIOLET}I${PINK}N${ORANGE}N${ROSE}A${RESET} ${D}v${CHINNA_VERSION}${RESET}  ${BOLD}Mac Mission Control${RESET}"
-    echo -e "   ${D}natural language · project fix · browser scanner · dashboard · voice${RESET}"
+    echo -e "   ${BOLD}${SKY}c${TEAL}h${VIOLET}i${PINK}n${ORANGE}n${ROSE}a${RESET} ${D}v${CHINNA_VERSION}${RESET}  ${BOLD}code command center${RESET}"
+    echo -e "   ${D}ask, fix, run, scan, preview${RESET}"
     ui_line
-    echo ""
-    echo -ne "   ${D}Disk: ${RESET}"
-    disk_bar
-    echo ""
 }
 
 # ─── Ensure dep ───────────────────────────────────────────────
@@ -1482,29 +1493,43 @@ dispatch_intent() {
 # INTERACTIVE MENU
 # ═══════════════════════════════════════════════════════════════
 show_menu() {
+    local input ai_link disk_state user_name
+    user_name="${USER:-friend}"
+    ai_link=$([ -n "${OPENROUTER_API_KEY:-}" ] && echo "ready" || echo "local")
+    disk_state="$(compact_disk 2>/dev/null || echo "disk ok")"
+
     banner
-    echo -e "   ${BOLD}Type a mission number or natural language.${RESET} ${D}Example: fix this project, run stack, scan browser${RESET}"
+    echo -e "   ${D}╭────────────────────────────────────────────╮${RESET}"
+    echo -e "   ${D}│${RESET} ${SKY}Hello, ${user_name}.${RESET}"
+    echo -e "   ${D}│${RESET} ${BOLD}How can I help you today?${RESET}"
+    echo -e "   ${D}╰────────────────────────────────────────────╯${RESET}"
     echo ""
-    mission_meter "System" 78
-    mission_meter "Project" 64
-    mission_meter "AI Link" $([ -n "${OPENROUTER_API_KEY:-}" ] && echo 92 || echo 38)
+    echo -ne "   "
+    status_chip "disk" "$disk_state" "$TEAL"
+    echo -ne "  "
+    status_chip "ai" "$ai_link" "$VIOLET"
+    echo -ne "  "
+    status_chip "mode" "confirm-run" "$ORANGE"
     echo ""
-    mission_card "01" "🚀" "Run Project"      "detect stack, install deps, preview localhost" "$TEAL"
-    mission_card "02" "🛠️" "Fix Project"      "audit, dependency check, AI code prompts" "$VIOLET"
-    mission_card "03" "🧩" "Browser Scanner"  "load unpacked extension/dist" "$PINK"
-    mission_card "04" "🌐" "Dashboard"        "open local Chinna control room" "$SKY"
-    mission_card "05" "🤖" "AI Chat"          "ask anything with local context" "$ORANGE"
-    mission_card "06" "🎤" "Talk Mode"        "natural voice command flow" "$ROSE"
-    mission_card "07" "🧹" "Deep Clean"       "system cache, dev cache, disk reclaim" "$LIME"
-    mission_card "08" "📊" "Status"           "disk, RAM, CPU, battery, ports" "$TEAL"
-    mission_card "09" "🌿" "Git Commit"       "AI commit message and git workflow" "$GREEN"
-    mission_card "10" "⚙️" "Config"           "API keys, models, automation" "$ORANGE"
-    mission_card "11" "🩺" "Doctor"           "toolchain and Chinna health check" "$SKY"
-    mission_card "12" "📍" "Notch"            "menu-bar quick actions" "$VIOLET"
-    echo -e "   ${D}╰──────────────────────────────────────────────${RESET}"
-    echo -e "   ${ORANGE}q${RESET})  ${D}Quit${RESET}"
     echo ""
-    echo -ne "   ${BOLD}>${RESET} "
+    echo -ne "   "
+    quick_chip "1" "run" "$TEAL"
+    quick_chip "2" "fix" "$VIOLET"
+    quick_chip "3" "browser" "$PINK"
+    quick_chip "4" "dashboard" "$SKY"
+    quick_chip "5" "ask" "$ORANGE"
+    echo ""
+    echo -ne "   "
+    quick_chip "6" "talk" "$ROSE"
+    quick_chip "7" "clean" "$LIME"
+    quick_chip "8" "status" "$TEAL"
+    quick_chip "9" "git" "$GREEN"
+    quick_chip "10" "config" "$ORANGE"
+    echo ""
+    echo -e "   ${D}Try: fix this project · scan browser · run localhost${RESET}"
+    echo ""
+    echo -e "   ${D}╭─ chinna${RESET}"
+    echo -ne "   ${D}╰─>${RESET} "
     if ! read -r input; then
         echo ""
         info "No interactive input available. Use: chinna help"
@@ -1536,7 +1561,7 @@ show_menu() {
         wifi) cmd_wifi ;;
         preview) echo -ne "  File/dir (ENTER for pwd): "; read -r f; cmd_preview "$f" ;;
         plugins) cmd_plugins ;;
-        q|Q) echo -e "  ${ORANGE}Later 👋${RESET}"; exit 0 ;;
+        q|Q|quit|exit) echo -e "  ${ORANGE}Later.${RESET}"; exit 0 ;;
         "")  show_menu ;;
         *)
             # Not a number — try intent engine

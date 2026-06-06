@@ -3,85 +3,80 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Chinna Scanner</title>
+  <title>Chinna</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <main class="shell">
-    <section class="hero">
-      <div>
-        <div class="brand">
-          <img src="icon.svg" alt="">
-          <span>Chinna Live</span>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <img src="icon.svg" alt="">
+        <span>Chinna</span>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="copyScanBtn" title="Copy latest scan" aria-label="Copy latest scan">[]</button>
+        <button class="icon-btn" id="openDashboard" title="Open dashboard" aria-label="Open dashboard">↗</button>
+        <div class="health" id="health">
+          <span class="dot"></span>
+          <span id="healthText">Checking</span>
         </div>
-        <h1>Scan. Diagnose. Fix.</h1>
       </div>
-      <div class="health" id="health">
-        <span class="dot"></span>
-        <span id="healthText">Checking</span>
+    </header>
+
+    <section class="stage">
+      <div class="hero-copy">
+        <h1>Hello, pichi</h1>
+        <p>How can I help you today?</p>
       </div>
+
+      <div class="quick-actions" aria-label="Quick actions">
+        <button data-quick="scan">Scan this tab</button>
+        <button data-quick="errors">Find console errors</button>
+        <button data-quick="commands">Give fix commands</button>
+        <label for="fileInput">Upload logs</label>
+      </div>
+
+      <section class="status-grid" aria-label="Scan status">
+        <div>
+          <span id="scoreValue">--</span>
+          <small>score</small>
+        </div>
+        <div>
+          <span id="issueCount">0</span>
+          <small>findings</small>
+        </div>
+        <div>
+          <span id="errorCount">0</span>
+          <small>errors</small>
+        </div>
+      </section>
+
+      <section class="conversation" id="conversation" aria-live="polite">
+        <article class="bubble assistant">
+          <span class="label">Chinna</span>
+          <p>Ready to scan the active page.</p>
+        </article>
+      </section>
     </section>
 
-    <section class="toolbar">
-      <button class="primary" id="scanBtn">
-        <span class="icon">⌁</span>
-        Scan Active Site
-      </button>
-      <label class="upload">
-        <input id="fileInput" type="file" multiple>
-        <span class="icon">↑</span>
-        Upload Logs
-      </label>
-    </section>
-
-    <section class="prompt">
-      <textarea id="prompt" rows="3" placeholder="Ask Chinna what to check, for example: find React console errors and give exact terminal commands"></textarea>
-      <button id="analyzeBtn">Send to Chinna</button>
-    </section>
-
-    <section class="scoreboard">
-      <div class="score">
-        <span id="scoreValue">--</span>
-        <small>site score</small>
+    <section class="composer" aria-label="Chinna prompt">
+      <div class="sharebar">
+        <span id="contextText">Sharing "Current tab"</span>
+        <button id="clearBtn" title="Clear chat" aria-label="Clear chat">×</button>
       </div>
-      <div class="metric">
-        <span id="issueCount">0</span>
-        <small>findings</small>
+      <textarea id="prompt" rows="2" placeholder="Ask for a scan, fix prompt, terminal command, or uploaded log analysis"></textarea>
+      <div class="composer-row">
+        <label class="plus" for="fileInput" title="Upload files" aria-label="Upload files">+</label>
+        <select id="modeSelect" title="Analysis mode" aria-label="Analysis mode">
+          <option>Flash</option>
+          <option>Local</option>
+          <option>Fix</option>
+        </select>
+        <button class="secondary" id="scanBtn">Scan</button>
+        <button class="send" id="analyzeBtn" title="Send" aria-label="Send">▶</button>
       </div>
-      <div class="metric">
-        <span id="errorCount">0</span>
-        <small>live errors</small>
-      </div>
+      <input id="fileInput" type="file" multiple>
     </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Findings</h2>
-        <button class="ghost" id="copyScanBtn">Copy Scan</button>
-      </div>
-      <div id="findings" class="stack empty">Run a scan to inspect the active page.</div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Commands</h2>
-        <span class="fine">confirm before run</span>
-      </div>
-      <div id="commands" class="stack empty">Commands appear after scan or analysis.</div>
-    </section>
-
-    <section class="panel ai">
-      <div class="panel-head">
-        <h2>Chinna Answer</h2>
-        <span id="model" class="fine">local</span>
-      </div>
-      <pre id="answer">No analysis yet.</pre>
-    </section>
-
-    <footer>
-      <span>Console capture starts after injection.</span>
-      <button class="ghost" id="openDashboard">Dashboard</button>
-    </footer>
   </main>
   <div class="toast" id="toast"></div>
   <script src="popup.js"></script>

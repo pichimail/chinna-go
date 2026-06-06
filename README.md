@@ -69,8 +69,10 @@ Load it in Chrome, Edge, or Brave:
 3. Click **Load unpacked**
 4. Select `~/.chinna/extension/dist`
 
-The extension scans the active tab, captures live runtime errors after injection, supports log/code file upload, and sends results only to the local Chinna server at `http://localhost:7777`.
+The extension uses a compact chat UI with quick actions, file upload, page scan, command cards, copy buttons, and confirm-before-run terminal fixes. It scans the active tab, captures live runtime errors after injection, supports log/code file upload, and sends results only to the local Chinna server at `http://localhost:7777`.
 Normal content scripts cannot read historic DevTools logs from before injection; re-run the scan and reproduce the issue once for fresh console capture.
+
+The bare `chinna` command opens a compact conversational command center. Type a quick action number or a natural-language request such as `fix this project`, `scan browser`, or `run localhost`.
 
 Optional commands:
 
