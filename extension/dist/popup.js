@@ -235,6 +235,16 @@ function updateStats(data) {
   if(miniErrEl)   { miniErrEl.textContent = errors; }
 }
 
+function renderCommandCards(commands = []) {
+  commands.slice(0, 6).forEach((command) => {
+    const safe = escapeHtml(command);
+    const bubble = addBubble("system", `<code>${safe}</code><div class="cmd-row"><button type="button" class="copy-command">Copy command</button></div>`, "Fix command");
+    bubble.querySelector(".copy-command")?.addEventListener("click", () => {
+      navigator.clipboard.writeText(command).then(() => showToast("Command copied"));
+    });
+  });
+}
+
 function buildScanPayload(pageData = {}) {
   const headings = Array.isArray(pageData.headings) ? pageData.headings : [];
   const images = Array.isArray(pageData.images) ? pageData.images : [];
@@ -293,12 +303,19 @@ async function sendMessage() {
   const payload = { message: text, model, page_context: pageData, timestamp: Date.now() };
 
   if(attachedFiles.length) {
-    // attach as base64
     const reads = await Promise.all(attachedFiles.map(f => new Promise((res, rej) => {
       const r = new FileReader();
-      r.onload = e => res({ name:f.name, content: e.target.result });
+      r.onload = e => {
+        const dataUrl = String(e.target.result || "");
+        res({
+          name: f.name,
+          mime: f.type || "application/octet-stream",
+          size: f.size,
+          data_b64: dataUrl.split(",")[1] || ""
+        });
+      };
       r.onerror = rej;
-      r.readAsText(f);
+      r.readAsDataURL(f);
     })));
     payload.attachments = reads;
   }
@@ -313,7 +330,7 @@ async function sendMessage() {
     removeThinking();
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const reply = data.response || data.message || data.result || JSON.stringify(data);
+    const reply = data.reply || data.response || data.message || data.result || JSON.stringify(data);
     addBubble("assistant", formatResponse(reply), "Chinna");
   } catch(err) {
     removeThinking();
@@ -362,6 +379,7 @@ async function runScan() {
     } else {
       addBubble("assistant", data.summary || "Scan complete — no major issues found.", "Chinna");
     }
+    renderCommandCards(data.commands || []);
   } catch(err) {
     removeThinking();
     addBubble("assistant", `Scan failed: <span style="color:var(--red)">${escapeHtml(err.message)}</span>`, "Chinna");
