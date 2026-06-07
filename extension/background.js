@@ -1,6 +1,54 @@
 // Chinna Tab Assistant — service worker
 const CHINNA = 'http://localhost:7777';
 
+async function installRuntimeHooks() {
+  if (window.__chinnaPageHookInstalled) return 'already';
+  window.__chinnaPageHookInstalled = true;
+
+  const KEY = '__chinna_runtime_events';
+  const MAX = 80;
+  const read = () => {
+    try { return JSON.parse(sessionStorage.getItem(KEY) || '[]'); }
+    catch { return []; }
+  };
+  const write = (items) => {
+    try { sessionStorage.setItem(KEY, JSON.stringify(items.slice(-MAX))); }
+    catch {}
+  };
+  const emit = (payload) => {
+    const items = read();
+    items.push({ ...payload, at: Date.now(), url: location.href });
+    write(items);
+  };
+
+  window.addEventListener('error', (e) => emit({
+    kind: 'error',
+    message: e.message || '',
+    source: e.filename || '',
+    line: e.lineno || 0,
+    column: e.colno || 0,
+    stack: e.error && e.error.stack ? String(e.error.stack).slice(0, 3000) : ''
+  }));
+  window.addEventListener('unhandledrejection', (e) => emit({
+    kind: 'unhandledrejection',
+    message: e.reason && e.reason.message ? e.reason.message : String(e.reason || ''),
+    stack: e.reason && e.reason.stack ? String(e.reason.stack).slice(0, 3000) : ''
+  }));
+  ['error', 'warn'].forEach((level) => {
+    const original = console[level];
+    if (typeof original !== 'function') return;
+    console[level] = function(...args) {
+      emit({ kind: 'console', level, message: args.map((x) => {
+        try { return typeof x === 'string' ? x : JSON.stringify(x); }
+        catch { return String(x); }
+      }).join(' ').slice(0, 3000) });
+      return original.apply(this, args);
+    };
+  });
+
+  return 'ok';
+}
+
 chrome.action.onClicked.addListener(async (tab) => {
   try { await chrome.sidePanel.open({ tabId: tab.id }); } catch (e) {}
 });
@@ -21,6 +69,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const t = tabs[0] || {};
       sendResponse({ url: t.url || '', title: t.title || '', id: t.id });
+    });
+    return true;
+  }
+  if (msg.type === 'install-runtime-hooks') {
+    if (!sender.tab?.id) {
+      sendResponse({ ok: false, error: 'no tab context' });
+      return false;
+    }
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id },
+      world: 'MAIN',
+      func: installRuntimeHooks
+    }).then(() => {
+      sendResponse({ ok: true });
+    }).catch((e) => {
+      sendResponse({ ok: false, error: String(e) });
     });
     return true;
   }
