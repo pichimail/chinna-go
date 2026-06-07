@@ -1,100 +1,111 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Chinna</title>
-  <link rel="stylesheet" href="popup.css" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Chinna AI</title>
+<link rel="stylesheet" href="shared.css"/>
+<link rel="stylesheet" href="popup.css"/>
 </head>
-<body data-shell="popup">
-  <main class="shell">
-    <header class="app-header">
-      <div class="brand-wrap">
-        <img src="icon.svg" alt="Chinna" class="brand-icon" />
-        <div>
-          <div class="eyebrow">Chinna assistant</div>
-          <h1 id="greeting">Hey Buddy</h1>
-        </div>
-      </div>
-      <div class="header-actions">
-        <button id="modeToggleBtn" class="icon-btn" title="Switch view" data-tooltip="Switch view">A</button>
-        <button id="sidePanelBtn" class="icon-btn" title="Open side panel" data-tooltip="Open side panel">⇢</button>
-        <button id="attachBtn" class="icon-btn" title="Attach to tab" data-tooltip="Attach to tab">⊞</button>
-        <button id="clearBtn" class="icon-btn" title="Clear chat" data-tooltip="Clear chat">⟲</button>
-      </div>
-    </header>
-
-    <section class="hero">
-      <p id="subGreeting">I’ll stay calm, clear, and tuned to this tab.</p>
-      <div class="site-pills">
-        <span class="pill" id="hostPill">Current site</span>
-        <span class="pill" id="modePill">Popup mode</span>
-        <span class="pill" id="memoryPill">Smart prompts</span>
-      </div>
-    </section>
-
-    <section class="workspace" id="workspace">
-      <aside class="rail" id="rail">
-        <section class="card soft">
-          <div class="card-head">
-            <span>Quick suggestions</span>
-            <button id="pageBriefBtn" class="tiny-btn">Copy brief</button>
-          </div>
-          <div id="suggestions" class="suggestions"></div>
-        </section>
-
-        <section class="card soft">
-          <div class="card-head">
-            <span>Page pulse</span>
-            <button id="scanBtn" class="tiny-btn">Scan</button>
-          </div>
-          <div class="stats">
-            <div><strong id="scoreValue">--</strong><span>Score</span></div>
-            <div><strong id="issueCount">0</strong><span>Findings</span></div>
-            <div><strong id="errorCount">0</strong><span>Errors</span></div>
-            <div><strong id="nodeCount">--</strong><span>Nodes</span></div>
-          </div>
-          <p id="siteBrief" class="site-brief">Open a page and I’ll shape the suggestions around it.</p>
-        </section>
-
-        <section class="card soft compact">
-          <div class="card-head">
-            <span>Modes</span>
-          </div>
-          <div class="mode-actions">
-            <button id="overlayModeBtn" class="ghost-btn">Attach in tab</button>
-            <button id="panelModeBtn" class="ghost-btn">Open side panel</button>
-          </div>
-        </section>
-      </aside>
-
-      <div class="splitter" id="splitter" aria-hidden="true"></div>
-
-      <section class="chat-surface">
-        <div id="conversation" class="conversation"></div>
-        <div id="thinking" class="thinking" hidden>
-          <span class="thinking-dot"></span>
-          <span id="thinkingText">Thinking…</span>
-        </div>
-        <form id="composer" class="composer">
-          <label for="fileInput" class="icon-btn upload-btn" title="Add files" data-tooltip="Add files">＋</label>
-          <textarea id="prompt" placeholder="Ask naturally about this page…"></textarea>
-          <div class="composer-actions">
-            <select id="styleSelect" title="Response style">
-              <option value="gentle">Gentle</option>
-              <option value="focused">Focused</option>
-              <option value="actionable">Actionable</option>
-            </select>
-            <button type="button" id="copyScanBtn" class="ghost-btn">Copy scan</button>
-            <button type="submit" id="analyzeBtn" class="send-btn">Send</button>
-          </div>
-        </form>
-      </section>
-    </section>
-  </main>
-
-  <input id="fileInput" type="file" multiple hidden />
-  <div id="toast" class="toast"></div>
-  <script src="popup.js"></script>
+<body>
+<div class="app" id="app">
+  <header class="hdr">
+    <div class="hdr-brand">
+      <svg class="logo-icon" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="28" height="28" rx="8" fill="url(#lgi)"/>
+  <path d="M18 8a7 7 0 1 0 0 12" stroke="white" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+  <circle cx="20" cy="14" r="1.8" fill="white"/>
+  <defs>
+    <linearGradient id="lgi" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7c6ef7"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+  </defs>
+</svg>
+      <span class="brand-name">Chinna</span>
+      <span class="health-pill" id="health"><span class="dot"></span><span id="healthText">checking…</span></span>
+    </div>
+    <div class="hdr-actions">
+      <button class="icon-btn" id="openSidePanel" data-tip="Open as side panel" aria-label="Side panel">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="1" y="1" width="14" height="14" rx="2.5"/>
+          <line x1="10" y1="1" x2="10" y2="15"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="openDashboard" data-tip="Chinna dashboard" aria-label="Dashboard">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/>
+          <rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="themeBtn" data-tip="Theme" aria-label="Toggle theme">
+        <svg id="themeIcon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M13 8.6A5.2 5.2 0 0 1 7.4 3a4.9 4.9 0 1 0 5.6 5.6Z"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="clearBtn" data-tip="Clear chat" aria-label="Clear">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <polyline points="3,4 4,4 13,4"/>
+          <path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1M6 7v5M10 7v5"/><path d="M4 4l1 9h6l1-9"/>
+        </svg>
+      </button></div>
+  </header>
+  <div class="ctx-bar" id="ctxBar">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" class="ctx-icon">
+      <rect x="1" y="2" width="12" height="10" rx="2"/><path d="M4 2V1M10 2V1"/>
+    </svg>
+    <span id="contextText" class="ctx-text">Current tab</span>
+    <button class="icon-btn ctx-scan" id="ctxScanBtn" data-tip="Scan this tab" aria-label="Scan">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="7" cy="7" r="5"/><line x1="7" y1="4" x2="7" y2="7"/><line x1="7" y1="7" x2="9.5" y2="9.5"/>
+      </svg>
+    </button>
+  </div>
+  <div class="chat" id="conversation">
+    <div class="welcome" id="welcome">
+      <div class="greeting">Hey Buddy 👋</div>
+      <div class="sub-greeting">What are we looking at today?</div>
+      <div class="suggestions" id="suggestions"></div>
+    </div>
+  </div>
+  <div class="stats-row" id="statsRow" style="display:none">
+    <div class="stat-chip"><span id="scoreValue">--</span><small>score</small></div>
+    <div class="stat-chip"><span id="issueCount">0</span><small>issues</small></div>
+    <div class="stat-chip"><span id="errorCount">0</span><small>errors</small></div>
+    <button class="ghost-btn" id="copyScanBtn" data-tip="Copy scan JSON" aria-label="Copy scan">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="4" y="4" width="8" height="8" rx="1.5"/><path d="M2 10V2h8"/>
+      </svg>
+      Copy
+    </button>
+  </div>
+  <div class="composer">
+    <div class="composer-top" id="attachBar" style="display:none">
+      <span class="attach-label">📎 <span id="attachNames"></span></span>
+      <button class="icon-btn" id="clearAttach" aria-label="Remove attachments">✕</button>
+    </div>
+    <textarea id="prompt" placeholder="Ask me anything about this page…"></textarea>
+    <div class="composer-row">
+      <label class="icon-btn" for="fileInput" data-tip="Attach file" aria-label="Attach">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M13.5 8.5l-5.5 5.5a4 4 0 0 1-5.66-5.66l6.5-6.5A2.5 2.5 0 0 1 12.4 5.4l-6.5 6.5a1 1 0 0 1-1.42-1.42L10 4"/>
+        </svg>
+      </label>
+      <input type="file" id="fileInput" multiple style="display:none"/>
+      <select id="modelSelect" aria-label="Model">
+        <option value="flash">⚡ Flash</option>
+        <option value="local">🔒 Local</option>
+      </select>
+      <button class="ghost-btn scan-btn" id="scanBtn" data-tip="Full page scan">Scan</button>
+      <button class="send-btn" id="analyzeBtn" aria-label="Send">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="14" y1="2" x2="2" y2="8"/><line x1="14" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="8" y2="14"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+<script src="popup.js"></script>
 </body>
 </html>

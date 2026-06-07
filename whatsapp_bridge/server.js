@@ -9,6 +9,7 @@ const pino = require('pino');
 const {
   default: makeWASocket,
   DisconnectReason,
+  downloadMediaMessage,
   fetchLatestBaileysVersion,
   useMultiFileAuthState,
 } = require('@whiskeysockets/baileys');
@@ -78,8 +79,21 @@ function upsertChat(jid, patch = {}) {
   chats.set(jid, { ...prev, ...patch, jid });
 }
 
+function unwrapMessage(message = {}) {
+  return message.ephemeralMessage?.message
+    || message.viewOnceMessage?.message
+    || message.viewOnceMessageV2?.message
+    || message.documentWithCaptionMessage?.message
+    || message;
+}
+
+function contentType(message = {}) {
+  const msg = unwrapMessage(message);
+  return Object.keys(msg || {})[0] || 'unknown';
+}
+
 function msgText(m) {
-  const msg = m.message || {};
+  const msg = unwrapMessage(m.message || {});
   return msg.conversation
     || msg.extendedTextMessage?.text
     || msg.imageMessage?.caption
@@ -90,13 +104,63 @@ function msgText(m) {
     || '';
 }
 
-function storeMessage(m) {
+function mediaSummary(m) {
+  const msg = unwrapMessage(m.message || {});
+  if (msg.imageMessage) return { kind: 'image', label: 'Image', mime: msg.imageMessage.mimetype || 'image/jpeg', caption: msg.imageMessage.caption || '' };
+  if (msg.videoMessage) return { kind: 'video', label: 'Video', mime: msg.videoMessage.mimetype || 'video/mp4', caption: msg.videoMessage.caption || '' };
+  if (msg.audioMessage) return { kind: 'audio', label: msg.audioMessage.ptt ? 'Voice note' : 'Audio', mime: msg.audioMessage.mimetype || 'audio/ogg', caption: '' };
+  if (msg.documentMessage) return {
+    kind: 'document',
+    label: msg.documentMessage.fileName || 'Document',
+    mime: msg.documentMessage.mimetype || 'application/octet-stream',
+    caption: msg.documentMessage.caption || '',
+    fileName: msg.documentMessage.fileName || 'file',
+    size: Number(msg.documentMessage.fileLength || 0),
+  };
+  if (msg.stickerMessage) return { kind: 'sticker', label: 'Sticker', mime: msg.stickerMessage.mimetype || 'image/webp', caption: '' };
+  return null;
+}
+
+async function mediaPreview(m, summary) {
+  if (!summary || !sock) return summary;
+  const preview = { ...summary };
+  try {
+    const buffer = await downloadMediaMessage(
+      m,
+      'buffer',
+      {},
+      { logger, reuploadRequest: sock.updateMediaMessage }
+    );
+    const maxInline = Number(process.env.CHINNA_WA_INLINE_MEDIA_LIMIT || 2_250_000);
+    preview.size = buffer.length;
+    preview.name = preview.fileName || `${preview.kind || 'media'}-${m.key?.id || Date.now()}`;
+    if (buffer.length <= maxInline) {
+      preview.data_b64 = buffer.toString('base64');
+    } else {
+      preview.too_large = true;
+    }
+  } catch (e) {
+    preview.error = e?.message || String(e);
+  }
+  return preview;
+}
+
+function friendlyLast(text, media) {
+  if (text) return text;
+  if (!media) return '';
+  if (media.caption) return `${media.label}: ${media.caption}`;
+  return media.label || 'Media';
+}
+
+async function storeMessage(m) {
   const jid = m.key?.remoteJid;
   if (!jid || jid === 'status@broadcast') return;
+  const text = msgText(m);
+  const media = await mediaPreview(m, mediaSummary(m));
   upsertChat(jid, {
     name: m.pushName || chatName(jid),
     timestamp: Number(m.messageTimestamp || Math.floor(Date.now() / 1000)),
-    last: msgText(m) || (m.message ? '[media]' : ''),
+    last: friendlyLast(text, media),
   });
   const arr = messages.get(jid) || [];
   const id = m.key?.id || `${Date.now()}-${arr.length}`;
@@ -108,8 +172,9 @@ function storeMessage(m) {
       participant: m.key?.participant || '',
       pushName: m.pushName || '',
       timestamp: Number(m.messageTimestamp || Math.floor(Date.now() / 1000)),
-      text: msgText(m),
-      type: Object.keys(m.message || {})[0] || 'unknown',
+      text,
+      media,
+      type: media?.kind || contentType(m.message || {}),
     });
   }
   messages.set(jid, arr.slice(-300));
@@ -162,11 +227,15 @@ async function startSocket(force = false) {
       for (const c of items || []) upsertChat(c.id, { name: c.notify || c.name || c.verifiedName });
     });
     sock.ev.on('messages.upsert', ({ messages: batch }) => {
-      for (const m of batch || []) storeMessage(m);
+      (async () => {
+        for (const m of batch || []) await storeMessage(m);
+      })().catch((e) => { lastError = e.message; });
     });
     sock.ev.on('messaging-history.set', ({ chats: cs, messages: ms }) => {
-      for (const c of cs || []) upsertChat(c.id, { name: c.name, unread: c.unreadCount || 0, timestamp: Number(c.conversationTimestamp || 0) });
-      for (const m of ms || []) storeMessage(m);
+      (async () => {
+        for (const c of cs || []) upsertChat(c.id, { name: c.name, unread: c.unreadCount || 0, timestamp: Number(c.conversationTimestamp || 0) });
+        for (const m of ms || []) await storeMessage(m);
+      })().catch((e) => { lastError = e.message; });
     });
     sock.ev.on('call', (items) => {
       for (const c of items || []) calls.unshift({ ...c, at: Date.now() });
@@ -218,16 +287,21 @@ const server = http.createServer(async (req, res) => {
       let sent;
       if (body.file_b64) {
         const buffer = Buffer.from(String(body.file_b64), 'base64');
-        sent = await sock.sendMessage(jid, {
-          document: buffer,
-          mimetype: body.mime || 'application/octet-stream',
-          fileName: body.name || 'file',
-          caption: text || undefined,
-        });
+        const mime = body.mime || 'application/octet-stream';
+        const name = body.name || 'file';
+        if (mime.startsWith('image/')) {
+          sent = await sock.sendMessage(jid, { image: buffer, mimetype: mime, caption: text || undefined });
+        } else if (mime.startsWith('video/')) {
+          sent = await sock.sendMessage(jid, { video: buffer, mimetype: mime, caption: text || undefined });
+        } else if (mime.startsWith('audio/')) {
+          sent = await sock.sendMessage(jid, { audio: buffer, mimetype: mime, ptt: false });
+        } else {
+          sent = await sock.sendMessage(jid, { document: buffer, mimetype: mime, fileName: name, caption: text || undefined });
+        }
       } else {
         sent = await sock.sendMessage(jid, { text });
       }
-      upsertChat(jid, { last: text || '[file]', timestamp: Math.floor(Date.now() / 1000) });
+      upsertChat(jid, { last: text || body.name || 'File sent', timestamp: Math.floor(Date.now() / 1000) });
       return json(res, { ok: true, jid, id: sent?.key?.id || '' });
     }
     if (req.method === 'POST' && url.pathname === '/reconnect') {

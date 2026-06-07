@@ -438,16 +438,26 @@ html[data-theme="synth"] .bigbtn.solid{color:#190a2b}
 .chatx-incoming-head{font-size:12px;font-weight:700;color:var(--t1)}
 .chatx-incoming-sub{margin-top:4px;font-size:11px;color:var(--t2)}
 .chatx-incoming-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
-.chatx-invite-card{display:grid;grid-template-columns:92px 1fr;gap:9px;align-items:center;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);padding:8px}
-.chatx-invite-card img{width:92px;height:92px;border-radius:8px;background:#fff;image-rendering:pixelated}
+.chatx-invite-card{display:grid;grid-template-columns:104px 1fr;gap:10px;align-items:center;border:1px solid rgba(var(--accr),.36);border-radius:14px;background:linear-gradient(145deg,rgba(var(--accr),.18),rgba(255,255,255,.055));padding:9px;box-shadow:inset 0 1px 0 rgba(255,255,255,.09)}
+.chatx-invite-qr-frame{width:104px;height:104px;border-radius:13px;padding:6px;background:linear-gradient(135deg,#7dd3fc,#a78bfa,#f472b6,#fde047);box-shadow:0 12px 30px rgba(0,0,0,.32)}
+.chatx-invite-card img{width:92px;height:92px;border-radius:8px;background:#fff;image-rendering:pixelated;filter:contrast(1.14) saturate(1.1)}
 .chatx-fingerprint{font-family:var(--font-mono);font-size:9px;color:var(--t3);word-break:break-all;line-height:1.35}
 .chatx-relay-line{font-size:10px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chatx-short-code{font-family:var(--font-mono);font-size:11px;color:var(--t1);background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:8px;padding:5px 7px;margin-top:6px;display:inline-flex;max-width:100%}
+.chatx-share-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 
 .wa-grid{display:grid;grid-template-columns:288px 1fr;gap:10px;min-height:520px}
 .wa-panel{border:1px solid var(--line);border-radius:var(--r);background:var(--panel2);min-height:0;display:flex;flex-direction:column}
 .wa-status{display:grid;grid-template-columns:128px 1fr;gap:12px;align-items:center;padding:12px;border-bottom:1px solid var(--line)}
 .wa-qr{width:128px;height:128px;border-radius:12px;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line)}
 .wa-qr img{width:100%;height:100%;image-rendering:pixelated}
+.wa-media{margin-top:7px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.045);overflow:hidden}
+.wa-media img,.wa-media video{display:block;max-width:260px;max-height:210px;width:auto;height:auto;border-radius:10px}
+.wa-media audio{width:240px;display:block;margin:8px}
+.wa-media-doc{padding:9px;display:flex;gap:8px;align-items:center;font-size:12px}
+.wa-media-meta{font-size:10px;color:var(--t3);margin-top:3px;word-break:break-word}
+.wa-media-actions{display:flex;gap:6px;flex-wrap:wrap;padding:7px;border-top:1px solid var(--line)}
+.wa-media-actions button{height:25px}
 .wa-chat-list{overflow:auto;padding:8px;display:flex;flex-direction:column;gap:5px}
 .wa-chat-item{display:flex;gap:8px;align-items:center;padding:8px;border-radius:var(--r-sm);cursor:pointer;border:1px solid transparent;transition:.14s var(--ease)}
 .wa-chat-item:hover,.wa-chat-item.on{background:rgba(var(--accr),.12);border-color:rgba(var(--accr),.25)}
@@ -1048,23 +1058,28 @@ html[data-theme="aurora"] .cx-pal-card{
               </div>
             </div>
             <div style="display:flex;gap:6px">
-              <button type="button" class="bigbtn ghost smallbtn" onclick="chatxCopyId()">Copy ID</button>
+              <button type="button" class="bigbtn ghost smallbtn" onclick="chatxShareInvite()">Share</button>
               <button type="button" class="bigbtn ghost smallbtn" onclick="chatxCopyInvite()">Copy Invite</button>
               <button type="button" class="bigbtn ghost smallbtn" onclick="chatxExportCurrent()">Export</button>
             </div>
             <div class="chatx-invite-card">
-              <img id="chatx-invite-qr" alt="Secure Chat invite QR">
+              <div class="chatx-invite-qr-frame"><img id="chatx-invite-qr" alt="Secure Chat invite QR"></div>
               <div>
-                <div style="font-size:11px;font-weight:700;color:var(--t1)">Private Invite</div>
+                <div style="font-size:11px;font-weight:800;color:var(--t1)">Private Invite</div>
                 <div class="chatx-relay-line" id="chatx-relay-label">Relay: this Mac</div>
+                <div class="chatx-short-code" id="chatx-short-code">Generating...</div>
                 <div class="chatx-fingerprint" id="chatx-fingerprint">fingerprint pending</div>
+                <div class="chatx-share-row">
+                  <button type="button" class="miniA" onclick="chatxShareInvite()">Share QR/link</button>
+                  <button type="button" class="miniA" onclick="chatxCopyId()">Copy short ID</button>
+                </div>
               </div>
             </div>
             <div style="display:flex;gap:6px">
               <input id="chatx-add-id" class="field" placeholder="Paste invite link / JSON / Friend ID" style="margin:0;font-size:12px;min-width:0">
               <button type="button" class="bigbtn smallbtn" onclick="chatxAddContact()">Add</button>
             </div>
-            <div style="font-size:10px;color:var(--t3)">Share the invite QR or link. Bare IDs only work for legacy local users.</div>
+            <div style="font-size:10px;color:var(--t3)">Share the QR/link once. Chinna handles the relay, invite token, and key lookup.</div>
             <div id="chatx-contacts" style="overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px;min-height:150px"></div>
             <div style="font-size:10px;color:var(--t3);margin-top:2px">Call log</div>
             <div id="chatx-call-log" class="chatx-call-log"><div style="font-size:10px;color:var(--t3);padding:4px">No call events yet.</div></div>
@@ -3764,6 +3779,7 @@ function chatxRenderInviteCard(){
   if(qr) qr.src = chatxQrUrl(invite, 240);
   if($('chatx-fingerprint')) $('chatx-fingerprint').textContent = `Key ${chatxInvitePayload.fingerprint}`;
   if($('chatx-relay-label')) $('chatx-relay-label').textContent = `Relay: ${chatxInvitePayload.relay_url || 'this Mac'}`;
+  if($('chatx-short-code')) $('chatx-short-code').textContent = (chatxIdentity?.id || '').slice(0,18) || 'Ready';
 }
 
 function renderChatxContacts(){
@@ -4019,7 +4035,23 @@ function chatxCopyId(){
 function chatxCopyInvite(){
   const invite = chatxInviteString();
   if(!invite) return;
-  navigator.clipboard.writeText(invite).then(()=>toast('Secure Chat invite copied'));
+  navigator.clipboard.writeText(invite).then(()=>toast('Invite link copied'));
+}
+
+async function chatxShareInvite(){
+  const invite = chatxInviteString();
+  if(!invite) return;
+  const title = 'Chinna Secure Chat invite';
+  const text = `Open this in Chinna Secure Chat to connect with ${chatxIdentity?.name || 'me'}:\n${invite}`;
+  if(navigator.share){
+    try{
+      await navigator.share({title,text});
+      toast('Invite shared');
+      return;
+    }catch{}
+  }
+  await navigator.clipboard.writeText(invite);
+  toast('Invite copied');
 }
 
 async function chatxForward(mid){
@@ -4903,6 +4935,48 @@ function waNormalizeJid(value){
   const digits = raw.replace(/\D/g,'');
   return digits ? `${digits}@s.whatsapp.net` : '';
 }
+function waFmtSize(bytes){
+  const n = Number(bytes||0);
+  if(!n) return '';
+  if(n < 1024) return `${n} B`;
+  if(n < 1024*1024) return `${(n/1024).toFixed(1)} KB`;
+  return `${(n/1024/1024).toFixed(1)} MB`;
+}
+function waMediaSrc(media){
+  return media?.data_b64 ? `data:${media.mime||'application/octet-stream'};base64,${media.data_b64}` : '';
+}
+function waDownloadMedia(mid){
+  const m = waMessages.find(x=>String(x.id)===String(mid));
+  const media = m?.media;
+  if(!media?.data_b64){ toast('Preview data not available yet'); return; }
+  const a=document.createElement('a');
+  a.href=waMediaSrc(media);
+  a.download=media.name || media.fileName || `${media.kind||'whatsapp'}-media`;
+  a.click();
+}
+function waOpenMedia(mid){
+  const m = waMessages.find(x=>String(x.id)===String(mid));
+  const media = m?.media;
+  if(!media?.data_b64){ toast('Preview data not available yet'); return; }
+  const bytes = Uint8Array.from(atob(media.data_b64), ch => ch.charCodeAt(0));
+  const blob = new Blob([bytes], {type:media.mime||'application/octet-stream'});
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank', 'noopener,noreferrer');
+  setTimeout(()=>URL.revokeObjectURL(url), 45000);
+}
+function waRenderMedia(media, mid){
+  if(!media) return '';
+  const mime = media.mime || 'application/octet-stream';
+  const name = media.name || media.fileName || media.label || media.kind || 'Media';
+  const size = waFmtSize(media.size);
+  const meta = `<div class="wa-media-meta">${escHtml([mime,size,media.too_large?'large file':''].filter(Boolean).join(' · '))}</div>`;
+  const actions = media.data_b64 ? `<div class="wa-media-actions"><button type="button" class="miniA" onclick="waOpenMedia('${esc(mid)}')">Open</button><button type="button" class="miniA" onclick="waDownloadMedia('${esc(mid)}')">Download</button></div>` : '';
+  const src = waMediaSrc(media);
+  if(src && mime.startsWith('image/')) return `<div class="wa-media"><img src="${src}" alt="${escHtml(name)}">${actions}</div>`;
+  if(src && mime.startsWith('video/')) return `<div class="wa-media"><video src="${src}" controls playsinline></video>${actions}</div>`;
+  if(src && mime.startsWith('audio/')) return `<div class="wa-media"><audio src="${src}" controls></audio>${actions}</div>`;
+  return `<div class="wa-media"><div class="wa-media-doc"><span style="font-size:20px">📎</span><div><div>${escHtml(name)}</div>${meta}</div></div>${actions || `<div class="wa-media-actions"><span style="font-size:10px;color:var(--t3)">Preview will appear after WhatsApp sync downloads this file.</span></div>`}</div>`;
+}
 function waSelectManualChat(){
   const raw = $('wa-new-chat')?.value || '';
   const jid = waNormalizeJid(raw);
@@ -4932,9 +5006,11 @@ function renderWaThread(){
   el.innerHTML = waMessages.map(m=>{
     const mine = m.fromMe;
     const time = new Date(Number(m.timestamp||0)*1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const text = m.text || m.media?.caption || '';
     return `<div class="wa-msg ${mine?'mine':''}">
       <div class="wa-msg-meta">${mine?'You':escHtml(m.pushName||m.participant||'Contact')} · ${escHtml(time)} · ${escHtml(m.type||'message')}</div>
-      <div style="white-space:pre-wrap">${escHtml(m.text || '[media/message]')}</div>
+      ${text ? `<div style="white-space:pre-wrap">${escHtml(text)}</div>` : ''}
+      ${waRenderMedia(m.media, m.id)}
     </div>`;
   }).join('');
   el.scrollTop = el.scrollHeight;

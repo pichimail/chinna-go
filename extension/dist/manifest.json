@@ -1,17 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "Chinna Smart Site Assistant",
-  "description": "A calm, site-aware assistant with popup, side panel, and attach-to-page modes.",
+  "name": "Chinna AI",
+  "description": "Your personal AI buddy — reads, visualises and fixes any page.",
   "version": "7.0.0",
   "action": {
-    "default_title": "Chinna",
+    "default_title": "Chinna AI",
     "default_popup": "popup.html",
     "default_icon": "icon.svg"
   },
   "icons": {
-    "16": "icon.svg",
-    "48": "icon.svg",
+    "16":  "icon.svg",
+    "48":  "icon.svg",
     "128": "icon.svg"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
   },
   "permissions": [
     "activeTab",
@@ -29,9 +32,13 @@
   "background": {
     "service_worker": "background.js"
   },
-  "side_panel": {
-    "default_path": "sidepanel.html"
-  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "web_accessible_resources": [
     {
       "resources": ["icon.svg"],
