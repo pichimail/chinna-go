@@ -1,54 +1,6 @@
 // Chinna Tab Assistant — service worker
 const CHINNA = 'http://localhost:7777';
 
-async function installRuntimeHooks() {
-  if (window.__chinnaPageHookInstalled) return 'already';
-  window.__chinnaPageHookInstalled = true;
-
-  const KEY = '__chinna_runtime_events';
-  const MAX = 80;
-  const read = () => {
-    try { return JSON.parse(sessionStorage.getItem(KEY) || '[]'); }
-    catch { return []; }
-  };
-  const write = (items) => {
-    try { sessionStorage.setItem(KEY, JSON.stringify(items.slice(-MAX))); }
-    catch {}
-  };
-  const emit = (payload) => {
-    const items = read();
-    items.push({ ...payload, at: Date.now(), url: location.href });
-    write(items);
-  };
-
-  window.addEventListener('error', (e) => emit({
-    kind: 'error',
-    message: e.message || '',
-    source: e.filename || '',
-    line: e.lineno || 0,
-    column: e.colno || 0,
-    stack: e.error && e.error.stack ? String(e.error.stack).slice(0, 3000) : ''
-  }));
-  window.addEventListener('unhandledrejection', (e) => emit({
-    kind: 'unhandledrejection',
-    message: e.reason && e.reason.message ? e.reason.message : String(e.reason || ''),
-    stack: e.reason && e.reason.stack ? String(e.reason.stack).slice(0, 3000) : ''
-  }));
-  ['error', 'warn'].forEach((level) => {
-    const original = console[level];
-    if (typeof original !== 'function') return;
-    console[level] = function(...args) {
-      emit({ kind: 'console', level, message: args.map((x) => {
-        try { return typeof x === 'string' ? x : JSON.stringify(x); }
-        catch { return String(x); }
-      }).join(' ').slice(0, 3000) });
-      return original.apply(this, args);
-    };
-  });
-
-  return 'ok';
-}
-
 chrome.action.onClicked.addListener(async (tab) => {
   try { await chrome.sidePanel.open({ tabId: tab.id }); } catch (e) {}
 });
@@ -69,22 +21,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const t = tabs[0] || {};
       sendResponse({ url: t.url || '', title: t.title || '', id: t.id });
-    });
-    return true;
-  }
-  if (msg.type === 'install-runtime-hooks') {
-    if (!sender.tab?.id) {
-      sendResponse({ ok: false, error: 'no tab context' });
-      return false;
-    }
-    chrome.scripting.executeScript({
-      target: { tabId: sender.tab.id },
-      world: 'MAIN',
-      func: installRuntimeHooks
-    }).then(() => {
-      sendResponse({ ok: true });
-    }).catch((e) => {
-      sendResponse({ ok: false, error: String(e) });
     });
     return true;
   }
@@ -123,135 +59,15 @@ chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
 // ---- Injected: scrape readable page content ----
 function scrapePage() {
   function clean(t){ return (t||'').replace(/\s+/g,' ').trim(); }
-  function meta(sel){ return document.querySelector(sel)?.getAttribute('content') || document.querySelector(sel)?.getAttribute('href') || ''; }
-  function metaMap(prefix){
-    const out = {};
-    document.querySelectorAll(`meta[${prefix}]`).forEach(m => {
-      const key = (m.getAttribute(prefix) || '').replace(/^(og:|twitter:)/, '');
-      if (key) out[key] = clean(m.getAttribute('content') || '');
-    });
-    return out;
-  }
-  function parseScriptJson(varName) {
-    for (const s of document.scripts) {
-      const txt = s.textContent || '';
-      const ix = txt.indexOf(varName);
-      if (ix < 0) continue;
-      const eq = txt.indexOf('{', ix);
-      if (eq < 0) continue;
-      let depth = 0, end = -1, inStr = false, esc = false;
-      for (let i = eq; i < txt.length; i++) {
-        const ch = txt[i];
-        if (inStr) {
-          if (esc) esc = false;
-          else if (ch === '\\') esc = true;
-          else if (ch === '"') inStr = false;
-          continue;
-        }
-        if (ch === '"') inStr = true;
-        else if (ch === '{') depth++;
-        else if (ch === '}') {
-          depth--;
-          if (depth === 0) { end = i + 1; break; }
-        }
-      }
-      if (end > eq) {
-        try { return JSON.parse(txt.slice(eq, end)); } catch(e) {}
-      }
-    }
-    return null;
-  }
-  const title = clean(document.title);
-  const metaDesc = clean(meta('meta[name="description"]'));
-  const openGraph = metaMap('property');
-  const twitter = metaMap('name');
-  const canonical = meta('link[rel="canonical"]');
-  const headings = [...document.querySelectorAll('h1,h2,h3')].slice(0,60).map(h=>clean(h.textContent)).filter(Boolean);
-  const paras = [...document.querySelectorAll('p,li,#description-inline-expander,#description,yt-formatted-string')].map(p=>clean(p.textContent)).filter(t=>t.length>25).slice(0,140);
-  const visibleText = clean(document.body?.innerText || '').slice(0, 10000);
-  const links = [...document.querySelectorAll('a[href]')].slice(0,90).map(a=>({t:clean(a.textContent).slice(0,100), href:a.href})).filter(l=>l.t);
-  const forms = [...document.querySelectorAll('form')].slice(0,20).map(f => ({
-    action: f.action || '',
-    method: f.method || 'get',
-    inputs: [...f.querySelectorAll('input,textarea,select,button')].slice(0,40).map(i => ({
-      name: i.name || '',
-      type: i.type || i.tagName.toLowerCase(),
-      label: clean(i.getAttribute('aria-label') || document.querySelector(`label[for="${i.id}"]`)?.textContent || '')
-    }))
-  }));
-  const images = [...document.images].slice(0,80).map(img => ({src: img.currentSrc || img.src, alt: img.alt || '', w: img.naturalWidth || img.width, h: img.naturalHeight || img.height}));
-  const media = [...document.querySelectorAll('video,audio')].slice(0,20).map(m => ({
-    tag: m.tagName.toLowerCase(),
-    src: m.currentSrc || m.src || '',
-    duration: Number.isFinite(m.duration) ? m.duration : '',
-    paused: !!m.paused,
-    currentTime: Number.isFinite(m.currentTime) ? m.currentTime : '',
-  }));
-  const jsonLd = [...document.querySelectorAll('script[type="application/ld+json"]')].slice(0,8).map(s => {
-    try { return JSON.parse(s.textContent); } catch(e) { return clean(s.textContent).slice(0,1000); }
-  });
-  let runtimeEvents = [];
-  try { runtimeEvents = JSON.parse(sessionStorage.getItem('__chinna_runtime_events') || '[]').slice(-80); } catch(e) {}
-  const player = parseScriptJson('ytInitialPlayerResponse') || {};
-  const playerDetails = player.videoDetails || {};
-  const url = location.href;
-  const urlObj = new URL(url);
-  const videoId = urlObj.searchParams.get('v') || playerDetails.videoId || '';
-  const descriptionNode = document.querySelector('#description-inline-expander, ytd-text-inline-expander, #description');
-  const channelNode = document.querySelector('#owner #channel-name a, ytd-video-owner-renderer ytd-channel-name a, ytd-channel-name a');
-  const hashtags = [...new Set((visibleText.match(/#[\p{L}\p{N}_-]+/gu) || []).slice(0,20))];
-  const youtube = /(^|\.)youtube\.com$|youtu\.be$/.test(location.hostname) ? {
-    videoId,
-    url,
-    title: clean(playerDetails.title || document.querySelector('h1 yt-formatted-string, h1')?.textContent || openGraph.title || title),
-    channel: clean(playerDetails.author || channelNode?.textContent || ''),
-    description: clean(playerDetails.shortDescription || descriptionNode?.textContent || metaDesc).slice(0, 5000),
-    duration: playerDetails.lengthSeconds || '',
-    keywords: playerDetails.keywords || [],
-    hashtags,
-    isLive: !!playerDetails.isLiveContent,
-    viewsText: clean(document.querySelector('#info span, #count yt-formatted-string, span.view-count')?.textContent || ''),
-    publishText: clean([...document.querySelectorAll('#info-strings yt-formatted-string, #date yt-formatted-string')].map(x => x.textContent).join(' ')),
-    playback: media.find(m => m.tag === 'video') || null,
-  } : null;
+  const title = document.title;
+  const metaDesc = document.querySelector('meta[name="description"]')?.content || '';
+  const headings = [...document.querySelectorAll('h1,h2,h3')].slice(0,40).map(h=>clean(h.textContent)).filter(Boolean);
+  const paras = [...document.querySelectorAll('p,li')].map(p=>clean(p.textContent)).filter(t=>t.length>40).slice(0,120);
+  const links = [...document.querySelectorAll('a[href]')].slice(0,60).map(a=>({t:clean(a.textContent).slice(0,80), href:a.href})).filter(l=>l.t);
   const tables = [...document.querySelectorAll('table')].slice(0,5).map(tb=>{
     return [...tb.querySelectorAll('tr')].slice(0,30).map(tr=>[...tr.querySelectorAll('td,th')].map(td=>clean(td.textContent)).join(' | ')).join('\n');
   });
-  return {
-    url,
-    title,
-    metaDesc,
-    meta: { description: metaDesc, canonical },
-    openGraph,
-    twitter,
-    jsonLd,
-    youtube,
-    headings,
-    paras,
-    visibleText,
-    links,
-    forms,
-    images,
-    media,
-    tables,
-    errors: runtimeEvents.filter(e => e.kind === 'error' || e.kind === 'unhandledrejection'),
-    console: runtimeEvents.filter(e => e.kind === 'console'),
-    performance: {
-      url,
-      navigationType: performance.getEntriesByType?.('navigation')?.[0]?.type || '',
-      timing: performance.getEntriesByType?.('navigation')?.[0]?.toJSON?.() || {},
-    },
-    counts: {
-      h1: document.querySelectorAll('h1').length,
-      links: document.querySelectorAll('a[href]').length,
-      images: document.images.length,
-      forms: document.forms.length,
-    },
-    accessibility: {
-      images_missing_alt: [...document.images].filter(img => !img.hasAttribute('alt')).length,
-      inputs_unlabeled: [...document.querySelectorAll('input,textarea,select')].filter(i => !i.labels?.length && !i.getAttribute('aria-label') && !i.getAttribute('aria-labelledby')).length,
-    }
-  };
+  return { title, metaDesc, headings, paras, links, tables, url: location.href };
 }
 
 // ---- Injected: clone page into single self-contained HTML ----

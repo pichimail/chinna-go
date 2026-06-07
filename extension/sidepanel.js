@@ -2,7 +2,6 @@
 const CHINNA = 'http://localhost:7777';
 let currentTab = { url: '', title: '' };
 let history = [];
-let lastAccousticaTaskId = localStorage.getItem('lastAccousticaTaskId') || '';
 
 const $ = (id) => document.getElementById(id);
 const msgs = $('msgs'), input = $('input'), sendBtn = $('sendBtn');
@@ -17,12 +16,12 @@ async function refreshTab() {
 }
 function safeHost(u){ try { return new URL(u).hostname.replace('www.',''); } catch(e){ return ''; } }
 
-// ---------- Contextual suggestions ----------
+// ---------- Contextual suggestions (max 3, auto-switch) ----------
 function renderSuggestions() {
   const host = safeHost(currentTab.url);
   const url = currentTab.url || '';
   let s = [];
-  if (/youtube\.com|youtu\.be|vimeo|music|spotify|soundcloud/.test(url)) s = ['Summarize this video', 'Make Accoustica prompt', 'Generate with Accoustica', 'Check Accoustica task'];
+  if (/youtube\.com|vimeo/.test(url)) s = ['Summarize this video page', 'Key points & timestamps', 'Clone this page'];
   else if (/github\.com/.test(url)) s = ['Explain this repo', 'Summarize the README', 'List open issues'];
   else if (/news|medium|blog|article|\/20\d\d\//.test(url)) s = ['Summarize this article', 'TL;DR in 3 bullets', 'Extract key quotes'];
   else if (/amazon|flipkart|shop|product|store/.test(url)) s = ['Compare specs', 'Scrape price & reviews', 'Pros & cons'];
@@ -32,7 +31,7 @@ function renderSuggestions() {
   else s = ['Summarize this page', 'Scrape main content', 'Clone this page'];
   const wrap = $('suggs');
   wrap.innerHTML = '';
-  s.slice(0, 4).forEach(text => {
+  s.slice(0, 3).forEach(text => {
     const b = document.createElement('button');
     b.className = 'sugg'; b.textContent = text;
     b.onclick = () => { input.value = text; doSend(); };
@@ -49,16 +48,6 @@ function addMsg(who, text, cls) {
   d.className = 'msg ' + cls;
   d.innerHTML = `<div class="who">${who}</div><div class="bubble"></div>`;
   d.querySelector('.bubble').textContent = text;
-  msgs.appendChild(d);
-  msgs.scrollTop = msgs.scrollHeight;
-  return d;
-}
-function addHtmlMsg(who, html, cls) {
-  const w = $('msgs').querySelector('.welcome'); if (w) w.remove();
-  const d = document.createElement('div');
-  d.className = 'msg ' + cls;
-  d.innerHTML = `<div class="who">${who}</div><div class="bubble rich"></div>`;
-  d.querySelector('.bubble').innerHTML = html;
   msgs.appendChild(d);
   msgs.scrollTop = msgs.scrollHeight;
   return d;
@@ -95,8 +84,7 @@ function addArtifact(opts) {
   wrap.querySelector('.copyBtn').onclick = () => { navigator.clipboard.writeText(opts.content); toast('Copied'); };
   msgs.scrollTop = msgs.scrollHeight;
 }
-function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function attr(s){ return escapeHtml(s).replace(/"/g,'&quot;'); }
+function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function downloadFile(name, content, mime) {
   const blob = new Blob([content], { type: mime });
@@ -109,11 +97,11 @@ function downloadFile(name, content, mime) {
 
 // ---------- AI chat (through local Chinna server) ----------
 async function askAI(question, context) {
-  const sys = context ? `You are Chinna, a friendly assistant embedded in the user's browser. The user is viewing this page:\nTitle: ${context.title}\nURL: ${context.url}\nContent:\n${context.text}\n\nAnswer conversationally and concisely. If this is a video or music page, use the live page metadata before asking for uploads.` : 'You are Chinna, a friendly browser assistant. Be concise and natural.';
+  const sys = context ? `You are Chinna, a friendly assistant embedded in the user's browser. The user is viewing this page:\nTitle: ${context.title}\nURL: ${context.url}\nContent:\n${context.text}\n\nAnswer conversationally and concisely.` : 'You are Chinna, a friendly browser assistant. Be concise and natural.';
   try {
     const r = await fetch(`${CHINNA}/api/chat`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: question, system: sys, page_context: context?.raw || null, source: 'extension' })
+      body: JSON.stringify({ message: question, system: sys })
     });
     const d = await r.json();
     return d.reply || d.error || 'No response.';
@@ -126,136 +114,8 @@ async function getPageContext() {
   const res = await send({ type: 'run-in-tab', func: 'scrape', options: {} });
   if (!res.ok) return null;
   const r = res.result;
-  const yt = r.youtube || {};
-  const text = [
-    `URL: ${r.url || ''}`,
-    `Title: ${yt.title || r.title || ''}`,
-    yt.videoId ? `Video ID: ${yt.videoId}` : '',
-    yt.channel ? `Channel: ${yt.channel}` : '',
-    yt.description ? `Video description: ${yt.description}` : '',
-    yt.hashtags?.length ? `Tags: ${yt.hashtags.join(', ')}` : '',
-    r.metaDesc,
-    ...(r.headings||[]),
-    ...(r.paras||[]),
-    r.visibleText || ''
-  ].filter(Boolean).join('\n').slice(0, 9000);
+  const text = [r.metaDesc, ...(r.headings||[]), ...(r.paras||[])].join('\n').slice(0, 6000);
   return { title: r.title, url: r.url, text, raw: r };
-}
-
-async function apiJson(path, body) {
-  const r = await fetch(`${CHINNA}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body || {})
-  });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || `Request failed (${r.status})`);
-  return d;
-}
-
-function renderAccousticaCard(taskId, initial) {
-  const html = `
-    <div class="acc-card" data-task="${attr(taskId)}">
-      <div class="acc-top">
-        <div>
-          <div class="acc-kicker">ACCOUSTICA</div>
-          <div class="acc-title">${attr(initial?.title || 'Generating audio')}</div>
-        </div>
-        <span class="acc-status">${attr(initial?.status || 'PENDING')}</span>
-      </div>
-      <div class="acc-body">Task ${attr(taskId)} is queued.</div>
-      <div class="acc-player"></div>
-      <div class="acc-actions">
-        <button class="a-btn ghost refreshTask">Refresh</button>
-        <button class="a-btn ghost copyTask">Copy ID</button>
-      </div>
-    </div>`;
-  const node = addHtmlMsg('Chinna', html, 'ai').querySelector('.acc-card');
-  node.querySelector('.copyTask').onclick = () => { navigator.clipboard.writeText(taskId); toast('Copied task ID'); };
-  node.querySelector('.refreshTask').onclick = () => pollAccousticaOnce(taskId, node);
-  return node;
-}
-
-function updateAccousticaCard(card, data) {
-  if (!card || !data) return;
-  card.querySelector('.acc-status').textContent = data.status || 'PENDING';
-  const tracks = data.tracks || [];
-  const track = tracks.find(t => t.audioUrl || t.streamAudioUrl) || tracks[0] || {};
-  const playable = data.playableUrl || track.audioUrl || track.streamAudioUrl || '';
-  const title = track.title || card.querySelector('.acc-title').textContent || 'Audio ready';
-  card.querySelector('.acc-title').textContent = title;
-  const body = card.querySelector('.acc-body');
-  body.textContent = playable ? 'Audio ready. Final render may keep improving until SUCCESS.' : (data.failed ? 'Generation failed. Review the task status.' : 'Still processing...');
-  if (playable && !card.dataset.readyUrl) {
-    card.dataset.readyUrl = playable;
-    const cover = track.imageUrl ? `<img class="acc-cover" src="${attr(track.imageUrl)}" alt="">` : '';
-    card.querySelector('.acc-player').innerHTML = `
-      ${cover}
-      <audio controls src="${attr(playable)}"></audio>
-      <div class="acc-actions">
-        <a class="a-btn" href="${attr(playable)}" target="_blank" rel="noreferrer">Open</a>
-        <a class="a-btn ghost" href="${attr(playable)}" download>Download</a>
-        <button class="a-btn ghost playNow">Play</button>
-      </div>`;
-    const audio = card.querySelector('audio');
-    const playButton = card.querySelector('.playNow');
-    playButton.onclick = () => audio.play().catch(() => toast('Press Play in the audio player'));
-    audio.play().then(() => toast('Audio ready')).catch(() => toast('Audio ready'));
-  }
-}
-
-async function pollAccousticaOnce(taskId, card) {
-  try {
-    const r = await fetch(`${CHINNA}/api/music/accoustica/task?taskId=${encodeURIComponent(taskId)}`);
-    const data = await r.json();
-    updateAccousticaCard(card, data);
-    return data;
-  } catch (e) {
-    toast('Could not check task');
-    return { ok: false, error: String(e) };
-  }
-}
-
-function scheduleAccousticaPolling(taskId, card) {
-  setTimeout(() => {
-    const started = Date.now();
-    const timer = setInterval(async () => {
-      const data = await pollAccousticaOnce(taskId, card);
-      if (data.done || data.failed || Date.now() - started > 600000) {
-        clearInterval(timer);
-        if (!data.done && !data.failed) toast('Still processing. Use Refresh to check again.');
-      }
-    }, 1000);
-  }, 5000);
-}
-
-async function handleAccousticaCommand(q, ctx) {
-  if (!/accoustica/i.test(q)) return false;
-  if (/check/i.test(q)) {
-    const taskId = (q.match(/[a-zA-Z0-9_-]{8,}/)?.[0]) || lastAccousticaTaskId;
-    if (!taskId) { addMsg('Chinna', 'No Accoustica task ID yet.', 'ai'); return true; }
-    const card = renderAccousticaCard(taskId, { status: 'CHECKING' });
-    await pollAccousticaOnce(taskId, card);
-    return true;
-  }
-  if (/generate/i.test(q)) {
-    const data = await apiJson('/api/music/accoustica/generate', { page_context: ctx?.raw || {}, message: q });
-    lastAccousticaTaskId = data.taskId;
-    localStorage.setItem('lastAccousticaTaskId', data.taskId);
-    const card = renderAccousticaCard(data.taskId, data);
-    scheduleAccousticaPolling(data.taskId, card);
-    return true;
-  }
-  const prompt = await apiJson('/api/music/accoustica/prompt-from-page', { page_context: ctx?.raw || {}, message: q });
-  addArtifact({
-    badge: 'PROMPT',
-    name: 'accoustica-prompt.txt',
-    note: 'Accoustica prompt ready.',
-    preview: prompt.prompt,
-    content: prompt.prompt,
-    mime: 'text/plain'
-  });
-  return true;
 }
 
 // ---------- Main send ----------
@@ -266,16 +126,6 @@ async function doSend() {
   input.value = ''; autoGrow();
   addTyping();
   const ctx = await getPageContext();
-  try {
-    if (await handleAccousticaCommand(q, ctx)) {
-      rmTyping();
-      return;
-    }
-  } catch (e) {
-    rmTyping();
-    addMsg('Chinna', e.message || 'Accoustica request failed.', 'ai');
-    return;
-  }
   const ans = await askAI(q, ctx);
   rmTyping();
   addMsg('Chinna', ans, 'ai');

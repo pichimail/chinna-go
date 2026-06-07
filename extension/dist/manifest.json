@@ -6,13 +6,6 @@
   "permissions": ["activeTab", "scripting", "tabs", "downloads", "storage", "sidePanel", "tabCapture", "offscreen"],
   "host_permissions": ["<all_urls>", "http://localhost:7777/*"],
   "background": { "service_worker": "background.js" },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_start"
-    }
-  ],
   "side_panel": { "default_path": "sidepanel.html" },
   "action": { "default_title": "Open Chinna Assistant" },
   "icons": {

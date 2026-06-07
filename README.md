@@ -1,13 +1,13 @@
 # Chinna V6
 
-Chinna is a local Mac sidekick for cleanup, system checks, disk exploration, AI chat, Telegram control, browser context scanning, WhatsApp, and Accoustica music prompts/generation.
+Chinna is a local Mac sidekick for cleanup, system checks, disk exploration, AI chat, Telegram control, and voice actions.
 
 ## One-Touch Install
 
-Copy and paste this into Terminal on macOS to strictly replace any older Chinna version with the latest V6:
+Copy and paste this into Terminal on macOS to install or replace any older Chinna version with V5:
 
 ```bash
-curl -fsSL -H "Cache-Control: no-cache" https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
 ```
 
 Alternative form (also supported):
@@ -17,11 +17,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/ins
 ```
 
 What it does:
-- Stops old Chinna services
-- Clears stale Chinna app code and local app caches
-- Installs the latest Chinna V6 app files from GitHub
-- Refreshes the unpacked browser extension in `~/.chinna/extension/dist`
-- Replaces older installed Chinna code with V6
+- Installs the latest Chinna V6 app files
+- Replaces older installed Chinna code with V5
 - Sets up the local command in your shell path
 - Keeps your user data and API keys separate from app code
 
@@ -30,12 +27,11 @@ What it does:
 If you already have any older Chinna install, run the same one-touch install command again:
 
 ```bash
-curl -fsSL -H "Cache-Control: no-cache" https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
 ```
 
 This will:
-- Stop the old server and replace the old app code with V6
-- Clear stale local app caches
+- Replace the old app code with V5
 - Preserve your local data, config, and API keys
 - Refresh the command so `chinna` points to the new version
 
@@ -47,27 +43,9 @@ After install, use these commands:
 chinna --version
 chinna help
 chinna dashboard
-chinna extension
 chinna start
 chinna config
 ```
-
-## Browser Extension
-
-The installer refreshes the unpacked extension here:
-
-```bash
-~/.chinna/extension/dist
-```
-
-Load it in Chrome, Edge, or Brave:
-
-1. Open `chrome://extensions`
-2. Enable Developer mode
-3. Click **Load unpacked**
-4. Select `~/.chinna/extension/dist`
-
-The extension reads the active tab, including YouTube/video metadata where available, and sends page context only to the local Chinna server at `http://localhost:7777`. It can summarize the current page, create Accoustica prompts, start Accoustica generation, and poll the task until audio is ready.
 
 Optional commands:
 
@@ -80,8 +58,8 @@ chinna uninstall --purge
 
 Where files live:
 - App and local state: `~/.chinna`
-- API keys and config: `~/.chinna/env`
-- Model presets: `~/.chinna/models`
+- API keys: `~/.chinna/api_keys.json`
+- Config: `~/.chinna/config`
 
 ## Auto Update
 
@@ -109,7 +87,6 @@ chinna config
 Typical setup:
 - OpenRouter key for AI chat
 - OpenAI key for transcription and optional fallback features
-- Accoustica API Key for music generation
 - Telegram bot token for remote control
 
 ## Remove
@@ -151,7 +128,7 @@ chinna uninstall --purge
 
   ```bash
   chinna uninstall
-  bash <(curl -fsSL -H "Cache-Control: no-cache" https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh)
+  bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh)
   ```
 
 ## Notes

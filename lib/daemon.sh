@@ -46,7 +46,7 @@ except Exception:
 data[key] = value
 os.makedirs(os.path.dirname(path), exist_ok=True)
 with open(path, 'w') as f:
-    json.dump(data, f, indent=2, ensure_ascii=True)
+    json.dump(data, f, indent=2, ensure_ascii=False)
 PY
 }
 

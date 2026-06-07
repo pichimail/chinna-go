@@ -4,7 +4,7 @@ RAW="https://raw.githubusercontent.com/pichimail/chinna-go/main/extension"
 DEST="$HOME/.chinna/extension"
 echo "  → Installing Chinna Tab Assistant extension..."
 mkdir -p "$DEST/icons"
-for f in manifest.json background.js content.js sidepanel.html sidepanel.js sidepanel.css INSTALL.md; do
+for f in manifest.json background.js sidepanel.html sidepanel.js sidepanel.css INSTALL.md; do
   curl -fsSL "$RAW/$f" -o "$DEST/$f"
 done
 for i in 16 48 128; do

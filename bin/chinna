@@ -1043,7 +1043,7 @@ cmd_audit() {
     local report="$audit_dir/audit-$timestamp.txt"
 
     {
-        echo "CHINNA V6 AUDIT REPORT"
+        echo "CHINNA V5 AUDIT REPORT"
         echo "Generated: $(date)"
         echo "Path: $(pwd)"
         echo "Stack: $(detect_stack .)"
@@ -1200,39 +1200,6 @@ cmd_dashboard() {
 }
 
 # ═══════════════════════════════════════════════════════════════
-# COMMAND: extension (load-unpacked helper)
-# ═══════════════════════════════════════════════════════════════
-cmd_extension() {
-    banner
-    echo -e "   ${BOLD}${ORANGE}🧩 BROWSER EXTENSION${RESET}"; echo ""
-    local candidates=(
-        "$CHINNA_HOME/extension/dist"
-        "$CHINNA_HOME/extension"
-        "$(pwd)/extension/dist"
-        "$(pwd)/extension"
-    )
-    local ext_dir=""
-    for d in "${candidates[@]}"; do
-        if [ -f "$d/manifest.json" ]; then
-            ext_dir="$d"
-            break
-        fi
-    done
-    if [ -z "$ext_dir" ]; then
-        fail "Extension files not found. Run the installer again."
-        return 1
-    fi
-    ok "Load unpacked folder:"
-    echo "   $ext_dir"
-    if command -v pbcopy >/dev/null 2>&1; then
-        printf '%s' "$ext_dir" | pbcopy
-        info "Path copied to clipboard"
-    fi
-    open "$ext_dir" 2>/dev/null || true
-    open "chrome://extensions" 2>/dev/null || true
-}
-
-# ═══════════════════════════════════════════════════════════════
 # COMMAND: app-install (one-click Mac app wrapper)
 # ═══════════════════════════════════════════════════════════════
 cmd_app_install() {
@@ -1341,7 +1308,6 @@ dispatch_intent() {
         git)            cmd_git ;;
         deploy)         deploy_project ;;
         run_project|stack_setup) run_project ;;
-        extension)      cmd_extension ;;
         env_setup)      generate_env . ;;
         publish)        cmd_publish ;;
         update)         cmd_update ;;
@@ -1463,7 +1429,6 @@ show_help() {
      ${C}status${RESET}                 Live disk/RAM/CPU dashboard
      ${C}kill${RESET}                   Kill RAM-hogging processes
      ${C}ports${RESET}                  Show active ports
-     ${C}extension${RESET}              Reveal unpacked browser extension
      ${C}wifi${RESET}                   WiFi diagnostics + speed test
      ${C}brew${RESET}                   Install Homebrew + dev tools
      ${C}run${RESET} [dir]              Auto-detect stack & run project
@@ -1526,7 +1491,6 @@ main() {
         scan)                       cmd_scan ;;
         status|stats)               cmd_status ;;
         dashboard|web|ui|panel)     cmd_dashboard ;;
-        extension|browser-extension) cmd_extension ;;
         dupes|duplicates)           shift; cmd_dupes "$@" ;;
         kill)                       cmd_kill ;;
         ports)                      cmd_ports ;;

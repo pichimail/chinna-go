@@ -9,7 +9,6 @@ CHINNA_HOME = os.environ.get('CHINNA_HOME', os.path.expanduser('~/.chinna'))
 DASHBOARD_DIR = os.path.join(CHINNA_HOME, 'dashboard')
 HOME = os.path.expanduser('~')
 API_KEYS_FILE = os.path.join(CHINNA_HOME, 'api_keys.json')
-ACCOUSTICA_TASKS_FILE = os.path.join(CHINNA_HOME, 'state/accoustica_tasks.json')
 PAIR_STATE_FILE = os.path.join(CHINNA_HOME, 'telegram_pair.json')
 CHAT_DB_FILE = os.path.join(CHINNA_HOME, 'state/chat_db.json')
 WHATSAPP_DIR = os.path.join(CHINNA_HOME, 'whatsapp')
@@ -19,7 +18,6 @@ WHATSAPP_BRIDGE_PID_FILE = os.path.join(WHATSAPP_DIR, 'bridge.pid')
 WHATSAPP_BRIDGE_LOG = os.path.join(WHATSAPP_DIR, 'bridge.log')
 SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(SERVER_DIR, '..'))
-KIEAI_BASE_URL = 'https://api.kie.ai'
 
 # Shared TURN fallback for first-run users. Override via env if needed.
 DEFAULT_TURN_URLS = os.environ.get(
@@ -250,20 +248,17 @@ def list_dashboard_plugins():
 
 def read_shell_config():
     cfg = {}
-    for path in (os.path.join(CHINNA_HOME, 'config'), os.path.join(CHINNA_HOME, 'env')):
-        if not os.path.exists(path):
-            continue
-        try:
-            with open(path) as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith('#'):
-                        continue
-                    m = re.match(r"(?:export\s+)?([A-Z0-9_]+)=['\"]?(.*?)['\"]?$", line)
-                    if m:
-                        cfg[m.group(1)] = m.group(2)
-        except Exception:
-            pass
+    path = os.path.join(CHINNA_HOME, 'config')
+    if not os.path.exists(path):
+        return cfg
+    try:
+        with open(path) as f:
+            for line in f:
+                m = re.match(r"export\s+([A-Z0-9_]+)=['\"]?(.*?)['\"]?$", line.strip())
+                if m:
+                    cfg[m.group(1)] = m.group(2)
+    except Exception:
+        pass
     return cfg
 
 def load_keys():
@@ -279,9 +274,6 @@ def load_keys():
         'TURN_USERNAME',
         'TURN_CREDENTIAL',
         'CHAT_RELAY_URL',
-        'KIEAI_API_KEY',
-        'KIE_AI_API_KEY',
-        'KIEAI_CALLBACK_URL',
     ):
         if not keys.get(name) and shell_cfg.get(name):
             keys[name] = shell_cfg[name]
@@ -302,132 +294,6 @@ def load_keys():
 def save_keys(d):
     cur = load_keys(); cur.update(d)
     write_json(API_KEYS_FILE, cur)
-
-def kieai_key(keys=None):
-    keys = keys or load_keys()
-    return safe_text(keys.get('KIEAI_API_KEY') or keys.get('KIE_AI_API_KEY') or '')
-
-def load_accoustica_tasks():
-    data = read_json(ACCOUSTICA_TASKS_FILE, {})
-    return data if isinstance(data, dict) else {}
-
-def save_accoustica_tasks(data):
-    write_json(ACCOUSTICA_TASKS_FILE, data if isinstance(data, dict) else {})
-
-def playable_audio_url(item):
-    if not isinstance(item, dict):
-        return ''
-    for key in ('audioUrl', 'audio_url', 'streamAudioUrl', 'stream_audio_url'):
-        value = item.get(key)
-        if isinstance(value, str) and re.match(r'^https?://', value):
-            return value
-    return ''
-
-def normalize_accoustica_track(item):
-    item = item if isinstance(item, dict) else {}
-    return {
-        'id': safe_text(item.get('id') or item.get('audioId') or item.get('audio_id') or '')[:120],
-        'title': safe_text(item.get('title') or '')[:160],
-        'prompt': safe_text(item.get('prompt') or '')[:5000],
-        'tags': safe_text(item.get('tags') or item.get('style') or '')[:1000],
-        'audioUrl': playable_audio_url(item),
-        'streamAudioUrl': safe_text(item.get('streamAudioUrl') or item.get('stream_audio_url') or '')[:1000],
-        'imageUrl': safe_text(item.get('imageUrl') or item.get('image_url') or item.get('coverUrl') or '')[:1000],
-        'duration': item.get('duration') or item.get('duration_seconds') or '',
-    }
-
-def normalize_accoustica_tracks(value):
-    if isinstance(value, dict):
-        if isinstance(value.get('sunoData'), list):
-            value = value.get('sunoData')
-        elif isinstance(value.get('data'), list):
-            value = value.get('data')
-        else:
-            value = [value]
-    if not isinstance(value, list):
-        return []
-    return [normalize_accoustica_track(x) for x in value if isinstance(x, dict)]
-
-def accoustica_first_playable(tracks):
-    for track in tracks or []:
-        url = playable_audio_url(track)
-        if url:
-            return url
-    return ''
-
-def accoustica_status_info(status):
-    status = safe_text(status or 'PENDING').upper()
-    in_progress = {'PENDING', 'TEXT_SUCCESS', 'FIRST_SUCCESS'}
-    failures = {'CREATE_TASK_FAILED', 'GENERATE_AUDIO_FAILED', 'CALLBACK_EXCEPTION', 'SENSITIVE_WORD_ERROR'}
-    return {
-        'status': status,
-        'done': status == 'SUCCESS',
-        'failed': status in failures,
-        'in_progress': status in in_progress,
-    }
-
-def accoustica_callback_url(handler):
-    keys = load_keys()
-    configured = safe_text(keys.get('KIEAI_CALLBACK_URL') or '')
-    if configured and re.match(r'^https://', configured, re.I):
-        return configured
-    host = handler.headers.get('X-Forwarded-Host') or handler.headers.get('Host') or f'localhost:{PORT}'
-    proto = handler.headers.get('X-Forwarded-Proto') or ('https' if not re.match(r'^(localhost|127\.0\.0\.1|\[::1\])(?::|$)', host) else 'http')
-    return f"{proto}://{host}/api/music/accoustica/callback"
-
-def accoustica_prompt_from_context(page_context, user_prompt=''):
-    ctx = page_context if isinstance(page_context, dict) else {}
-    youtube = ctx.get('youtube') if isinstance(ctx.get('youtube'), dict) else {}
-    meta = ctx.get('meta') if isinstance(ctx.get('meta'), dict) else {}
-    og = ctx.get('openGraph') if isinstance(ctx.get('openGraph'), dict) else {}
-    title = safe_text(youtube.get('title') or ctx.get('title') or og.get('title') or '')[:80] or 'Inspired Track'
-    channel = safe_text(youtube.get('channel') or og.get('site_name') or '')[:80]
-    description = safe_text(youtube.get('description') or meta.get('description') or ctx.get('metaDesc') or '', keep_newlines=True)
-    hashtags = youtube.get('hashtags') if isinstance(youtube.get('hashtags'), list) else []
-    visible = safe_text(ctx.get('visibleText') or ctx.get('text') or '', keep_newlines=True)
-    source_bits = [title, channel, description[:900], ' '.join(hashtags[:8]), visible[:800], safe_text(user_prompt, keep_newlines=True)]
-    source = '\n'.join(x for x in source_bits if x).lower()
-    style_parts = []
-    for label, needles in [
-        ('dance pop', ['pop', 'dance', 'dua', 'club']),
-        ('live arena energy', ['live', 'concert', 'arena', 'stage', 'crowd']),
-        ('bright synth bass', ['synth', 'electro', 'electronic']),
-        ('uplifting chorus', ['uplift', 'levitating', 'happy', 'celebration']),
-        ('cinematic percussion', ['cinematic', 'dramatic', 'performance']),
-        ('clean radio mix', ['official', 'video', 'single']),
-    ]:
-        if any(n in source for n in needles):
-            style_parts.append(label)
-    if not style_parts:
-        style_parts = ['modern pop', 'polished production', 'memorable hook']
-    style = ', '.join(dict.fromkeys(style_parts))[:1000]
-    prompt = (
-        f"Create an original {style} track inspired by the mood and energy of the current page. "
-        "Use a fresh melody, original lyrics, and a distinct vocal identity. "
-        "Aim for a catchy hook, strong groove, clean arrangement, and polished modern mix."
-    )
-    if title:
-        prompt += f" Page reference mood: {title}."
-    if channel:
-        prompt += f" Source context: {channel}."
-    if hashtags:
-        prompt += " Context tags: " + ', '.join(hashtags[:5]) + "."
-    return {
-        'ok': True,
-        'title': title,
-        'style': style,
-        'prompt': safe_text(prompt)[:500],
-        'negativeTags': 'copied melody, copied lyrics, artist impersonation, low quality, distortion',
-        'customMode': False,
-        'instrumental': False,
-        'model': 'V5',
-        'source': {
-            'url': safe_text(ctx.get('url') or '')[:500],
-            'title': safe_text(ctx.get('title') or title)[:180],
-            'videoId': safe_text(youtube.get('videoId') or '')[:80],
-            'channel': channel,
-        }
-    }
 
 def generate_turn_credentials():
     uname = 'chinna-' + secrets.token_hex(4)
@@ -1355,306 +1221,6 @@ def process_attachments(attachments):
 
     return results, vision_images
 
-def compact_scan_for_prompt(scan):
-    page = scan.get('page') or {}
-    counts = scan.get('counts') or {}
-    errors = scan.get('errors') or []
-    console = scan.get('console') or []
-    resources = scan.get('resources') or {}
-    return {
-        'url': safe_text(page.get('url', ''))[:500],
-        'title': safe_text(page.get('title', ''))[:180],
-        'counts': counts,
-        'errors': errors[:12],
-        'console': console[:20],
-        'resource_failures': (resources.get('failed') or [])[:12],
-        'performance': scan.get('performance') or {},
-        'meta': scan.get('meta') or {},
-        'accessibility': scan.get('accessibility') or {},
-    }
-
-def extension_local_findings(scan):
-    scan = scan if isinstance(scan, dict) else {}
-    page = scan.get('page') or {}
-    counts = scan.get('counts') or {}
-    meta = scan.get('meta') or {}
-    accessibility = scan.get('accessibility') or {}
-    performance = scan.get('performance') or {}
-    errors = scan.get('errors') or []
-    console = scan.get('console') or []
-    resources = scan.get('resources') or {}
-    failed_resources = resources.get('failed') or []
-    findings = []
-    commands = []
-    code_prompts = []
-
-    def add(severity, title, detail, fix, command=''):
-        findings.append({
-            'severity': severity,
-            'title': safe_text(title)[:120],
-            'detail': safe_text(detail, keep_newlines=True)[:800],
-            'fix': safe_text(fix, keep_newlines=True)[:900],
-        })
-        if command:
-            commands.append(command)
-
-    if not page.get('title'):
-        add('high', 'Missing page title', 'The active tab did not expose a document title.', 'Add a concise, unique <title> for this route.')
-    if not meta.get('description'):
-        add('medium', 'Missing meta description', 'No meta description was found.', 'Add <meta name="description" content="..."> with route-specific copy.')
-    h1_count = int(counts.get('h1') or 0)
-    if h1_count == 0:
-        add('high', 'Missing H1', 'The page has no H1 heading.', 'Add exactly one visible H1 that names the page purpose.')
-    elif h1_count > 1:
-        add('medium', 'Multiple H1 headings', f'The page has {h1_count} H1 elements.', 'Keep one primary H1 and demote section headings to H2/H3.')
-    missing_alt = int(accessibility.get('images_missing_alt') or 0)
-    if missing_alt:
-        add('medium', 'Images missing alt text', f'{missing_alt} image(s) have no alt text.', 'Add useful alt text for meaningful images and alt="" for decorative images.')
-    unlabeled = int(accessibility.get('inputs_unlabeled') or 0)
-    if unlabeled:
-        add('high', 'Unlabeled form controls', f'{unlabeled} input/control(s) appear to be unlabeled.', 'Connect every input to a <label>, aria-label, or aria-labelledby.')
-    if failed_resources:
-        add('high', 'Failed resources detected', f'{len(failed_resources)} failed resource(s) were captured after scan injection.', 'Fix the broken asset/API URLs and re-run the scan.')
-    if errors:
-        add('high', 'Runtime errors captured', f'{len(errors)} runtime error(s) were captured after scan injection.', 'Open DevTools, reproduce once, then fix the first stack trace before lower-priority UI issues.')
-    long_tasks = int(performance.get('long_tasks') or 0)
-    if long_tasks:
-        add('medium', 'Main thread long tasks', f'{long_tasks} long task(s) were observed.', 'Split heavy work, lazy-load non-critical code, and defer analytics/third-party scripts.')
-
-    combined_logs = '\n'.join(
-        safe_text(x.get('message') or x.get('text') or x, keep_newlines=True)
-        for x in (errors + console)[:40]
-    )
-    for pkg in sorted(set(re.findall(r"(?:Cannot find module|Can't resolve|Module not found).*?['\"](@?[\w./-]+)['\"]", combined_logs)))[:5]:
-        if pkg and not pkg.startswith(('.', '/')):
-            commands.append(f"npm install {pkg}")
-    if 'vite' in combined_logs.lower():
-        commands.append('npm run dev -- --host 0.0.0.0')
-    if 'next' in combined_logs.lower():
-        commands.append('npm run dev')
-
-    code_prompts.append(
-        "Using the scan JSON and console errors, identify the root cause, name the exact files likely involved, "
-        "and provide a minimal patch plan. Do not guess file contents that are not present."
-    )
-    if combined_logs:
-        code_prompts.append("Debug this browser console/runtime error and provide exact code changes:\n" + combined_logs[:3500])
-
-    severity_weight = {'high': 14, 'medium': 8, 'low': 3}
-    score = max(0, 100 - sum(severity_weight.get(f.get('severity'), 4) for f in findings))
-    return {
-        'ok': True,
-        'score': score,
-        'status': 'critical' if score < 60 else ('needs-work' if score < 82 else 'healthy'),
-        'summary': f"{len(findings)} finding(s) on {safe_text(page.get('url', 'this page'))[:160]}",
-        'findings': findings[:20],
-        'commands': list(dict.fromkeys(commands))[:10],
-        'code_prompts': code_prompts[:6],
-        'scan': compact_scan_for_prompt(scan),
-        'limits': [
-            'The extension captures live console/runtime events after injection.',
-            'Historic DevTools console entries from before the scan are not available to normal content scripts.'
-        ]
-    }
-
-def extension_ai_analysis(scan, user_prompt='', attachments=None):
-    local = extension_local_findings(scan)
-    if not load_keys().get('OPENROUTER_API_KEY') and not load_keys().get('OPENAI_API_KEY'):
-        local['ai_reply'] = 'No AI key configured. Returning deterministic scan findings only.'
-        local['model'] = 'local-rules'
-        return local
-
-    attachment_context, _ = process_attachments(attachments or [])
-    attach_text = ''
-    for a in attachment_context[:5]:
-        if a.get('type') == 'text':
-            attach_text += f"\n--- {a.get('name')} ---\n{a.get('content','')[:5000]}\n"
-        else:
-            attach_text += f"\n[{a.get('name')} uploaded: {a.get('type','file')}]\n"
-
-    prompt = (
-        "You are Chinna's browser extension analyzer. Diagnose the live browser scan below.\n"
-        "Return concise sections: Summary, Root Cause, Fix Steps, Terminal Commands, Code Prompt.\n"
-        "Prefer exact, safe commands. Never recommend destructive commands. If the issue needs project files, say which files to inspect.\n\n"
-        f"User request: {safe_text(user_prompt or 'Scan this page and give exact fixes', keep_newlines=True)}\n\n"
-        f"Local deterministic findings:\n{json.dumps(local, ensure_ascii=True)[:7000]}\n\n"
-        f"Scan JSON:\n{json.dumps(compact_scan_for_prompt(scan), ensure_ascii=True)[:9000]}\n"
-        f"{attach_text[:7000]}"
-    )
-    messages = [
-        {'role': 'system', 'content': 'You produce accurate web debugging instructions for a local Mac developer. Be brief, exact, and safety-conscious.'},
-        {'role': 'user', 'content': prompt}
-    ]
-    msg, used_model = openrouter_chat(messages, model='meta-llama/llama-3.3-70b-instruct:free')
-    if not msg and load_keys().get('OPENAI_API_KEY'):
-        msg, used_model = openai_chat(messages, model='gpt-4o-mini')
-    local['ai_reply'] = (msg or {}).get('content') or 'AI analysis failed. Local findings are still available.'
-    local['model'] = used_model
-    local['attachments_processed'] = len(attachment_context)
-    return local
-
-def run_confirmed_terminal_command(command, cwd=None):
-    cmd = safe_text(command, keep_newlines=True).splitlines()[0][:500].strip()
-    if not cmd:
-        return {'error': 'command required'}
-    if not is_safe_terminal_command(cmd):
-        return {'error': 'Command blocked for safety. Chinna only runs confirmed, non-destructive commands here.', 'command': cmd}
-    run_cwd = os.path.abspath(os.path.expanduser(cwd or HOME))
-    if not os.path.isdir(run_cwd):
-        run_cwd = HOME
-    try:
-        proc = subprocess.run(['bash', '-lc', cmd], cwd=run_cwd, text=True, capture_output=True, timeout=90)
-        return {
-            'ok': proc.returncode == 0,
-            'command': cmd,
-            'cwd': run_cwd,
-            'returncode': proc.returncode,
-            'stdout': (proc.stdout or '')[-5000:],
-            'stderr': (proc.stderr or '')[-3000:],
-        }
-    except subprocess.TimeoutExpired:
-        return {'error': 'command timed out', 'command': cmd, 'cwd': run_cwd}
-
-def accoustica_generate_request(body, handler):
-    keys = load_keys()
-    key = kieai_key(keys)
-    if not key:
-        return {'ok': False, 'error': 'Accoustica API key is not configured.', 'key_set': False}, 400
-    prompt_info = accoustica_prompt_from_context(body.get('page_context') or {}, body.get('message') or body.get('user_prompt') or '')
-    prompt = safe_text(body.get('prompt') or prompt_info.get('prompt') or '', keep_newlines=True)
-    custom = bool(body.get('customMode', False))
-    instrumental = bool(body.get('instrumental', False))
-    payload = {
-        'prompt': prompt[:5000 if custom else 500],
-        'customMode': custom,
-        'instrumental': instrumental,
-        'model': safe_text(body.get('model') or 'V5')[:40] or 'V5',
-        'callBackUrl': accoustica_callback_url(handler),
-    }
-    optional_names = ('style', 'title', 'negativeTags', 'vocalGender', 'styleWeight', 'weirdnessConstraint', 'audioWeight')
-    for name in optional_names:
-        if body.get(name) not in (None, ''):
-            payload[name] = body.get(name)
-    if custom:
-        payload['style'] = safe_text(payload.get('style') or prompt_info.get('style') or '')[:1000]
-        payload['title'] = safe_text(payload.get('title') or prompt_info.get('title') or 'Inspired Track')[:80]
-        if not payload.get('style') or (not instrumental and not payload.get('prompt')) or not payload.get('title'):
-            return {'ok': False, 'error': 'Advanced Accoustica mode requires title, style, and prompt unless instrumental is enabled.'}, 400
-    else:
-        payload = {k: payload[k] for k in ('prompt', 'customMode', 'instrumental', 'model', 'callBackUrl')}
-        if not payload['prompt']:
-            return {'ok': False, 'error': 'prompt required'}, 400
-    req = urllib.request.Request(
-        f'{KIEAI_BASE_URL}/api/v1/generate',
-        data=json.dumps(payload).encode('utf-8'),
-        headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {key}'},
-        method='POST'
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=45) as res:
-            provider = json.loads(res.read().decode('utf-8', 'replace') or '{}')
-    except urllib.error.HTTPError as e:
-        raw = e.read().decode('utf-8', 'replace')
-        try:
-            provider = json.loads(raw)
-        except Exception:
-            provider = {'error': raw}
-        return {'ok': False, 'error': 'Accoustica provider rejected the request.', 'provider': provider}, e.code
-    except Exception as e:
-        return {'ok': False, 'error': safe_text(str(e))}, 502
-
-    task_id = safe_text(
-        provider.get('taskId') or provider.get('task_id') or
-        ((provider.get('data') or {}).get('taskId') if isinstance(provider.get('data'), dict) else '')
-    )
-    if not task_id:
-        return {'ok': False, 'error': 'Provider response did not include a task ID.', 'provider': provider}, 502
-    tasks = load_accoustica_tasks()
-    now = int(time.time())
-    tasks[task_id] = {
-        'taskId': task_id,
-        'status': 'PENDING',
-        'created_at': now,
-        'updated_at': now,
-        'payload': {k: v for k, v in payload.items() if k != 'callBackUrl'},
-        'callbackUrl': payload.get('callBackUrl'),
-        'provider': provider,
-        'tracks': [],
-    }
-    save_accoustica_tasks(tasks)
-    return {
-        'ok': True,
-        'taskId': task_id,
-        'status': 'PENDING',
-        'pollAfterMs': 5000,
-        'pollIntervalMs': 1000,
-        'timeoutMs': 600000,
-        'task': tasks[task_id],
-    }, 200
-
-def accoustica_poll_task(task_id):
-    task_id = safe_text(task_id)[:160]
-    if not task_id:
-        return {'ok': False, 'error': 'taskId required'}, 400
-    keys = load_keys()
-    key = kieai_key(keys)
-    tasks = load_accoustica_tasks()
-    task = tasks.get(task_id, {'taskId': task_id, 'status': 'PENDING', 'tracks': []})
-    if not key:
-        status = accoustica_status_info(task.get('status'))
-        return {'ok': True, 'key_set': False, **status, 'taskId': task_id, 'tracks': task.get('tracks') or [], 'playableUrl': accoustica_first_playable(task.get('tracks'))}, 200
-    url = f"{KIEAI_BASE_URL}/api/v1/generate/record-info?taskId={urllib.parse.quote(task_id)}"
-    req = urllib.request.Request(url, headers={'Authorization': f'Bearer {key}'}, method='GET')
-    try:
-        with urllib.request.urlopen(req, timeout=35) as res:
-            provider = json.loads(res.read().decode('utf-8', 'replace') or '{}')
-    except urllib.error.HTTPError as e:
-        raw = e.read().decode('utf-8', 'replace')
-        try:
-            provider = json.loads(raw)
-        except Exception:
-            provider = {'error': raw}
-        return {'ok': False, 'error': 'Accoustica provider polling failed.', 'provider': provider}, e.code
-    except Exception as e:
-        return {'ok': False, 'error': safe_text(str(e))}, 502
-
-    data = provider.get('data') if isinstance(provider.get('data'), dict) else provider
-    response = data.get('response') if isinstance(data.get('response'), dict) else data
-    tracks = normalize_accoustica_tracks(response)
-    if not tracks:
-        tracks = normalize_accoustica_tracks(data.get('sunoData') or data.get('data'))
-    status = safe_text(data.get('status') or task.get('status') or 'PENDING').upper()
-    task.update({
-        'taskId': task_id,
-        'status': status,
-        'updated_at': int(time.time()),
-        'provider': provider,
-    })
-    if tracks:
-        task['tracks'] = tracks
-    tasks[task_id] = task
-    save_accoustica_tasks(tasks)
-    info = accoustica_status_info(status)
-    return {'ok': True, 'taskId': task_id, **info, 'tracks': task.get('tracks') or [], 'playableUrl': accoustica_first_playable(task.get('tracks')), 'provider': provider}, 200
-
-def accoustica_callback_update(body):
-    data = body.get('data') if isinstance(body.get('data'), dict) else body
-    task_id = safe_text(data.get('task_id') or data.get('taskId') or body.get('task_id') or body.get('taskId'))[:160]
-    if not task_id:
-        return {'ok': False, 'error': 'task ID missing'}, 400
-    callback_type = safe_text(data.get('callbackType') or body.get('callbackType') or '').lower()
-    status_map = {'text': 'TEXT_SUCCESS', 'first': 'FIRST_SUCCESS', 'complete': 'SUCCESS', 'error': safe_text(data.get('errorCode') or 'CALLBACK_EXCEPTION').upper()}
-    status = status_map.get(callback_type, safe_text(data.get('status') or 'PENDING').upper())
-    tracks = normalize_accoustica_tracks(data.get('data') or data.get('response') or data)
-    tasks = load_accoustica_tasks()
-    task = tasks.get(task_id, {'taskId': task_id, 'created_at': int(time.time()), 'tracks': []})
-    task.update({'status': status, 'updated_at': int(time.time()), 'callback': body})
-    if tracks:
-        task['tracks'] = tracks
-    tasks[task_id] = task
-    save_accoustica_tasks(tasks)
-    return {'ok': True, 'taskId': task_id, 'status': status, 'tracks': task.get('tracks') or [], 'playableUrl': accoustica_first_playable(task.get('tracks'))}, 200
-
 # Tool: list previously uploaded files
 TOOLS.append({
     "type": "function",
@@ -1960,8 +1526,6 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json({
                 'chinna_ai_set': bool(k.get('OPENROUTER_API_KEY')),
                 'openai_set': bool(k.get('OPENAI_API_KEY')),
-                'accoustica_set': bool(kieai_key(k)),
-                'accoustica_callback_url': safe_text(k.get('KIEAI_CALLBACK_URL', '')),
                 'telegram_set': bool(k.get('TELEGRAM_BOT_TOKEN')),
                 'telegram_paired': bool(k.get('TELEGRAM_CHAT_ID')),
                 'telegram_bot': telegram_status().get('bot_username', ''),
@@ -1976,6 +1540,12 @@ class H(http.server.SimpleHTTPRequestHandler):
             })
         elif p == '/api/version':
             self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6'})
+        elif p == '/api/artifacts':
+            self.serve_artifacts_list()
+        elif p.startswith('/api/artifact/') and p.endswith('/preview'):
+            self.serve_artifact_preview(p.split('/')[3])
+        elif p.startswith('/api/artifact/') and len(p.split('/')) == 4:
+            self.serve_artifact_content(p.split('/')[3])
         elif p == '/api/check-update':
             self._json(self.check_update())
         elif p == '/api/models':
@@ -1996,29 +1566,6 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self._json(meta)
         elif p == '/api/whatsapp/status':
             self.whatsapp_proxy('GET', '/status')
-        elif p == '/api/extension/health':
-            self._json({
-                'ok': True,
-                'name': 'Chinna Browser Extension API',
-                'version': CHINNA_VERSION,
-                'server': f'http://localhost:{PORT}',
-                'ai_ready': bool(load_keys().get('OPENROUTER_API_KEY') or load_keys().get('OPENAI_API_KEY')),
-            })
-        elif p == '/api/music/accoustica/status':
-            tasks = load_accoustica_tasks()
-            latest = sorted(tasks.values(), key=lambda x: int(x.get('updated_at') or x.get('created_at') or 0), reverse=True)[:8]
-            self._json({
-                'ok': True,
-                'key_set': bool(kieai_key()),
-                'default_model': 'V5',
-                'pollAfterMs': 5000,
-                'pollIntervalMs': 1000,
-                'timeoutMs': 600000,
-                'tasks': latest,
-            })
-        elif p == '/api/music/accoustica/task':
-            data, code = accoustica_poll_task(q.get('taskId') or q.get('task_id') or '')
-            self._json(data, code)
         elif p == '/api/telegram/status':
             self._json(telegram_status())
         elif p in ('/api/chat/user', '/chat/api/user'):
@@ -2053,8 +1600,6 @@ class H(http.server.SimpleHTTPRequestHandler):
             d = {}
             if b.get('chinna_ai_key'): d['OPENROUTER_API_KEY'] = b['chinna_ai_key']
             if b.get('openai_key'): d['OPENAI_API_KEY'] = b['openai_key']
-            if b.get('accoustica_key'): d['KIEAI_API_KEY'] = b['accoustica_key']
-            if b.get('accoustica_callback_url') is not None: d['KIEAI_CALLBACK_URL'] = safe_text(b.get('accoustica_callback_url', ''))[:500]
             if b.get('telegram_token'): d['TELEGRAM_BOT_TOKEN'] = b['telegram_token']
             if b.get('telegram_chat'): d['TELEGRAM_CHAT_ID'] = b['telegram_chat']
             if 'turn_enabled' in b: d['TURN_ENABLED'] = '1' if bool(b.get('turn_enabled')) else '0'
@@ -2133,34 +1678,6 @@ class H(http.server.SimpleHTTPRequestHandler):
             else: self._json({'error':'no pid'},400)
         elif p == '/api/chat':
             self.chat(b)
-        elif p == '/api/extension/scan':
-            self._json(extension_local_findings(b.get('scan') or b))
-        elif p == '/api/extension/analyze':
-            self._json(extension_ai_analysis(b.get('scan') or b, b.get('prompt') or b.get('message') or '', b.get('attachments') or []))
-        elif p == '/api/extension/upload':
-            attachments = b.get('attachments') or ([b] if b.get('data_b64') else [])
-            attachment_context, _ = process_attachments(attachments)
-            self._json({'ok': True, 'files': attachment_context, 'count': len(attachment_context)})
-        elif p == '/api/extension/command-plan':
-            if b.get('confirm') is True:
-                self._json(run_confirmed_terminal_command(b.get('command', ''), b.get('cwd')))
-            else:
-                cmd = safe_text(b.get('command', ''), keep_newlines=True).splitlines()[0][:500].strip()
-                self._json({
-                    'ok': True,
-                    'mode': 'confirm_then_run',
-                    'safe': bool(cmd and is_safe_terminal_command(cmd)),
-                    'command': cmd,
-                    'message': 'Review this command, then resend with confirm:true to run it.'
-                })
-        elif p == '/api/music/accoustica/prompt-from-page':
-            self._json(accoustica_prompt_from_context(b.get('page_context') or b.get('context') or {}, b.get('message') or b.get('prompt') or ''))
-        elif p == '/api/music/accoustica/generate':
-            data, code = accoustica_generate_request(b, self)
-            self._json(data, code)
-        elif p == '/api/music/accoustica/callback':
-            data, code = accoustica_callback_update(b)
-            self._json(data, code)
         elif p == '/api/telegram/pair':
             self.telegram_pair(b)
         elif p == '/api/telegram/test':
@@ -2191,6 +1708,12 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.handle_project_action(q, b)
         elif p == '/api/plugins/action':
             self.plugin_action(b)
+        elif p == '/api/agent':
+            self.serve_agent(b)
+        elif p == '/api/shell':
+            self.exec_shell_direct(b)
+        elif p.startswith('/api/artifact/') and len(p.split('/')) == 4:
+            self.delete_artifact(p.split('/')[3])
         elif p == '/api/whatsapp':
             self.whatsapp_action(b)
         elif p == '/api/whatsapp-webhook':
@@ -2607,7 +2130,7 @@ fi
 
         # Detect images early for auto model selection
         has_images = any(
-            (a.get('mime','').startswith('image/') or 
+            (a.get('mime','').startswith('image/') or
              a.get('name','').lower().endswith(('.png','.jpg','.jpeg','.webp','.gif')))
             for a in raw_attachments
         )
@@ -2667,16 +2190,8 @@ fi
             + memory_context
         )
 
-        page_context = b.get('page_context') if isinstance(b.get('page_context'), dict) else None
         ext_context = b.get("system","")
-        if page_context:
-            system_prompt = (
-                system_prompt
-                + "\n\n[LIVE BROWSER TAB CONTEXT]\n"
-                + json.dumps(page_context, ensure_ascii=True)[:9000]
-                + "\nUse this structured active-tab context first when the user asks about the current page, video, music, or URL."
-            )
-        elif ext_context:
+        if ext_context:
             system_prompt = system_prompt + "\n\n[LIVE BROWSER TAB CONTEXT]\n" + str(ext_context)[:6000]
         messages = [{"role": "system", "content": system_prompt}]
 
@@ -3270,6 +2785,398 @@ fi
             pass
         self._json({'ok': True, 'logged': True})
 
+
+# ── CHINNA AGENT V1 ─────────────────────────────────────────────────────────
+import hashlib, glob as _glob, tempfile as _tempfile, shutil as _shutil
+from http.server import BaseHTTPRequestHandler
+
+ARTIFACTS_DIR = os.path.join(CHINNA_HOME, "artifacts")
+os.makedirs(ARTIFACTS_DIR, exist_ok=True)
+
+AGENT_TOOLS = {
+    "bash": "Run a shell command on this Mac (macOS-native: osascript, brew, xcode-select…)",
+    "python": "Execute Python code for data processing, calculations, or Mac scripting",
+    "write_file": "Write content to a file at a path",
+    "read_file": "Read a file from disk",
+    "web_search": "Search the web using the system browser (requires network)",
+    "create_artifact": "Create a named code/HTML/markdown artifact that appears in the Artifacts panel with live preview",
+    "ask_user": "Show the user 2-5 clickable choice buttons and pause for their selection",
+    "update_plan": "Update the live plan checklist (mark steps done or revise)",
+    "mac_control": "Control macOS: open apps, trigger notifications, control music, manage windows",
+}
+
+PLAN_MODE_TOOLS = {"ask_user", "update_plan"}  # read-only in plan mode
+MAX_AGENT_ROUNDS = 12
+AGENT_TIMEOUT_SECS = 60
+
+def _agent_system_prompt(mode: str, model_name: str = "") -> str:
+    tools_block = "\n".join(f"- **`{name}`** — {desc}" for name, desc in AGENT_TOOLS.items())
+    base = f"""You are Chinna, an advanced agentic Mac assistant. You have deep macOS integration \
+(processes, disk, battery, music, apps, notifications, osascript) PLUS full dev capabilities.
+
+To use a tool, write a fenced code block with the tool name as the language tag:
+```bash
+command here
+```
+
+Available tools:
+{tools_block}
+
+**Rules**
+- Keep responses concise. Let tool output speak.
+- For HTML/code outputs, ALWAYS use create_artifact (shows live preview).
+- After each completed step, call update_plan with the full checklist.
+- If ambiguous, use ask_user to get a decision — show 2-5 clear options.
+- You are running on macOS. Use Mac-native tools whenever possible."""
+
+    if mode == "plan":
+        base += """
+
+**PLAN MODE ACTIVE** — You MUST only output a plan, NEVER execute tools (except update_plan).
+Output a GitHub-style markdown checklist of steps. The user will approve before execution.
+Format:
+## Plan
+- [ ] Step 1: describe what you will do
+- [ ] Step 2: …
+Then stop. Wait for the user to say "Execute" or modify the plan."""
+
+    elif mode == "ask":
+        base += """
+
+**ASK MODE** — Standard chat. Explain, analyze, help. No autonomous tool execution.
+You may use ask_user to clarify what the user wants before committing to an approach."""
+
+    else:  # build
+        base += """
+
+**BUILD MODE ACTIVE** — Full tool access. Be decisive and take action.
+Do not ask for clarification on small details — use your best judgment and iterate."""
+
+    return base
+
+def _parse_tool_blocks(text: str) -> list:
+    """Extract fenced tool blocks from AI response text."""
+    blocks = []
+    pattern = re.compile(r"```(" + "|".join(AGENT_TOOLS.keys()) + r")\n(.*?)```", re.S)
+    for m in pattern.finditer(text):
+        blocks.append({"tool": m.group(1), "content": m.group(2).strip()})
+    return blocks
+
+def _strip_tool_blocks(text: str) -> str:
+    pattern = re.compile(r"```(?:" + "|".join(AGENT_TOOLS.keys()) + r")\n.*?```", re.S)
+    return pattern.sub("", text).strip()
+
+def _exec_bash(cmd: str) -> str:
+    try:
+        r = subprocess.run(cmd, shell=True, capture_output=True, text=True,
+                           timeout=AGENT_TIMEOUT_SECS, executable="/bin/bash")
+        out = (r.stdout or "").strip()
+        err = (r.stderr or "").strip()
+        if err and not out: return f"stderr: {err[:3000]}"
+        if err: return f"{out[:2000]}\nstderr: {err[:1000]}"
+        return out[:4000] or "(no output)"
+    except subprocess.TimeoutExpired:
+        return "Error: command timed out after 60s"
+    except Exception as e:
+        return f"Error: {e}"
+
+def _exec_python(code: str) -> str:
+    try:
+        with _tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write(code); fname = f.name
+        r = subprocess.run(["python3", fname], capture_output=True, text=True,
+                           timeout=AGENT_TIMEOUT_SECS)
+        os.unlink(fname)
+        out = (r.stdout or "").strip(); err = (r.stderr or "").strip()
+        if err and not out: return f"stderr: {err[:3000]}"
+        if err: return f"{out[:2000]}\nstderr: {err[:1000]}"
+        return out[:4000] or "(no output)"
+    except subprocess.TimeoutExpired:
+        return "Timeout: Python script took >60s"
+    except Exception as e:
+        return f"Error: {e}"
+
+def _create_artifact(content: str, name: str = "", lang: str = "txt") -> dict:
+    """Save an artifact and return its metadata."""
+    aid = hashlib.md5(f"{name}{time.time()}".encode()).hexdigest()[:10]
+    ext = {"html":"html","python":"py","py":"py","javascript":"js","js":"js",
+           "markdown":"md","md":"md","css":"css","json":"json","bash":"sh","sh":"sh"}.get(lang.lower(), "txt")
+    fname = f"{aid}.{ext}"
+    fpath = os.path.join(ARTIFACTS_DIR, fname)
+    with open(fpath, "w", encoding="utf-8") as f:
+        f.write(content)
+    meta = {"id": aid, "name": name or fname, "lang": lang, "file": fname,
+            "size": len(content), "created": int(time.time()), "preview": lang.lower() in ("html","htm")}
+    meta_path = os.path.join(ARTIFACTS_DIR, f"{aid}.json")
+    with open(meta_path, "w") as f:
+        json.dump(meta, f)
+    return meta
+
+def _parse_create_artifact(content: str) -> dict:
+    """Parse name/lang from create_artifact block header then content."""
+    lines = content.split("\n")
+    name = ""; lang = "txt"; body_lines = []
+    for line in lines:
+        if line.startswith("name:"):
+            name = line.split(":",1)[1].strip()
+        elif line.startswith("lang:") or line.startswith("language:"):
+            lang = line.split(":",1)[1].strip()
+        else:
+            body_lines.append(line)
+    body = "\n".join(body_lines).strip()
+    if not body and lines:
+        body = content
+    return _create_artifact(body, name, lang)
+
+def _execute_tool(tool: str, content: str, session_state: dict) -> str:
+    """Execute a single tool block and return string result."""
+    if tool == "bash":
+        return _exec_bash(content)
+    elif tool == "python":
+        return _exec_python(content)
+    elif tool == "write_file":
+        lines = content.split("\n")
+        path = ""
+        for line in lines:
+            if line.startswith("path:"):
+                path = os.path.expanduser(line.split(":",1)[1].strip()); break
+        body = "\n".join(l for l in lines if not l.startswith("path:"))
+        if not path: return "Error: no path: line in write_file block"
+        try:
+            os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+            with open(path,"w") as f: f.write(body)
+            return f"Written: {path} ({len(body)} chars)"
+        except Exception as e: return f"Error writing file: {e}"
+    elif tool == "read_file":
+        path = os.path.expanduser(content.strip())
+        try:
+            txt = open(path).read()
+            return txt[:8000] + ("\n... (truncated)" if len(txt)>8000 else "")
+        except Exception as e: return f"Error: {e}"
+    elif tool == "create_artifact":
+        meta = _parse_create_artifact(content)
+        session_state.setdefault("artifacts", []).append(meta)
+        return f"Artifact created: {meta['name']} (id:{meta['id']}, {meta['size']} chars)"
+    elif tool == "ask_user":
+        # Parsed by the loop — triggers a pause, not an exec
+        return "__ASK_USER__"
+    elif tool == "update_plan":
+        session_state["plan"] = content.strip()
+        return f"Plan updated ({len(content.splitlines())} steps)"
+    elif tool == "mac_control":
+        return _exec_bash(f"osascript -e '{content}' 2>/dev/null || echo 'osascript returned non-zero'")
+    elif tool == "web_search":
+        # Basic: use the existing search if available, else fallback
+        query = content.strip()
+        try:
+            import urllib.request
+            from urllib.parse import quote
+            url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
+            req = urllib.request.Request(url, headers={"User-Agent":"Mozilla/5.0"})
+            html = urllib.request.urlopen(req, timeout=10).read().decode(errors="replace")
+            results = re.findall(r'<a class="result__a"[^>]*href="([^"]+)"[^>]*>([^<]+)</a>', html)
+            if results:
+                return "\n".join(f"{i+1}. {title} — {href}" for i,(href,title) in enumerate(results[:5]))
+            return "No results found"
+        except Exception as e:
+            return f"Search error: {e}"
+    return f"Unknown tool: {tool}"
+
+def _sse_event(data: dict) -> str:
+    return f"data: {json.dumps(data)}\n\n"
+
+async def _run_agent_loop(message: str, history: list, mode: str, model: str, keys: dict):
+    """Core async generator that yields SSE events."""
+    import asyncio
+    import urllib.request, urllib.error
+
+    api_key = keys.get("OPENROUTER_API_KEY") or keys.get("OPENAI_API_KEY","")
+    if not api_key:
+        yield _sse_event({"type":"error","content":"No API key. Set OpenRouter key in Settings."})
+        return
+
+    sys_prompt = _agent_system_prompt(mode, model)
+    messages = [{"role":"system","content":sys_prompt}]
+    for h in history[-20:]:
+        messages.append(h)
+    messages.append({"role":"user","content":message})
+
+    session_state = {"artifacts": [], "plan": "", "round": 0}
+    yield _sse_event({"type":"mode","mode":mode})
+
+    for round_num in range(MAX_AGENT_ROUNDS):
+        session_state["round"] = round_num
+        yield _sse_event({"type":"round_start","round":round_num})
+
+        # Call AI
+        payload = json.dumps({
+            "model": model,
+            "messages": messages,
+            "max_tokens": 4000,
+            "stream": False,
+        }).encode()
+
+        try:
+            req = urllib.request.Request(
+                "https://openrouter.ai/api/v1/chat/completions",
+                data=payload,
+                headers={"Content-Type":"application/json",
+                         "Authorization":f"Bearer {api_key}",
+                         "HTTP-Referer":"http://localhost:7777"}
+            )
+            resp = urllib.request.urlopen(req, timeout=90)
+            d = json.loads(resp.read())
+            ai_text = d.get("choices",[{}])[0].get("message",{}).get("content","")
+        except Exception as e:
+            yield _sse_event({"type":"error","content":f"AI call failed: {e}"})
+            return
+
+        # Sanitize text
+        ai_text = ai_text.replace("\u2028"," ").replace("\u2029"," ")
+
+        # Strip tool blocks for display text
+        display_text = _strip_tool_blocks(ai_text)
+        if display_text:
+            yield _sse_event({"type":"text","content":display_text})
+
+        # Parse tool blocks
+        tool_blocks = _parse_tool_blocks(ai_text)
+
+        # Plan mode: only allow update_plan / ask_user
+        if mode == "plan":
+            tool_blocks = [b for b in tool_blocks if b["tool"] in PLAN_MODE_TOOLS]
+            if not tool_blocks and round_num == 0:
+                yield _sse_event({"type":"plan","content":ai_text})
+                yield _sse_event({"type":"done","artifacts":session_state["artifacts"]})
+                return
+
+        if not tool_blocks:
+            yield _sse_event({"type":"done","artifacts":session_state["artifacts"],"plan":session_state.get("plan","")})
+            return
+
+        # Execute tools
+        messages.append({"role":"assistant","content":ai_text})
+        tool_result_parts = []
+
+        for block in tool_blocks:
+            tool = block["tool"]; content = block["content"]
+            yield _sse_event({"type":"tool_start","tool":tool,"input":content[:500]})
+
+            if tool == "ask_user":
+                # Parse options from content
+                lines = [l.strip() for l in content.split("\n") if l.strip()]
+                question = lines[0] if lines else "Choose an option:"
+                options = [{"label":l.lstrip("0123456789.-) ")} for l in lines[1:] if l][:6]
+                yield _sse_event({"type":"ask_user","question":question,"options":options})
+                yield _sse_event({"type":"paused","reason":"waiting_for_user"})
+                return  # Pause — resume when user picks
+
+            result = _execute_tool(tool, content, session_state)
+            yield _sse_event({"type":"tool_result","tool":tool,"result":result[:3000]})
+            tool_result_parts.append(f"Tool `{tool}` result:\n{result}")
+
+            # Emit artifact event if created
+            if tool == "create_artifact" and session_state["artifacts"]:
+                yield _sse_event({"type":"artifact","meta":session_state["artifacts"][-1]})
+
+        # Feed results back to AI
+        tool_summary = "\n\n".join(tool_result_parts)
+        messages.append({"role":"user","content":f"Tool results:\n{tool_summary}"})
+
+    yield _sse_event({"type":"done","artifacts":session_state["artifacts"],"plan":session_state.get("plan","")})
+
+def serve_agent(self, b):
+    """POST /api/agent — streaming SSE agent endpoint."""
+    import asyncio
+    message = safe_text(b.get("message",""))
+    mode = b.get("mode","build").lower()
+    history = b.get("history", [])
+    model = b.get("model","") or load_keys().get("ACTIVE_MODEL","meta-llama/llama-3.3-70b-instruct:free")
+    keys = load_keys()
+
+    if mode not in ("ask","plan","build"):
+        mode = "build"
+
+    self.send_response(200)
+    self.send_header("Content-Type","text/event-stream")
+    self.send_header("Cache-Control","no-cache")
+    self.send_header("Access-Control-Allow-Origin","*")
+    self.send_header("X-Accel-Buffering","no")
+    self.end_headers()
+
+    try:
+        loop = asyncio.new_event_loop()
+        async def _run():
+            async for event in _run_agent_loop(message, history, mode, model, keys):
+                self.wfile.write(event.encode())
+                self.wfile.flush()
+        loop.run_until_complete(_run())
+        loop.close()
+    except (BrokenPipeError, ConnectionResetError):
+        pass
+    except Exception as e:
+        try:
+            self.wfile.write(_sse_event({"type":"error","content":str(e)}).encode())
+        except: pass
+
+def serve_artifacts_list(self):
+    """GET /api/artifacts — list all artifacts."""
+    arts = []
+    for meta_f in sorted(_glob.glob(os.path.join(ARTIFACTS_DIR,"*.json"))):
+        try:
+            arts.append(json.load(open(meta_f)))
+        except: pass
+    self._json({"artifacts": arts})
+
+def serve_artifact_content(self, aid: str):
+    """GET /api/artifact/{id} — get artifact content."""
+    meta_f = os.path.join(ARTIFACTS_DIR, f"{aid}.json")
+    if not os.path.exists(meta_f):
+        self._json({"error":"not found"},404); return
+    meta = json.load(open(meta_f))
+    fpath = os.path.join(ARTIFACTS_DIR, meta["file"])
+    content = open(fpath, encoding="utf-8").read() if os.path.exists(fpath) else ""
+    self._json({**meta, "content": content})
+
+def serve_artifact_preview(self, aid: str):
+    """GET /api/artifact/{id}/preview — serve HTML artifact for iframe."""
+    meta_f = os.path.join(ARTIFACTS_DIR, f"{aid}.json")
+    if not os.path.exists(meta_f):
+        self._json({"error":"not found"},404); return
+    meta = json.load(open(meta_f))
+    fpath = os.path.join(ARTIFACTS_DIR, meta["file"])
+    content = open(fpath, encoding="utf-8").read() if os.path.exists(fpath) else ""
+    b = content.encode()
+    self.send_response(200)
+    self.send_header("Content-Type","text/html; charset=utf-8")
+    self.send_header("Content-Length", str(len(b)))
+    self.send_header("X-Frame-Options","SAMEORIGIN")
+    self.end_headers()
+    self.wfile.write(b)
+
+def delete_artifact(self, aid: str):
+    """DELETE /api/artifact/{id}."""
+    meta_f = os.path.join(ARTIFACTS_DIR, f"{aid}.json")
+    if not os.path.exists(meta_f):
+        self._json({"error":"not found"},404); return
+    meta = json.load(open(meta_f))
+    for f in [meta_f, os.path.join(ARTIFACTS_DIR, meta["file"])]:
+        try: os.remove(f)
+        except: pass
+    self._json({"ok":True})
+
+def exec_shell_direct(self, b):
+    """POST /api/shell — direct shell exec (bash or python)."""
+    lang = b.get("lang","bash")
+    code = b.get("code","")
+    if not code: self._json({"error":"no code"},400); return
+    if lang == "python":
+        result = _exec_python(code)
+    else:
+        result = _exec_bash(code)
+    self._json({"result": result, "lang": lang})
+# ── END AGENT CODE ───────────────────────────────────────────────────────────
+
     def job_purge(self, jid):
         job_log(jid, "Requesting RAM purge (may prompt for sudo in your terminal)...")
         sh("sudo purge 2>/dev/null", 30)
@@ -3304,6 +3211,15 @@ fi
                 sh(f"rm -f '{fp}'"); n += 1
                 job_log(jid, f"  removed: {os.path.basename(fp)}")
         job_log(jid, f"Removed {n} file(s)."); job_done(jid)
+
+
+# ── Bind agent methods onto handler class ────────────────────────────────────
+H.serve_agent = serve_agent
+H.serve_artifacts_list = serve_artifacts_list
+H.serve_artifact_content = serve_artifact_content
+H.serve_artifact_preview = serve_artifact_preview
+H.delete_artifact = delete_artifact
+H.exec_shell_direct = exec_shell_direct
 
 if __name__ == '__main__':
     print(f"Chinna V6 -> http://localhost:{PORT}")
