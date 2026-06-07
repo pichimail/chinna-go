@@ -83,13 +83,34 @@ function unwrapMessage(message = {}) {
   return message.ephemeralMessage?.message
     || message.viewOnceMessage?.message
     || message.viewOnceMessageV2?.message
+    || message.viewOnceMessageV2Extension?.message
     || message.documentWithCaptionMessage?.message
+    || message.editedMessage?.message?.protocolMessage?.editedMessage
+    || message.deviceSentMessage?.message
     || message;
 }
 
 function contentType(message = {}) {
   const msg = unwrapMessage(message);
   return Object.keys(msg || {})[0] || 'unknown';
+}
+
+function messageLabel(m) {
+  const msg = unwrapMessage(m.message || {});
+  if (msg.conversation || msg.extendedTextMessage) return 'Text';
+  if (msg.imageMessage) return 'Image';
+  if (msg.videoMessage) return 'Video';
+  if (msg.audioMessage) return msg.audioMessage.ptt ? 'Voice note' : 'Audio';
+  if (msg.documentMessage) return 'Document';
+  if (msg.stickerMessage) return 'Sticker';
+  if (msg.contactMessage || msg.contactsArrayMessage) return 'Contact';
+  if (msg.locationMessage || msg.liveLocationMessage) return 'Location';
+  if (msg.reactionMessage) return 'Reaction';
+  if (msg.pollCreationMessage || msg.pollCreationMessageV2 || msg.pollUpdateMessage) return 'Poll';
+  if (msg.groupInviteMessage) return 'Group invite';
+  if (msg.buttonsResponseMessage || msg.listResponseMessage || msg.templateButtonReplyMessage) return 'Response';
+  if (msg.protocolMessage) return 'System update';
+  return 'Message';
 }
 
 function msgText(m) {
@@ -101,6 +122,15 @@ function msgText(m) {
     || msg.documentMessage?.caption
     || msg.buttonsResponseMessage?.selectedDisplayText
     || msg.listResponseMessage?.title
+    || msg.templateButtonReplyMessage?.selectedDisplayText
+    || msg.reactionMessage?.text
+    || msg.contactMessage?.displayName
+    || msg.contactsArrayMessage?.contacts?.map((c) => c.displayName).filter(Boolean).join(', ')
+    || msg.locationMessage?.name
+    || msg.liveLocationMessage?.caption
+    || msg.groupInviteMessage?.groupName
+    || msg.pollCreationMessage?.name
+    || msg.pollCreationMessageV2?.name
     || '';
 }
 
@@ -124,6 +154,10 @@ function mediaSummary(m) {
 async function mediaPreview(m, summary) {
   if (!summary || !sock) return summary;
   const preview = { ...summary };
+  if (typeof downloadMediaMessage !== 'function') {
+    preview.error = 'WhatsApp media downloader is unavailable in this Baileys version';
+    return preview;
+  }
   try {
     const buffer = await downloadMediaMessage(
       m,
@@ -157,10 +191,11 @@ async function storeMessage(m) {
   if (!jid || jid === 'status@broadcast') return;
   const text = msgText(m);
   const media = await mediaPreview(m, mediaSummary(m));
+  const label = media?.label || messageLabel(m);
   upsertChat(jid, {
     name: m.pushName || chatName(jid),
     timestamp: Number(m.messageTimestamp || Math.floor(Date.now() / 1000)),
-    last: friendlyLast(text, media),
+    last: friendlyLast(text, media) || label,
   });
   const arr = messages.get(jid) || [];
   const id = m.key?.id || `${Date.now()}-${arr.length}`;
@@ -174,7 +209,8 @@ async function storeMessage(m) {
       timestamp: Number(m.messageTimestamp || Math.floor(Date.now() / 1000)),
       text,
       media,
-      type: media?.kind || contentType(m.message || {}),
+      type: label,
+      rawType: contentType(m.message || {}),
     });
   }
   messages.set(jid, arr.slice(-300));
