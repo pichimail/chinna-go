@@ -12,7 +12,6 @@ scan:scan skan scna check_disk disk_check storage check space what_eating disk_u
 dupes:dupes dups duplicates dublicates same_files duplicate_files find_dupes same_files_unnaya duplicate_unnaya same_unnaya copies find_copies repeated_files
 brew:brew homebrew install_tools dev_setup tools install_dev dev_tools setup_dev brew_install
 run_project:run start serve launch project_run start_project run_this run_app start_app project_start localhost dev_server start_server serve_project idi_ela_run_cheyali run_cheyyi start_cheyyi ela_run_cheyali stack build_chei stack_build project_ki_run ela_cheyali deploy_locally run_locally
-fix:fix debug repair resolve issue bug bugs error errors broken not_working project_fix fix_project code_fix code_resolve bug_fix issue_fix fix_this_project solve_problem problem_solve
 extension:extension browser_extension chrome_extension ext scanner live_scan site_scan scan_browser unpacked load_unpacked browser_scanner chrome_scanner
 stack_setup:stack setup_stack install_deps install_packages dependencies deps_install kavalisna_stack stack_kavali required_stack setup_cheyyi install_cheyyi packages_kavali em_install_cheyyali what_to_install stack_em_kavali
 deploy:deploy deployment push_live go_live vercel netlify railway deploy_cheyyi live_cheyyi production_lo_pettu prod_deploy ship_it release
@@ -115,7 +114,7 @@ ai_detect_intent() {
     local api_key="${OPENROUTER_API_KEY:-}"
     [ -z "$api_key" ] && { echo "unknown"; return 1; }
 
-    local valid_intents="clean purge slow scan dupes brew run_project fix extension stack_setup deploy git free_ai pro_ai voice bot preview status ports wifi kill_apps remind update doctor config env_setup publish help"
+    local valid_intents="clean purge slow scan dupes brew run_project extension stack_setup deploy git free_ai pro_ai voice bot preview status ports wifi kill_apps remind update doctor config env_setup publish help"
 
     local result
     result=$(curl -s "https://openrouter.ai/api/v1/chat/completions" \

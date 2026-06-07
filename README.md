@@ -1,7 +1,6 @@
 # Chinna V6
 
-Chinna is a local Mac sidekick for cleanup, system checks, disk exploration, AI chat, Telegram control, and voice actions.
-It also includes a local Chrome/Edge/Brave extension for live website scanning and console-error fix prompts.
+Chinna is a local Mac sidekick for cleanup, system checks, disk exploration, AI chat, Telegram control, browser context scanning, WhatsApp, and Accoustica music prompts/generation.
 
 ## One-Touch Install
 
@@ -49,7 +48,6 @@ chinna --version
 chinna help
 chinna dashboard
 chinna extension
-chinna fix
 chinna start
 chinna config
 ```
@@ -69,10 +67,7 @@ Load it in Chrome, Edge, or Brave:
 3. Click **Load unpacked**
 4. Select `~/.chinna/extension/dist`
 
-The extension uses a compact chat UI with quick actions, file upload, page scan, command cards, copy buttons, and confirm-before-run terminal fixes. It scans the active tab, captures live runtime errors after injection, supports log/code file upload, and sends results only to the local Chinna server at `http://localhost:7777`.
-Normal content scripts cannot read historic DevTools logs from before injection; re-run the scan and reproduce the issue once for fresh console capture.
-
-The bare `chinna` command opens a compact conversational command center. Type a quick action number or a natural-language request such as `fix this project`, `scan browser`, or `run localhost`.
+The extension reads the active tab, including YouTube/video metadata where available, and sends page context only to the local Chinna server at `http://localhost:7777`. It can summarize the current page, create Accoustica prompts, start Accoustica generation, and poll the task until audio is ready.
 
 Optional commands:
 
@@ -114,6 +109,7 @@ chinna config
 Typical setup:
 - OpenRouter key for AI chat
 - OpenAI key for transcription and optional fallback features
+- Accoustica API Key for music generation
 - Telegram bot token for remote control
 
 ## Remove
@@ -143,13 +139,6 @@ chinna uninstall --purge
 
   ```bash
   chinna dashboard
-  ```
-
-- If the extension cannot connect, run:
-
-  ```bash
-  chinna dashboard
-  chinna extension
   ```
 
 - If AI chat or Telegram is not working, verify keys in:

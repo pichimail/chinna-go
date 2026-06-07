@@ -11,7 +11,7 @@ RAW="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 CHINNA="${CHINNA_HOME:-$HOME/.chinna}"
 PORT="${CHINNA_DASHBOARD_PORT:-7777}"
 STATE_FILE="${CHINNA}/.installstate"
-CACHE_BUST="$(date +%s)"
+SESSION_STAMP="$(date +%s)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -51,7 +51,7 @@ copy_or_fetch() {
         -H "Cache-Control: no-cache, no-store, must-revalidate" \
         -H "Pragma: no-cache" \
         -H "Expires: 0" \
-        "${RAW}/${rel}?v=${CACHE_BUST}" -o "${dest}"
+        "${RAW}/${rel}?v=${SESSION_STAMP}" -o "${dest}"
 }
 
 # ── One-time-setup resumable step system ─────────────────────
@@ -73,6 +73,35 @@ run_refresh_step() {
     local name="$1"; shift
     echo "  → Refreshing: $name"
     "$@" && mark_done "refresh:${name}:$(date +%Y%m%d%H%M%S)"
+}
+
+step_strict_cleanup() {
+    echo "    Stopping old Chinna services..."
+    pkill -9 -f dashboard_server 2>/dev/null || true
+    pkill -9 -f 'dashboard_server.py' 2>/dev/null || true
+    pkill -9 -f "server.py ${PORT}" 2>/dev/null || true
+    pkill -9 -f 'whatsapp_bridge/server.js' 2>/dev/null || true
+    if [ -f "${CHINNA}/server.pid" ]; then
+        kill "$(cat "${CHINNA}/server.pid" 2>/dev/null)" 2>/dev/null || true
+        rm -f "${CHINNA}/server.pid"
+    fi
+    echo "    Clearing stale app code and caches..."
+    rm -f "${CHINNA}/dashboard_server.py" "${CHINNA}/lib/server.py"
+    rm -rf \
+        "${CHINNA}/dashboard" \
+        "${CHINNA}/lib" \
+        "${CHINNA}/extension" \
+        "${CHINNA}/.cache" \
+        "${CHINNA}/__pycache__" \
+        "${CHINNA}/lib/__pycache__" \
+        "${HOME}/Library/Caches/com.chinna.dashboard" \
+        "${HOME}/Library/Caches/com.chinna.Chinna" \
+        "${HOME}/Library/Caches/chinna" \
+        "${HOME}/Library/Saved Application State/com.chinna.Chinna.savedState" 2>/dev/null || true
+    rm -f "${CHINNA}/install/chinna_v5.py" "${CHINNA}/server_v4.py" 2>/dev/null || true
+    find "${CHINNA}" -name '*.pyc' -delete 2>/dev/null || true
+    mkdir -p "${CHINNA}/lib" "${CHINNA}/dashboard" "${CHINNA}/logs"
+    echo "    ✓ old app code and caches cleared"
 }
 
 # ── Step implementations ───────────────────────────────────
@@ -128,26 +157,6 @@ step_install_node_tools() {
     brew install "${tools[@]}" 2>/dev/null | grep -E "✓|already|Pouring" | head -4 || true
 }
 
-step_strict_cleanup() {
-    echo "    Stopping old Chinna services..."
-    pkill -9 -f dashboard_server 2>/dev/null || true
-    pkill -9 -f 'dashboard_server.py' 2>/dev/null || true
-    pkill -9 -f 'server.py 7777' 2>/dev/null || true
-    pkill -9 -f 'whatsapp_bridge/server.js' 2>/dev/null || true
-
-    echo "    Clearing stale app code and caches..."
-    rm -f "${CHINNA}/dashboard_server.py" "${CHINNA}/lib/server.py"
-    rm -rf "${CHINNA}/dashboard"
-    rm -rf "${CHINNA}/extension"
-    rm -rf "${CHINNA}/__pycache__" "${CHINNA}/lib/__pycache__"
-    rm -f "${CHINNA}/install/chinna_v5.py" "${CHINNA}/server_v4.py"
-    find "${CHINNA}" -name '*.pyc' -delete 2>/dev/null || true
-    rm -rf "${HOME}/Library/Caches/com.chinna.Chinna" 2>/dev/null || true
-    rm -rf "${HOME}/Library/Saved Application State/com.chinna.Chinna.savedState" 2>/dev/null || true
-    mkdir -p "${CHINNA}/dashboard" "${CHINNA}/lib" "${CHINNA}/logs"
-    echo "    ✓ old app code and caches cleared"
-}
-
 step_write_server() {
     echo "    ↻ Force-refreshing server (dashboard_server.py)..."
     copy_or_fetch "lib/server.py" "${CHINNA}/dashboard_server.py"
@@ -174,17 +183,6 @@ step_write_whatsapp_bridge() {
     echo "    ✓ WhatsApp bridge updated"
 }
 
-step_write_extension() {
-    echo "    ↻ Force-refreshing browser extension..."
-    mkdir -p "${CHINNA}/extension/dist"
-    for file in manifest.json icon.svg background.js content.js shared.css popup.html popup.css sidepanel.html sidepanel.css popup.js; do
-        copy_or_fetch "extension/dist/${file}" "${CHINNA}/extension/dist/${file}" 2>/dev/null && \
-            echo "      ✓ extension/dist/${file}" || \
-            echo "      ⚠ extension/dist/${file} (skipped)"
-    done
-    echo "    ✓ browser extension updated → ${CHINNA}/extension/dist"
-}
-
 step_write_libs() {
     echo "    ↻ Force-refreshing lib files..."
     for lib in config clean stack registry notify daemon server plugins swiftbar voice lang; do
@@ -198,6 +196,20 @@ step_write_libs() {
             echo "      ✓ lib/plugins/${plugin}.sh" || \
             echo "      ⚠ lib/plugins/${plugin}.sh (skipped)"
     done
+}
+
+step_write_extension() {
+    echo "    ↻ Installing browser extension files..."
+    mkdir -p "${CHINNA}/extension/icons" "${CHINNA}/extension/dist/icons"
+    for f in manifest.json background.js content.js sidepanel.html sidepanel.js sidepanel.css INSTALL.md install-extension.sh; do
+        copy_or_fetch "extension/$f" "${CHINNA}/extension/$f" 2>/dev/null || true
+        copy_or_fetch "extension/dist/$f" "${CHINNA}/extension/dist/$f" 2>/dev/null || copy_or_fetch "extension/$f" "${CHINNA}/extension/dist/$f" 2>/dev/null || true
+    done
+    for i in 16 48 128; do
+        copy_or_fetch "extension/icons/icon${i}.png" "${CHINNA}/extension/icons/icon${i}.png" 2>/dev/null || true
+        copy_or_fetch "extension/dist/icons/icon${i}.png" "${CHINNA}/extension/dist/icons/icon${i}.png" 2>/dev/null || copy_or_fetch "extension/icons/icon${i}.png" "${CHINNA}/extension/dist/icons/icon${i}.png" 2>/dev/null || true
+    done
+    echo "    ✓ Extension at ~/.chinna/extension/dist (load unpacked in chrome://extensions)"
 }
 
 step_write_bin() {
@@ -216,6 +228,9 @@ step_write_defaults() {
 # OPENROUTER_API_KEY=
 # ANTHROPIC_API_KEY=
 # OPENAI_API_KEY=
+# KIEAI_API_KEY=
+# KIE_AI_API_KEY=
+# KIEAI_CALLBACK_URL=
 APPAUTOMATIONMODE=off
 APPNOTIFYSOUND=/System/Library/Sounds/Glass.aiff
 APPNOTIFYSPEAK=off
@@ -293,7 +308,6 @@ run_refresh_step "strict_cleanup"        step_strict_cleanup
 run_refresh_step "write_server"          step_write_server
 run_refresh_step "write_dashboard"       step_write_dashboard
 run_refresh_step "write_whatsapp_bridge" step_write_whatsapp_bridge
-run_refresh_step "write_extension"       step_write_extension
 run_refresh_step "write_libs"            step_write_libs
 run_refresh_step "write_bin"             step_write_bin
 run_refresh_step "write_defaults"        step_write_defaults
@@ -301,7 +315,8 @@ run_refresh_step "write_defaults"        step_write_defaults
 # ──────────────────────────────────────────────────────────────
 # RESTART SERVER
 # ──────────────────────────────────────────────────────────────
-run_refresh_step "start_server" step_start_server
+run_refresh_step "write_extension" step_write_extension
+run_refresh_step "start_server"    step_start_server
 
 # ── macOS notification ─────────────────────────────────────
 osascript -e 'display notification "Models, Music, WhatsApp & 15 Godspeed features ready!" with title "🟢 Chinna V6 installed"' 2>/dev/null || true
@@ -312,7 +327,7 @@ echo "  ✅  CHINNA V6 READY!"
 echo "  ══════════════════════════════════════════════════════"
 echo ""
 echo "  🌐  Dashboard   →  http://localhost:${PORT}"
-echo "  🧩  Extension   →  ${CHINNA}/extension/dist  (load unpacked)"
+echo "  🧩  Extension   →  ~/.chinna/extension/dist"
 echo "  📦  Share URL   →  curl -fsSL -H \"Cache-Control: no-cache\" https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash"
 echo ""
 echo "  Quick commands (in a new terminal tab):"
@@ -320,7 +335,7 @@ echo "    chinna doctor         → full system health check"
 echo "    chinna run            → smart project runner"
 echo "    chinna ai <prompt>    → AI chat"
 echo "    chinna dashboard      → open dashboard"
-echo "    chinna extension      → open Chrome extensions + show unpacked folder"
+echo "    chinna extension      → show unpacked browser extension"
 echo "    chinna model-set free → switch AI model"
 echo "    chinna clean          → deep Mac clean"
 echo "    chinna audit          → project audit"

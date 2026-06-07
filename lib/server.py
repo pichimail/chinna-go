@@ -9,6 +9,7 @@ CHINNA_HOME = os.environ.get('CHINNA_HOME', os.path.expanduser('~/.chinna'))
 DASHBOARD_DIR = os.path.join(CHINNA_HOME, 'dashboard')
 HOME = os.path.expanduser('~')
 API_KEYS_FILE = os.path.join(CHINNA_HOME, 'api_keys.json')
+ACCOUSTICA_TASKS_FILE = os.path.join(CHINNA_HOME, 'state/accoustica_tasks.json')
 PAIR_STATE_FILE = os.path.join(CHINNA_HOME, 'telegram_pair.json')
 CHAT_DB_FILE = os.path.join(CHINNA_HOME, 'state/chat_db.json')
 WHATSAPP_DIR = os.path.join(CHINNA_HOME, 'whatsapp')
@@ -18,6 +19,7 @@ WHATSAPP_BRIDGE_PID_FILE = os.path.join(WHATSAPP_DIR, 'bridge.pid')
 WHATSAPP_BRIDGE_LOG = os.path.join(WHATSAPP_DIR, 'bridge.log')
 SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(SERVER_DIR, '..'))
+KIEAI_BASE_URL = 'https://api.kie.ai'
 
 # Shared TURN fallback for first-run users. Override via env if needed.
 DEFAULT_TURN_URLS = os.environ.get(
@@ -248,17 +250,20 @@ def list_dashboard_plugins():
 
 def read_shell_config():
     cfg = {}
-    path = os.path.join(CHINNA_HOME, 'config')
-    if not os.path.exists(path):
-        return cfg
-    try:
-        with open(path) as f:
-            for line in f:
-                m = re.match(r"export\s+([A-Z0-9_]+)=['\"]?(.*?)['\"]?$", line.strip())
-                if m:
-                    cfg[m.group(1)] = m.group(2)
-    except Exception:
-        pass
+    for path in (os.path.join(CHINNA_HOME, 'config'), os.path.join(CHINNA_HOME, 'env')):
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    m = re.match(r"(?:export\s+)?([A-Z0-9_]+)=['\"]?(.*?)['\"]?$", line)
+                    if m:
+                        cfg[m.group(1)] = m.group(2)
+        except Exception:
+            pass
     return cfg
 
 def load_keys():
@@ -274,6 +279,9 @@ def load_keys():
         'TURN_USERNAME',
         'TURN_CREDENTIAL',
         'CHAT_RELAY_URL',
+        'KIEAI_API_KEY',
+        'KIE_AI_API_KEY',
+        'KIEAI_CALLBACK_URL',
     ):
         if not keys.get(name) and shell_cfg.get(name):
             keys[name] = shell_cfg[name]
@@ -294,6 +302,132 @@ def load_keys():
 def save_keys(d):
     cur = load_keys(); cur.update(d)
     write_json(API_KEYS_FILE, cur)
+
+def kieai_key(keys=None):
+    keys = keys or load_keys()
+    return safe_text(keys.get('KIEAI_API_KEY') or keys.get('KIE_AI_API_KEY') or '')
+
+def load_accoustica_tasks():
+    data = read_json(ACCOUSTICA_TASKS_FILE, {})
+    return data if isinstance(data, dict) else {}
+
+def save_accoustica_tasks(data):
+    write_json(ACCOUSTICA_TASKS_FILE, data if isinstance(data, dict) else {})
+
+def playable_audio_url(item):
+    if not isinstance(item, dict):
+        return ''
+    for key in ('audioUrl', 'audio_url', 'streamAudioUrl', 'stream_audio_url'):
+        value = item.get(key)
+        if isinstance(value, str) and re.match(r'^https?://', value):
+            return value
+    return ''
+
+def normalize_accoustica_track(item):
+    item = item if isinstance(item, dict) else {}
+    return {
+        'id': safe_text(item.get('id') or item.get('audioId') or item.get('audio_id') or '')[:120],
+        'title': safe_text(item.get('title') or '')[:160],
+        'prompt': safe_text(item.get('prompt') or '')[:5000],
+        'tags': safe_text(item.get('tags') or item.get('style') or '')[:1000],
+        'audioUrl': playable_audio_url(item),
+        'streamAudioUrl': safe_text(item.get('streamAudioUrl') or item.get('stream_audio_url') or '')[:1000],
+        'imageUrl': safe_text(item.get('imageUrl') or item.get('image_url') or item.get('coverUrl') or '')[:1000],
+        'duration': item.get('duration') or item.get('duration_seconds') or '',
+    }
+
+def normalize_accoustica_tracks(value):
+    if isinstance(value, dict):
+        if isinstance(value.get('sunoData'), list):
+            value = value.get('sunoData')
+        elif isinstance(value.get('data'), list):
+            value = value.get('data')
+        else:
+            value = [value]
+    if not isinstance(value, list):
+        return []
+    return [normalize_accoustica_track(x) for x in value if isinstance(x, dict)]
+
+def accoustica_first_playable(tracks):
+    for track in tracks or []:
+        url = playable_audio_url(track)
+        if url:
+            return url
+    return ''
+
+def accoustica_status_info(status):
+    status = safe_text(status or 'PENDING').upper()
+    in_progress = {'PENDING', 'TEXT_SUCCESS', 'FIRST_SUCCESS'}
+    failures = {'CREATE_TASK_FAILED', 'GENERATE_AUDIO_FAILED', 'CALLBACK_EXCEPTION', 'SENSITIVE_WORD_ERROR'}
+    return {
+        'status': status,
+        'done': status == 'SUCCESS',
+        'failed': status in failures,
+        'in_progress': status in in_progress,
+    }
+
+def accoustica_callback_url(handler):
+    keys = load_keys()
+    configured = safe_text(keys.get('KIEAI_CALLBACK_URL') or '')
+    if configured and re.match(r'^https://', configured, re.I):
+        return configured
+    host = handler.headers.get('X-Forwarded-Host') or handler.headers.get('Host') or f'localhost:{PORT}'
+    proto = handler.headers.get('X-Forwarded-Proto') or ('https' if not re.match(r'^(localhost|127\.0\.0\.1|\[::1\])(?::|$)', host) else 'http')
+    return f"{proto}://{host}/api/music/accoustica/callback"
+
+def accoustica_prompt_from_context(page_context, user_prompt=''):
+    ctx = page_context if isinstance(page_context, dict) else {}
+    youtube = ctx.get('youtube') if isinstance(ctx.get('youtube'), dict) else {}
+    meta = ctx.get('meta') if isinstance(ctx.get('meta'), dict) else {}
+    og = ctx.get('openGraph') if isinstance(ctx.get('openGraph'), dict) else {}
+    title = safe_text(youtube.get('title') or ctx.get('title') or og.get('title') or '')[:80] or 'Inspired Track'
+    channel = safe_text(youtube.get('channel') or og.get('site_name') or '')[:80]
+    description = safe_text(youtube.get('description') or meta.get('description') or ctx.get('metaDesc') or '', keep_newlines=True)
+    hashtags = youtube.get('hashtags') if isinstance(youtube.get('hashtags'), list) else []
+    visible = safe_text(ctx.get('visibleText') or ctx.get('text') or '', keep_newlines=True)
+    source_bits = [title, channel, description[:900], ' '.join(hashtags[:8]), visible[:800], safe_text(user_prompt, keep_newlines=True)]
+    source = '\n'.join(x for x in source_bits if x).lower()
+    style_parts = []
+    for label, needles in [
+        ('dance pop', ['pop', 'dance', 'dua', 'club']),
+        ('live arena energy', ['live', 'concert', 'arena', 'stage', 'crowd']),
+        ('bright synth bass', ['synth', 'electro', 'electronic']),
+        ('uplifting chorus', ['uplift', 'levitating', 'happy', 'celebration']),
+        ('cinematic percussion', ['cinematic', 'dramatic', 'performance']),
+        ('clean radio mix', ['official', 'video', 'single']),
+    ]:
+        if any(n in source for n in needles):
+            style_parts.append(label)
+    if not style_parts:
+        style_parts = ['modern pop', 'polished production', 'memorable hook']
+    style = ', '.join(dict.fromkeys(style_parts))[:1000]
+    prompt = (
+        f"Create an original {style} track inspired by the mood and energy of the current page. "
+        "Use a fresh melody, original lyrics, and a distinct vocal identity. "
+        "Aim for a catchy hook, strong groove, clean arrangement, and polished modern mix."
+    )
+    if title:
+        prompt += f" Page reference mood: {title}."
+    if channel:
+        prompt += f" Source context: {channel}."
+    if hashtags:
+        prompt += " Context tags: " + ', '.join(hashtags[:5]) + "."
+    return {
+        'ok': True,
+        'title': title,
+        'style': style,
+        'prompt': safe_text(prompt)[:500],
+        'negativeTags': 'copied melody, copied lyrics, artist impersonation, low quality, distortion',
+        'customMode': False,
+        'instrumental': False,
+        'model': 'V5',
+        'source': {
+            'url': safe_text(ctx.get('url') or '')[:500],
+            'title': safe_text(ctx.get('title') or title)[:180],
+            'videoId': safe_text(youtube.get('videoId') or '')[:80],
+            'channel': channel,
+        }
+    }
 
 def generate_turn_credentials():
     uname = 'chinna-' + secrets.token_hex(4)
@@ -1381,6 +1515,146 @@ def run_confirmed_terminal_command(command, cwd=None):
     except subprocess.TimeoutExpired:
         return {'error': 'command timed out', 'command': cmd, 'cwd': run_cwd}
 
+def accoustica_generate_request(body, handler):
+    keys = load_keys()
+    key = kieai_key(keys)
+    if not key:
+        return {'ok': False, 'error': 'Accoustica API key is not configured.', 'key_set': False}, 400
+    prompt_info = accoustica_prompt_from_context(body.get('page_context') or {}, body.get('message') or body.get('user_prompt') or '')
+    prompt = safe_text(body.get('prompt') or prompt_info.get('prompt') or '', keep_newlines=True)
+    custom = bool(body.get('customMode', False))
+    instrumental = bool(body.get('instrumental', False))
+    payload = {
+        'prompt': prompt[:5000 if custom else 500],
+        'customMode': custom,
+        'instrumental': instrumental,
+        'model': safe_text(body.get('model') or 'V5')[:40] or 'V5',
+        'callBackUrl': accoustica_callback_url(handler),
+    }
+    optional_names = ('style', 'title', 'negativeTags', 'vocalGender', 'styleWeight', 'weirdnessConstraint', 'audioWeight')
+    for name in optional_names:
+        if body.get(name) not in (None, ''):
+            payload[name] = body.get(name)
+    if custom:
+        payload['style'] = safe_text(payload.get('style') or prompt_info.get('style') or '')[:1000]
+        payload['title'] = safe_text(payload.get('title') or prompt_info.get('title') or 'Inspired Track')[:80]
+        if not payload.get('style') or (not instrumental and not payload.get('prompt')) or not payload.get('title'):
+            return {'ok': False, 'error': 'Advanced Accoustica mode requires title, style, and prompt unless instrumental is enabled.'}, 400
+    else:
+        payload = {k: payload[k] for k in ('prompt', 'customMode', 'instrumental', 'model', 'callBackUrl')}
+        if not payload['prompt']:
+            return {'ok': False, 'error': 'prompt required'}, 400
+    req = urllib.request.Request(
+        f'{KIEAI_BASE_URL}/api/v1/generate',
+        data=json.dumps(payload).encode('utf-8'),
+        headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {key}'},
+        method='POST'
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=45) as res:
+            provider = json.loads(res.read().decode('utf-8', 'replace') or '{}')
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode('utf-8', 'replace')
+        try:
+            provider = json.loads(raw)
+        except Exception:
+            provider = {'error': raw}
+        return {'ok': False, 'error': 'Accoustica provider rejected the request.', 'provider': provider}, e.code
+    except Exception as e:
+        return {'ok': False, 'error': safe_text(str(e))}, 502
+
+    task_id = safe_text(
+        provider.get('taskId') or provider.get('task_id') or
+        ((provider.get('data') or {}).get('taskId') if isinstance(provider.get('data'), dict) else '')
+    )
+    if not task_id:
+        return {'ok': False, 'error': 'Provider response did not include a task ID.', 'provider': provider}, 502
+    tasks = load_accoustica_tasks()
+    now = int(time.time())
+    tasks[task_id] = {
+        'taskId': task_id,
+        'status': 'PENDING',
+        'created_at': now,
+        'updated_at': now,
+        'payload': {k: v for k, v in payload.items() if k != 'callBackUrl'},
+        'callbackUrl': payload.get('callBackUrl'),
+        'provider': provider,
+        'tracks': [],
+    }
+    save_accoustica_tasks(tasks)
+    return {
+        'ok': True,
+        'taskId': task_id,
+        'status': 'PENDING',
+        'pollAfterMs': 5000,
+        'pollIntervalMs': 1000,
+        'timeoutMs': 600000,
+        'task': tasks[task_id],
+    }, 200
+
+def accoustica_poll_task(task_id):
+    task_id = safe_text(task_id)[:160]
+    if not task_id:
+        return {'ok': False, 'error': 'taskId required'}, 400
+    keys = load_keys()
+    key = kieai_key(keys)
+    tasks = load_accoustica_tasks()
+    task = tasks.get(task_id, {'taskId': task_id, 'status': 'PENDING', 'tracks': []})
+    if not key:
+        status = accoustica_status_info(task.get('status'))
+        return {'ok': True, 'key_set': False, **status, 'taskId': task_id, 'tracks': task.get('tracks') or [], 'playableUrl': accoustica_first_playable(task.get('tracks'))}, 200
+    url = f"{KIEAI_BASE_URL}/api/v1/generate/record-info?taskId={urllib.parse.quote(task_id)}"
+    req = urllib.request.Request(url, headers={'Authorization': f'Bearer {key}'}, method='GET')
+    try:
+        with urllib.request.urlopen(req, timeout=35) as res:
+            provider = json.loads(res.read().decode('utf-8', 'replace') or '{}')
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode('utf-8', 'replace')
+        try:
+            provider = json.loads(raw)
+        except Exception:
+            provider = {'error': raw}
+        return {'ok': False, 'error': 'Accoustica provider polling failed.', 'provider': provider}, e.code
+    except Exception as e:
+        return {'ok': False, 'error': safe_text(str(e))}, 502
+
+    data = provider.get('data') if isinstance(provider.get('data'), dict) else provider
+    response = data.get('response') if isinstance(data.get('response'), dict) else data
+    tracks = normalize_accoustica_tracks(response)
+    if not tracks:
+        tracks = normalize_accoustica_tracks(data.get('sunoData') or data.get('data'))
+    status = safe_text(data.get('status') or task.get('status') or 'PENDING').upper()
+    task.update({
+        'taskId': task_id,
+        'status': status,
+        'updated_at': int(time.time()),
+        'provider': provider,
+    })
+    if tracks:
+        task['tracks'] = tracks
+    tasks[task_id] = task
+    save_accoustica_tasks(tasks)
+    info = accoustica_status_info(status)
+    return {'ok': True, 'taskId': task_id, **info, 'tracks': task.get('tracks') or [], 'playableUrl': accoustica_first_playable(task.get('tracks')), 'provider': provider}, 200
+
+def accoustica_callback_update(body):
+    data = body.get('data') if isinstance(body.get('data'), dict) else body
+    task_id = safe_text(data.get('task_id') or data.get('taskId') or body.get('task_id') or body.get('taskId'))[:160]
+    if not task_id:
+        return {'ok': False, 'error': 'task ID missing'}, 400
+    callback_type = safe_text(data.get('callbackType') or body.get('callbackType') or '').lower()
+    status_map = {'text': 'TEXT_SUCCESS', 'first': 'FIRST_SUCCESS', 'complete': 'SUCCESS', 'error': safe_text(data.get('errorCode') or 'CALLBACK_EXCEPTION').upper()}
+    status = status_map.get(callback_type, safe_text(data.get('status') or 'PENDING').upper())
+    tracks = normalize_accoustica_tracks(data.get('data') or data.get('response') or data)
+    tasks = load_accoustica_tasks()
+    task = tasks.get(task_id, {'taskId': task_id, 'created_at': int(time.time()), 'tracks': []})
+    task.update({'status': status, 'updated_at': int(time.time()), 'callback': body})
+    if tracks:
+        task['tracks'] = tracks
+    tasks[task_id] = task
+    save_accoustica_tasks(tasks)
+    return {'ok': True, 'taskId': task_id, 'status': status, 'tracks': task.get('tracks') or [], 'playableUrl': accoustica_first_playable(task.get('tracks'))}, 200
+
 # Tool: list previously uploaded files
 TOOLS.append({
     "type": "function",
@@ -1686,6 +1960,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json({
                 'chinna_ai_set': bool(k.get('OPENROUTER_API_KEY')),
                 'openai_set': bool(k.get('OPENAI_API_KEY')),
+                'accoustica_set': bool(kieai_key(k)),
+                'accoustica_callback_url': safe_text(k.get('KIEAI_CALLBACK_URL', '')),
                 'telegram_set': bool(k.get('TELEGRAM_BOT_TOKEN')),
                 'telegram_paired': bool(k.get('TELEGRAM_CHAT_ID')),
                 'telegram_bot': telegram_status().get('bot_username', ''),
@@ -1700,18 +1976,6 @@ class H(http.server.SimpleHTTPRequestHandler):
             })
         elif p == '/api/version':
             self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6'})
-        elif p == '/api/extension/health':
-            self._json({
-                'ok': True,
-                'name': 'Chinna V6 Extension Bridge',
-                'version': CHINNA_VERSION,
-                'ai_ready': bool(load_keys().get('OPENROUTER_API_KEY') or load_keys().get('OPENAI_API_KEY')),
-                'mode': 'confirm-then-run',
-                'limits': [
-                    'Live console capture starts after extension injection.',
-                    'Historic DevTools console logs require a DevTools panel and cannot be read retroactively.'
-                ]
-            })
         elif p == '/api/check-update':
             self._json(self.check_update())
         elif p == '/api/models':
@@ -1732,6 +1996,29 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self._json(meta)
         elif p == '/api/whatsapp/status':
             self.whatsapp_proxy('GET', '/status')
+        elif p == '/api/extension/health':
+            self._json({
+                'ok': True,
+                'name': 'Chinna Browser Extension API',
+                'version': CHINNA_VERSION,
+                'server': f'http://localhost:{PORT}',
+                'ai_ready': bool(load_keys().get('OPENROUTER_API_KEY') or load_keys().get('OPENAI_API_KEY')),
+            })
+        elif p == '/api/music/accoustica/status':
+            tasks = load_accoustica_tasks()
+            latest = sorted(tasks.values(), key=lambda x: int(x.get('updated_at') or x.get('created_at') or 0), reverse=True)[:8]
+            self._json({
+                'ok': True,
+                'key_set': bool(kieai_key()),
+                'default_model': 'V5',
+                'pollAfterMs': 5000,
+                'pollIntervalMs': 1000,
+                'timeoutMs': 600000,
+                'tasks': latest,
+            })
+        elif p == '/api/music/accoustica/task':
+            data, code = accoustica_poll_task(q.get('taskId') or q.get('task_id') or '')
+            self._json(data, code)
         elif p == '/api/telegram/status':
             self._json(telegram_status())
         elif p in ('/api/chat/user', '/chat/api/user'):
@@ -1766,6 +2053,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             d = {}
             if b.get('chinna_ai_key'): d['OPENROUTER_API_KEY'] = b['chinna_ai_key']
             if b.get('openai_key'): d['OPENAI_API_KEY'] = b['openai_key']
+            if b.get('accoustica_key'): d['KIEAI_API_KEY'] = b['accoustica_key']
+            if b.get('accoustica_callback_url') is not None: d['KIEAI_CALLBACK_URL'] = safe_text(b.get('accoustica_callback_url', ''))[:500]
             if b.get('telegram_token'): d['TELEGRAM_BOT_TOKEN'] = b['telegram_token']
             if b.get('telegram_chat'): d['TELEGRAM_CHAT_ID'] = b['telegram_chat']
             if 'turn_enabled' in b: d['TURN_ENABLED'] = '1' if bool(b.get('turn_enabled')) else '0'
@@ -1845,51 +2134,33 @@ class H(http.server.SimpleHTTPRequestHandler):
         elif p == '/api/chat':
             self.chat(b)
         elif p == '/api/extension/scan':
-            scan = b.get('scan') if isinstance(b.get('scan'), dict) else b
-            self._json(extension_local_findings(scan))
+            self._json(extension_local_findings(b.get('scan') or b))
         elif p == '/api/extension/analyze':
-            scan = b.get('scan') if isinstance(b.get('scan'), dict) else {}
-            prompt = b.get('prompt') or b.get('message') or ''
-            attachments = b.get('attachments') or []
-            self._json(extension_ai_analysis(scan, prompt, attachments))
+            self._json(extension_ai_analysis(b.get('scan') or b, b.get('prompt') or b.get('message') or '', b.get('attachments') or []))
         elif p == '/api/extension/upload':
-            attachments = b.get('attachments') or []
-            processed, _ = process_attachments(attachments)
-            self._json({'ok': True, 'files': [
-                {
-                    'id': x.get('id'),
-                    'name': x.get('name'),
-                    'mime': x.get('mime'),
-                    'size': x.get('size'),
-                    'type': x.get('type'),
-                    'path': x.get('path')
-                } for x in processed
-            ], 'count': len(processed)})
+            attachments = b.get('attachments') or ([b] if b.get('data_b64') else [])
+            attachment_context, _ = process_attachments(attachments)
+            self._json({'ok': True, 'files': attachment_context, 'count': len(attachment_context)})
         elif p == '/api/extension/command-plan':
-            scan = b.get('scan') if isinstance(b.get('scan'), dict) else {}
-            issue = safe_text(b.get('issue') or b.get('prompt') or '', keep_newlines=True)
-            command = safe_text(b.get('command') or '', keep_newlines=True)
-            confirmed = bool(b.get('confirmed'))
-            cwd = b.get('cwd') or HOME
-            local = extension_local_findings(scan)
-            commands = []
-            if command:
-                commands.append(command.splitlines()[0])
-            commands.extend(local.get('commands') or [])
-            commands = list(dict.fromkeys([c for c in commands if c]))[:10]
-            if confirmed and command:
-                result = run_confirmed_terminal_command(command, cwd=cwd)
-                self._json(result, 200 if result.get('ok') else 400)
+            if b.get('confirm') is True:
+                self._json(run_confirmed_terminal_command(b.get('command', ''), b.get('cwd')))
             else:
+                cmd = safe_text(b.get('command', ''), keep_newlines=True).splitlines()[0][:500].strip()
                 self._json({
                     'ok': True,
-                    'requires_confirmation': True,
-                    'mode': 'confirm-then-run',
-                    'issue': issue[:1000],
-                    'commands': commands,
-                    'code_prompts': local.get('code_prompts', []),
-                    'note': 'Pick a command and confirm before Chinna runs it. Unsafe commands are blocked.'
+                    'mode': 'confirm_then_run',
+                    'safe': bool(cmd and is_safe_terminal_command(cmd)),
+                    'command': cmd,
+                    'message': 'Review this command, then resend with confirm:true to run it.'
                 })
+        elif p == '/api/music/accoustica/prompt-from-page':
+            self._json(accoustica_prompt_from_context(b.get('page_context') or b.get('context') or {}, b.get('message') or b.get('prompt') or ''))
+        elif p == '/api/music/accoustica/generate':
+            data, code = accoustica_generate_request(b, self)
+            self._json(data, code)
+        elif p == '/api/music/accoustica/callback':
+            data, code = accoustica_callback_update(b)
+            self._json(data, code)
         elif p == '/api/telegram/pair':
             self.telegram_pair(b)
         elif p == '/api/telegram/test':
@@ -2396,6 +2667,17 @@ fi
             + memory_context
         )
 
+        page_context = b.get('page_context') if isinstance(b.get('page_context'), dict) else None
+        ext_context = b.get("system","")
+        if page_context:
+            system_prompt = (
+                system_prompt
+                + "\n\n[LIVE BROWSER TAB CONTEXT]\n"
+                + json.dumps(page_context, ensure_ascii=True)[:9000]
+                + "\nUse this structured active-tab context first when the user asks about the current page, video, music, or URL."
+            )
+        elif ext_context:
+            system_prompt = system_prompt + "\n\n[LIVE BROWSER TAB CONTEXT]\n" + str(ext_context)[:6000]
         messages = [{"role": "system", "content": system_prompt}]
 
         # Inject history (with special handling for the very last user message if it has vision)
