@@ -4396,6 +4396,8 @@ async function agentSend() {
 
         if (evt.type === 'mode') {
           // mode confirmed
+        } else if (evt.type === 'sandbox') {
+          agentSetStatus(true, 'sandbox ready');
         } else if (evt.type === 'text') {
           if (!aiMsgEl) aiMsgEl = agentAddMsg('ai', '');
           agentAppendText(aiMsgEl, evt.content);
@@ -4626,4 +4628,3 @@ window.toast = function(msg, type, dur){
     };
   }
 })();
-
