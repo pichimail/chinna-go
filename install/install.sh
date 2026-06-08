@@ -150,10 +150,18 @@ step_write_server() {
 step_write_dashboard() {
     echo "    ↻ Force-refreshing dashboard (index.html)..."
     copy_or_fetch "dashboard/index.html" "${CHINNA}/dashboard/index.html"
-    # Also copy dashboard assets if present
-    for asset in chinna-favicon.svg chinna-icon.svg chinna-logo.svg; do
-        copy_or_fetch "dashboard/assets/${asset}" "${CHINNA}/dashboard/assets/${asset}" 2>/dev/null || true
-    done
+    mkdir -p "${CHINNA}/dashboard/assets"
+    # Sync the full dashboard asset bundle so installed users never get a bare HTML shell.
+    if [ "${LOCAL_SOURCE}" = "on" ] && [ -d "${REPO_ROOT}/dashboard/assets" ]; then
+        while IFS= read -r -d '' asset_path; do
+            rel="${asset_path#${REPO_ROOT}/}"
+            copy_or_fetch "${rel}" "${CHINNA}/${rel}"
+        done < <(find "${REPO_ROOT}/dashboard/assets" -maxdepth 1 -type f -print0)
+    else
+        for asset in dashboard.css dashboard.js chinna-favicon.svg chinna-icon.svg chinna-logo.svg; do
+            copy_or_fetch "dashboard/assets/${asset}" "${CHINNA}/dashboard/assets/${asset}" 2>/dev/null || true
+        done
+    fi
     echo "    ✓ dashboard updated"
 }
 
