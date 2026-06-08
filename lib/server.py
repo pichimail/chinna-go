@@ -1540,6 +1540,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             })
         elif p == '/api/version':
             self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6'})
+        elif p.startswith('/api/ext/key'):
+            self.ext_get_apikey(q)
         elif p == '/api/artifacts':
             self.serve_artifacts_list()
         elif p.startswith('/api/artifact/') and p.endswith('/preview'):
@@ -1708,6 +1710,12 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.handle_project_action(q, b)
         elif p == '/api/plugins/action':
             self.plugin_action(b)
+        elif p == '/api/ext/music':
+            self.ext_music(b)
+        elif p == '/api/ext/generate-music':
+            self.ext_generate_music(b)
+        elif p == '/api/ext/shell':
+            self.ext_shell(b)
         elif p == '/api/agent':
             self.serve_agent(b)
         elif p == '/api/shell':
@@ -3177,6 +3185,71 @@ def exec_shell_direct(self, b):
     self._json({"result": result, "lang": lang})
 # ── END AGENT CODE ───────────────────────────────────────────────────────────
 
+
+# ── EXTENSION SUPPORT ENDPOINTS ──────────────────────────────────────────────
+def ext_get_apikey(self, q):
+    """GET /api/ext/key?name=KIE_API_KEY — return a single key for extension use."""
+    name = q.get('name', '') if isinstance(q, dict) else ''
+    keys = load_keys()
+    # Music gen key aliases
+    aliases = {
+        'ACCOUSTICA_API_KEY': ['ACCOUSTICA_API_KEY','KIE_AI_API_KEY','KIE_API_KEY'],
+        'KIE_API_KEY': ['KIE_API_KEY','KIE_AI_API_KEY','ACCOUSTICA_API_KEY'],
+        'KIE_AI_API_KEY': ['KIE_AI_API_KEY','KIE_API_KEY','ACCOUSTICA_API_KEY'],
+    }
+    val = ''
+    for cand in aliases.get(name, [name]):
+        if keys.get(cand):
+            val = keys[cand]; break
+    self._json({'name': name, 'value': val, 'present': bool(val)})
+
+def ext_music(self, b):
+    """POST /api/ext/music — control Apple Music from extension."""
+    action = b.get('action', 'playpause')
+    result = self.music_control(action) if hasattr(self, 'music_control') else {'ok': False}
+    self._json(result if isinstance(result, dict) else {'ok': True, 'result': str(result)})
+
+def ext_generate_music(self, b):
+    """POST /api/ext/generate-music — generate music via KIE/Accoustica API."""
+    import urllib.request
+    keys = load_keys()
+    api_key = keys.get('ACCOUSTICA_API_KEY') or keys.get('KIE_AI_API_KEY') or keys.get('KIE_API_KEY') or ''
+    if not api_key:
+        self._json({'error': 'No music API key. Set ACCOUSTICA_API_KEY (or KIE_API_KEY) in Settings.'}, 400); return
+    prompt = b.get('prompt', '')
+    if not prompt:
+        self._json({'error': 'No prompt'}, 400); return
+    try:
+        payload = json.dumps({
+            'prompt': prompt,
+            'customMode': b.get('customMode', False),
+            'instrumental': b.get('instrumental', False),
+            'model': b.get('model', 'V4'),
+        }).encode()
+        req = urllib.request.Request(
+            'https://api.kie.ai/api/v1/generate',
+            data=payload,
+            headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {api_key}'}
+        )
+        resp = urllib.request.urlopen(req, timeout=30)
+        self._json(json.loads(resp.read()))
+    except Exception as e:
+        self._json({'error': str(e)}, 500)
+
+def ext_shell(self, b):
+    """POST /api/ext/shell — run terminal command from extension (same as /api/shell)."""
+    if hasattr(self, 'exec_shell_direct'):
+        self.exec_shell_direct(b); return
+    lang = b.get('lang', 'bash'); code = b.get('code', '')
+    if not code: self._json({'error': 'no code'}, 400); return
+    try:
+        r = subprocess.run(code, shell=True, capture_output=True, text=True, timeout=60, executable='/bin/bash')
+        out = (r.stdout or '').strip(); err = (r.stderr or '').strip()
+        self._json({'result': out + (('\nstderr: ' + err) if err else ''), 'lang': lang})
+    except Exception as e:
+        self._json({'error': str(e)}, 500)
+# ── END EXTENSION SUPPORT ────────────────────────────────────────────────────
+
     def job_purge(self, jid):
         job_log(jid, "Requesting RAM purge (may prompt for sudo in your terminal)...")
         sh("sudo purge 2>/dev/null", 30)
@@ -3214,6 +3287,10 @@ def exec_shell_direct(self, b):
 
 
 # ── Bind agent methods onto handler class ────────────────────────────────────
+H.ext_get_apikey = ext_get_apikey
+H.ext_music = ext_music
+H.ext_generate_music = ext_generate_music
+H.ext_shell = ext_shell
 H.serve_agent = serve_agent
 H.serve_artifacts_list = serve_artifacts_list
 H.serve_artifact_content = serve_artifact_content

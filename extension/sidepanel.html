@@ -2,77 +2,152 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chinna Assistant</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Chinna</title>
 <link rel="stylesheet" href="sidepanel.css">
 </head>
 <body>
 <div id="app">
   <!-- Header -->
-  <header class="hdr">
-    <div class="hdr-l">
-      <div class="logo">◆</div>
-      <div class="hdr-title">Chinna</div>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">C</span>
+      <span class="brand-name">CHINNA</span>
+      <span class="conn-dot" id="connDot" title="Backend status"></span>
     </div>
-    <div class="hdr-r">
-      <button class="ic-btn" id="menuBtn" title="Tools">
-        <svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="newChatBtn" title="New chat (⌘⇧O)">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       </button>
+      <div class="menu-wrap">
+        <button class="icon-btn" id="menuBtn" title="Menu">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+        </button>
+        <div class="menu" id="menu">
+          <div class="menu-item" data-act="new"><span class="mi-ic">✎</span> New chat</div>
+          <div class="menu-item" data-act="history"><span class="mi-ic">⏱</span> Chat history</div>
+          <div class="menu-sep"></div>
+          <div class="menu-label">Context</div>
+          <div class="menu-item" data-act="this-tab"><span class="mi-ic">◰</span> This tab only</div>
+          <div class="menu-item" data-act="all-tabs"><span class="mi-ic">◳</span> All open tabs</div>
+          <div class="menu-item" data-act="select-tabs"><span class="mi-ic">☰</span> Pick tabs…</div>
+          <div class="menu-sep"></div>
+          <div class="menu-label">Tools</div>
+          <div class="menu-item" data-act="terminal"><span class="mi-ic">▷_</span> Terminal</div>
+          <div class="menu-item" data-act="music"><span class="mi-ic">♪</span> Music control</div>
+          <div class="menu-item" data-act="generate-music"><span class="mi-ic">✧</span> Generate music</div>
+          <div class="menu-item" data-act="autofill"><span class="mi-ic">⌨</span> Fill this form</div>
+          <div class="menu-item" data-act="screenshot"><span class="mi-ic">⛶</span> Screenshot</div>
+          <div class="menu-item" data-act="clone"><span class="mi-ic">⧉</span> Clone page</div>
+          <div class="menu-sep"></div>
+          <div class="menu-item" data-act="settings"><span class="mi-ic">⚙</span> Open dashboard</div>
+        </div>
+      </div>
     </div>
   </header>
 
-  <!-- Tool tray (toggled by menu) -->
-  <div class="tray" id="tray" hidden>
-    <button class="tool" data-act="screenshot" title="Screenshot tab">
-      <svg viewBox="0 0 24 24" class="ic"><path d="M3 7h3l2-2h8l2 2h3v12H3z"/><circle cx="12" cy="13" r="3.2"/></svg>
-      <span>Shot</span>
-    </button>
-    <button class="tool" data-act="record" title="Record screen">
-      <svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="12" r="6"/></svg>
-      <span>Record</span>
-    </button>
-    <button class="tool" data-act="summarize" title="Summarize tab">
-      <svg viewBox="0 0 24 24" class="ic"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-      <span>Summary</span>
-    </button>
-    <button class="tool" data-act="scrape" title="Scrape data">
-      <svg viewBox="0 0 24 24" class="ic"><path d="M4 5h16v4H4zM4 11h16v8H4z"/><path d="M8 15h8"/></svg>
-      <span>Scrape</span>
-    </button>
-    <button class="tool" data-act="clone" title="Clone page to single HTML">
-      <svg viewBox="0 0 24 24" class="ic"><path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4"/></svg>
-      <span>Clone</span>
-    </button>
-    <button class="tool" data-act="links" title="Extract links">
-      <svg viewBox="0 0 24 24" class="ic"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg>
-      <span>Links</span>
-    </button>
+  <!-- Context chip bar -->
+  <div class="context-bar" id="contextBar">
+    <span class="ctx-chip" id="ctxChip"><span class="ctx-ic">◰</span> <span id="ctxLabel">This tab</span></span>
+    <span class="ctx-tab-title" id="ctxTabTitle"></span>
   </div>
 
-  <!-- Tab context strip -->
-  <div class="ctx" id="ctx">
-    <span class="ctx-dot"></span>
-    <span class="ctx-title" id="ctxTitle">Reading current tab…</span>
+  <!-- Music mini-player (hidden until used) -->
+  <div class="music-player" id="musicPlayer" style="display:none">
+    <div class="mp-art" id="mpArt">♪</div>
+    <div class="mp-info">
+      <div class="mp-title" id="mpTitle">Not playing</div>
+      <div class="mp-artist" id="mpArtist">—</div>
+    </div>
+    <div class="mp-controls">
+      <button class="mp-btn" data-music="previous">⏮</button>
+      <button class="mp-btn mp-play" data-music="playpause" id="mpPlayBtn">⏯</button>
+      <button class="mp-btn" data-music="next">⏭</button>
+    </div>
   </div>
-
-  <!-- Suggestions (auto-switch per tab, max 3) -->
-  <div class="suggs" id="suggs"></div>
 
   <!-- Messages -->
-  <div class="msgs" id="msgs">
-    <div class="welcome">
-      <div class="welcome-icon">◆</div>
-      <div class="welcome-title">Ask about this tab</div>
-      <div class="welcome-sub">Summarize, scrape, clone, or just chat. I watch the page you're on.</div>
+  <div class="messages" id="messages">
+    <div class="welcome" id="welcome">
+      <div class="welcome-mark">C</div>
+      <div class="welcome-title">Chinna Companion</div>
+      <div class="welcome-sub">Your Mac + browser, one AI. Ask about this page, run terminal commands, control music, autofill forms.</div>
+      <div class="suggest-grid">
+        <button class="suggest" data-prompt="Summarize this page in 5 bullet points">⊹ Summarize page</button>
+        <button class="suggest" data-prompt="Extract all links and key data from this page">⛓ Extract data</button>
+        <button class="suggest" data-act="terminal-quick">▷_ Run a command</button>
+        <button class="suggest" data-act="music-quick">♪ Play my music</button>
+        <button class="suggest" data-act="autofill">⌨ Fill this form</button>
+        <button class="suggest" data-act="generate-music">✧ Generate a song</button>
+      </div>
     </div>
+  </div>
+
+  <!-- Terminal panel (slide-up) -->
+  <div class="panel terminal-panel" id="terminalPanel">
+    <div class="panel-head">
+      <span class="panel-title">▷_ Terminal</span>
+      <button class="icon-btn sm" data-close="terminalPanel">✕</button>
+    </div>
+    <div class="term-out" id="termOut"></div>
+    <div class="term-input-row">
+      <span class="term-prompt">$</span>
+      <input type="text" id="termInput" placeholder="echo hello" autocomplete="off" spellcheck="false">
+      <button class="run-btn" id="termRun">Run</button>
+    </div>
+  </div>
+
+  <!-- Generate music panel -->
+  <div class="panel music-gen-panel" id="musicGenPanel">
+    <div class="panel-head">
+      <span class="panel-title">✧ Generate Music</span>
+      <button class="icon-btn sm" data-close="musicGenPanel">✕</button>
+    </div>
+    <div class="panel-body">
+      <textarea id="musicPrompt" placeholder="A dreamy lo-fi beat with Telugu vocals, 90 BPM…" rows="3"></textarea>
+      <div class="mg-opts">
+        <label class="mg-check"><input type="checkbox" id="mgInstrumental"> Instrumental</label>
+        <select id="mgModel"><option value="V4">V4</option><option value="V3_5">V3.5</option></select>
+      </div>
+      <button class="run-btn full" id="mgGenerate">Generate</button>
+      <div class="mg-status" id="mgStatus"></div>
+    </div>
+  </div>
+
+  <!-- History panel -->
+  <div class="panel history-panel" id="historyPanel">
+    <div class="panel-head">
+      <span class="panel-title">⏱ Chat History</span>
+      <button class="icon-btn sm" data-close="historyPanel">✕</button>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <!-- Tab picker panel -->
+  <div class="panel tabs-panel" id="tabsPanel">
+    <div class="panel-head">
+      <span class="panel-title">☰ Pick tabs for context</span>
+      <button class="icon-btn sm" data-close="tabsPanel">✕</button>
+    </div>
+    <div class="tabs-list" id="tabsList"></div>
+    <button class="run-btn full" id="tabsApply">Use selected tabs</button>
   </div>
 
   <!-- Composer -->
   <div class="composer">
-    <textarea id="input" rows="1" placeholder="Ask anything about this page…"></textarea>
-    <button class="send" id="sendBtn" title="Send">
-      <svg viewBox="0 0 24 24" class="ic"><path d="M4 12l16-8-6 8 6 8z"/></svg>
-    </button>
+    <div class="composer-tools">
+      <button class="tool-chip" data-act="terminal" title="Terminal">▷_</button>
+      <button class="tool-chip" data-act="music" title="Music">♪</button>
+      <button class="tool-chip" data-act="screenshot" title="Screenshot">⛶</button>
+      <button class="tool-chip" data-act="autofill" title="Autofill form">⌨</button>
+      <button class="tool-chip" data-act="clone" title="Clone page">⧉</button>
+    </div>
+    <div class="input-row">
+      <textarea id="input" placeholder="Ask anything about this page…" rows="1"></textarea>
+      <button class="send-btn" id="sendBtn">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
   </div>
 </div>
 <script src="sidepanel.js"></script>
