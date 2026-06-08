@@ -27,6 +27,7 @@ let deepCleanVolume = null;
 let deepCleanForce = false;
 let chinnaPlugins = [];
 let deepCleanForceRequired = new Set();
+let keyStatus = { chinna_ai_set: false, openai_set: false };
 let agentFiles = []; // Agent file uploads {name, mime, size, data}
 let aiFiles = []; // AI chat file uploads {name, mime, size, data}
 let chatxIdentity = null;
@@ -70,6 +71,20 @@ function applyTheme(theme, persist=true){
   document.querySelectorAll('#themes button').forEach(b=>b.classList.toggle('on',b.dataset.t===safe));
   if(persist) localStorage.setItem(THEME_KEY, safe);
   setVoiceButton();
+  updateThemeToggle();
+}
+
+function updateThemeToggle(){
+  const btn = $('themeToggle');
+  if(!btn) return;
+  const dark = document.documentElement.dataset.theme === 'obsidian';
+  btn.textContent = dark ? '☀' : '◐';
+  btn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+}
+
+function toggleDashboardTheme(){
+  const dark = document.documentElement.dataset.theme === 'obsidian';
+  applyTheme(dark ? 'solaris' : 'obsidian');
 }
 
 function showLaunchSplash(){
@@ -81,7 +96,7 @@ function showLaunchSplash(){
 
 function completeMacOnboarding(){
   localStorage.setItem(ONBOARDING_KEY, '1');
-  go('macos');
+  go('overview');
 }
 
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;$('toasts').appendChild(t);setTimeout(()=>t.remove(),3500);}
@@ -615,6 +630,7 @@ function go(v){
   if(v==='whatsapp'){ waInit(); }
   if(v==='plugins'){ loadPlugins(); }
   if(v==='settings'){ loadTelegramStatus(); loadKeySettings(); }
+  if(v==='onboarding'){ loadKeySettings(); }
   if(v==='projects') loadProjectsView();
   if(location.hash !== '#'+v) history.replaceState(null,'','#'+v);
 }
@@ -669,6 +685,30 @@ function renderGauges(s){
 function renderOvInfo(s){
   const i=[['Host',s.os?.hostname||'—'],['Uptime',s.uptime||'—'],['Chip',(s.os?.chip||'—').replace('Apple ','')],['IP',s.network?.ip||'—']];
   $('ov-info').innerHTML=i.map(([k,v])=>`<div class="infocard"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  renderOverviewWidgets(s);
+}
+function renderOverviewWidgets(s){
+  const deck = $('overview-widget-deck');
+  if(!deck) return;
+  const cpu = s.cpu?.pct || 0;
+  const ram = s.memory?.pct || 0;
+  const disk = s.disk?.pct || 0;
+  const batt = s.battery?.pct || 0;
+  const aiReady = keyStatus.chinna_ai_set || keyStatus.openai_set;
+  deck.innerHTML = [
+    ['Neural Core', aiReady ? 'Online' : 'Needs key', aiReady ? 'Agent, chat, extension ready' : 'Add OpenRouter or OpenAI', aiReady ? 'var(--green)' : 'var(--amber)', 'go("settings")'],
+    ['Thermals', cpu + '%', `${s.cpu?.cores||0} cores active`, color(cpu), 'go("processes")'],
+    ['Memory Field', ram + '%', `${s.memory?.used||0}/${s.memory?.total||0} GB`, color(ram), 'confirmAction("purge")'],
+    ['Storage Mass', disk + '%', `${s.disk?.free||'?'} free`, color(disk), 'go("storage")'],
+    ['Power Cell', batt + '%', s.battery?.charging ? 'charging' : 'on battery', color(100-batt), 'go("battery")']
+  ].map(([name,value,meta,accent,action])=>`
+    <button type="button" class="liquid-widget" onclick="${action}" style="--widget-accent:${accent}">
+      <span class="lw-orbit"></span>
+      <span class="lw-name">${name}</span>
+      <span class="lw-value">${value}</span>
+      <span class="lw-meta">${meta}</span>
+    </button>
+  `).join('');
 }
 function renderProc(s){
   $('proc-list').innerHTML=(s.processes||[]).map(p=>`<div class="row"><div class="fic">⚙</div><div class="info"><div class="nm">${(p.name.split('/').pop())}</div><div class="mt">PID ${p.pid} · CPU ${p.cpu.toFixed(1)}%</div></div><div class="sz" style="color:${color(p.mem)}">${p.mem.toFixed(1)}%</div><div class="acts"><button type="button" class="miniA danger" onclick="confirmKill(${p.pid},'${(p.name.split('/').pop()).replace(/'/g,'')}')">Kill</button></div></div>`).join('');
@@ -1312,12 +1352,20 @@ function storUp(){if(storStack.length>1){storStack.pop();loadStorage(storStack[s
 /* AI */
 async function loadAIStatus(){
   const k=await api('get_keys');
-  $('ai-status').textContent=k.chinna_ai_set?'Connected · ready':'No API key — add one in Settings';
+  keyStatus = { chinna_ai_set: !!k.chinna_ai_set, openai_set: !!k.openai_set };
+  $('ai-status').textContent=(k.chinna_ai_set||k.openai_set)?'Connected · ready':'No API key — add one in Settings';
   setVoiceButton();
 }
 async function loadKeySettings(){
   const k = await api('get_keys').catch(()=>null);
   if(!k) return;
+  keyStatus = { chinna_ai_set: !!k.chinna_ai_set, openai_set: !!k.openai_set };
+  const statusText = k.chinna_ai_set && k.openai_set ? 'OpenRouter and OpenAI are saved.' :
+    k.chinna_ai_set ? 'OpenRouter is saved. Chinna AI, Agent, and extension are ready.' :
+    k.openai_set ? 'OpenAI is saved. Chinna AI, Agent, and extension are ready.' :
+    'No AI key saved yet. Add OpenRouter or OpenAI to activate Chinna AI, Agent, artifacts, and the extension.';
+  if($('settings-ai-status')) $('settings-ai-status').textContent = statusText;
+  if($('onboard-ai-status')) $('onboard-ai-status').textContent = statusText;
   if($('set-turn-enabled')) $('set-turn-enabled').checked = !!k.turn_enabled;
   if($('set-turn-urls')) $('set-turn-urls').value = k.turn_urls || '';
   if($('set-turn-user')) $('set-turn-user').value = k.turn_username || '';
@@ -2817,6 +2865,28 @@ async function installSwiftBarQuickActions(){
   toast('SwiftBar quick actions installed');
 }
 
+async function installBrowserExtension(){
+  const btn=$('install-extension-btn');
+  const note=$('extension-install-note') || $('install-app-note');
+  if(btn){
+    btn.disabled=true;
+    btn.textContent='Opening Chrome installer...';
+  }
+  if(note) note.textContent='Preparing the Chinna extension folder and opening Chrome extensions...';
+  const d = await api('install-extension',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>({error:'failed'}));
+  if(btn){
+    btn.disabled=false;
+    btn.textContent=d.error ? 'Install browser companion' : 'Reopen extension installer';
+  }
+  if(d.error){
+    if(note) note.textContent='Extension install failed. Check that the extension folder exists and Chrome is installed.';
+    toast('Extension install failed: '+d.error);
+    return;
+  }
+  if(note) note.textContent=d.result || 'Chrome opened. Enable Developer Mode, click Load unpacked, and select the opened Chinna extension folder.';
+  toast('Chrome extension folder ready');
+}
+
 function showSources(row,sources){
   if(!sources || !sources.length) return;
   const box=document.createElement('div');
@@ -3102,8 +3172,8 @@ async function reAttachPreviousFile(fileId, fileName, mime){
 /* keys */
 async function saveKeys(){
   const b={};
-  if($('set-or').value)b.chinna_ai_key=$('set-or').value;
-  if($('set-oa').value)b.openai_key=$('set-oa').value;
+  if($('set-or')?.value)b.chinna_ai_key=$('set-or').value;
+  if($('set-oa')?.value)b.openai_key=$('set-oa').value;
   b.turn_enabled = !!$('set-turn-enabled')?.checked;
   b.turn_urls = $('set-turn-urls')?.value?.trim?.() || '';
   b.turn_username = $('set-turn-user')?.value?.trim?.() || '';
@@ -3115,8 +3185,28 @@ async function saveKeys(){
   $('set-oa').value='';
   if($('turn-test-status')) $('turn-test-status').textContent = 'Settings saved. Run TURN test.';
   await loadKeySettings().catch(()=>{});
+  await loadAIStatus().catch(()=>{});
   await chatxLoadRtcConfig().catch(()=>{});
   if(chatxIdentity) await chatxPublishInvite().catch(()=>{});
+}
+async function saveOnboardingKeys(){
+  const b={};
+  const orKey = $('onboard-or')?.value?.trim() || '';
+  const oaKey = $('onboard-oa')?.value?.trim() || '';
+  if(orKey) b.chinna_ai_key = orKey;
+  if(oaKey) b.openai_key = oaKey;
+  if(!b.chinna_ai_key && !b.openai_key){
+    toast('Add OpenRouter or OpenAI key first');
+    return;
+  }
+  const d=await api('save_keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  if($('onboard-or')) $('onboard-or').value='';
+  if($('onboard-oa')) $('onboard-oa').value='';
+  localStorage.setItem(ONBOARDING_KEY, '1');
+  toast(d.result||'AI keys saved');
+  await loadKeySettings().catch(()=>{});
+  await loadAIStatus().catch(()=>{});
+  go('agent');
 }
 async function saveTelegramToken(){
   const token=$('tg-token').value.trim();
@@ -3551,6 +3641,7 @@ function initV6(){
   const initial=(window.location.hash||'').replace('#','');
   if(initial && $('view-'+initial)) window.setTimeout(()=>go(initial), 250);
   else window.setTimeout(()=>{ if(firstRun) go('onboarding'); }, 1150);
+  loadKeySettings().catch(()=>{});
   loadModels();
 }
 function dismissV6(){
@@ -4132,6 +4223,8 @@ let agentEventSource = null;
 let agentArtifacts = [];
 let agentPreviewingId = null;
 let agentCurrentPlan = '';
+let agentArtifactView = 'code';
+let agentPreviewHealthy = true;
 
 function agentSetMode(mode) {
   agentMode = mode;
@@ -4206,7 +4299,10 @@ function agentAddArtifact(meta) {
   if (count) count.textContent = agentArtifacts.length;
   agentRenderArtifactList();
   agentOpenArtifactsPanel();
-  if (meta.preview) agentShowPreview(meta.id, meta.name);
+  if (meta.preview) {
+    agentSetArtifactView('preview');
+    agentShowPreview(meta.id, meta.name);
+  }
 }
 
 function agentRenderArtifactList() {
@@ -4241,11 +4337,48 @@ function agentShowPreview(id, name) {
   const wrap = document.getElementById('agentPreviewWrap');
   const frame = document.getElementById('agentPreviewFrame');
   const label = document.getElementById('agentPreviewLabel');
+  const state = document.getElementById('agentPreviewState');
   if (!wrap || !frame) return;
   if (label) label.textContent = name || 'Preview';
+  if (state) state.textContent = 'Loading preview...';
+  agentPreviewHealthy = true;
+  const repairBtn = document.getElementById('agentRepairBtn');
+  if (repairBtn) repairBtn.style.display = 'none';
+  frame.onload = () => {
+    if (state) state.textContent = 'Preview ready';
+  };
+  frame.onerror = () => agentPreviewFailed('Preview failed to load');
   frame.src = `/api/artifact/${id}/preview`;
   wrap.style.display = 'flex';
   agentOpenArtifactsPanel();
+}
+function agentPreviewFailed(message) {
+  agentPreviewHealthy = false;
+  const state = document.getElementById('agentPreviewState');
+  const repairBtn = document.getElementById('agentRepairBtn');
+  if (state) state.textContent = message || 'Preview issue';
+  if (repairBtn) repairBtn.style.display = '';
+}
+function agentSetArtifactView(view){
+  agentArtifactView = view === 'preview' ? 'preview' : 'code';
+  const codeBtn = document.getElementById('agentCodeToggle');
+  const previewBtn = document.getElementById('agentPreviewToggle');
+  if(codeBtn) codeBtn.classList.toggle('active', agentArtifactView === 'code');
+  if(previewBtn) previewBtn.classList.toggle('active', agentArtifactView === 'preview');
+  const wrap = document.getElementById('agentPreviewWrap');
+  const list = document.getElementById('agentArtifactList');
+  if(list) list.style.display = agentArtifactView === 'code' ? '' : 'none';
+  if(wrap && agentArtifactView === 'preview' && agentPreviewingId) wrap.style.display = 'flex';
+  if(wrap && agentArtifactView === 'code') wrap.style.display = 'none';
+}
+async function agentRepairPreview(){
+  const current = agentArtifacts.find(a=>a.id===agentPreviewingId) || agentArtifacts[agentArtifacts.length-1];
+  const name = current?.name || 'the latest artifact';
+  const inp = document.getElementById('agentInput');
+  if(inp){
+    inp.value = `The preview for ${name} did not render successfully. Inspect the artifact, fix any HTML/CSS/JavaScript errors, recreate the artifact, and show the preview again.`;
+    agentSend();
+  }
 }
 function agentClosePreview() {
   const wrap = document.getElementById('agentPreviewWrap');
@@ -4253,6 +4386,8 @@ function agentClosePreview() {
   if (wrap) wrap.style.display = 'none';
   if (frame) frame.src = 'about:blank';
   agentPreviewingId = null;
+  const state = document.getElementById('agentPreviewState');
+  if (state) state.textContent = 'No preview';
 }
 function agentOpenPreviewFull() {
   if (agentPreviewingId) window.open(`/api/artifact/${agentPreviewingId}/preview`,'_blank');

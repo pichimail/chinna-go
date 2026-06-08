@@ -1780,6 +1780,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.install_dashboard_app()
         elif p == '/api/install-swiftbar':
             self._json(self.install_swiftbar_quick_actions())
+        elif p == '/api/install-extension':
+            self._json(self.prepare_browser_extension())
         else:
             self._json({'error': f'unknown {p}'}, 404)
 
@@ -2001,6 +2003,30 @@ fi
                 'plugin_path': plugin_path,
                 'swiftbar_app': swiftbar_exists,
                 'result': 'SwiftBar quick actions installed'
+            }
+        except Exception as e:
+            return {'error': safe_text(str(e))}
+
+    def prepare_browser_extension(self):
+        try:
+            src_candidates = [
+                os.path.join(REPO_ROOT, 'extension'),
+                os.path.join(CHINNA_HOME, 'extension'),
+            ]
+            src = next((x for x in src_candidates if os.path.exists(os.path.join(x, 'manifest.json'))), '')
+            if not src:
+                return {'error': 'Chinna extension source not found'}
+            dest = os.path.join(CHINNA_HOME, 'extension')
+            if os.path.abspath(src) != os.path.abspath(dest):
+                if os.path.exists(dest):
+                    shutil.rmtree(dest)
+                shutil.copytree(src, dest, ignore=shutil.ignore_patterns('dist'))
+            subprocess.run(['open', dest], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(['open', '-a', 'Google Chrome', 'chrome://extensions'], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return {
+                'ok': True,
+                'extension_path': dest,
+                'result': 'Extension folder ready. In Chrome, enable Developer Mode, choose Load unpacked, then select this folder.'
             }
         except Exception as e:
             return {'error': safe_text(str(e))}
@@ -3279,6 +3305,41 @@ def _execute_tool(tool: str, content: str, session_state: dict) -> str:
 def _sse_event(data: dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
 
+def _agent_model_call(keys: dict, messages: list, model: str):
+    import urllib.request
+
+    if keys.get("OPENROUTER_API_KEY"):
+        endpoint = "https://openrouter.ai/api/v1/chat/completions"
+        api_key = keys["OPENROUTER_API_KEY"]
+        chosen_model = model or "meta-llama/llama-3.3-70b-instruct:free"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": "http://localhost:7777",
+            "X-Title": "Chinna Dashboard",
+        }
+    elif keys.get("OPENAI_API_KEY"):
+        endpoint = "https://api.openai.com/v1/chat/completions"
+        api_key = keys["OPENAI_API_KEY"]
+        chosen_model = model if str(model).startswith(("gpt-", "o1", "o3", "o4")) else "gpt-4o-mini"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+    else:
+        raise RuntimeError("No API key configured")
+
+    payload = json.dumps({
+        "model": chosen_model,
+        "messages": messages,
+        "max_tokens": 4000,
+        "stream": False,
+    }).encode()
+    req = urllib.request.Request(endpoint, data=payload, headers=headers)
+    resp = urllib.request.urlopen(req, timeout=90)
+    d = json.loads(resp.read())
+    return d.get("choices", [{}])[0].get("message", {}).get("content", ""), chosen_model
+
 async def _run_agent_loop(message: str, history: list, mode: str, model: str, keys: dict):
     """Core async generator that yields SSE events."""
     import asyncio
@@ -3306,25 +3367,8 @@ async def _run_agent_loop(message: str, history: list, mode: str, model: str, ke
         session_state["round"] = round_num
         yield _sse_event({"type":"round_start","round":round_num})
 
-        # Call AI
-        payload = json.dumps({
-            "model": model,
-            "messages": messages,
-            "max_tokens": 4000,
-            "stream": False,
-        }).encode()
-
         try:
-            req = urllib.request.Request(
-                "https://openrouter.ai/api/v1/chat/completions",
-                data=payload,
-                headers={"Content-Type":"application/json",
-                         "Authorization":f"Bearer {api_key}",
-                         "HTTP-Referer":"http://localhost:7777"}
-            )
-            resp = urllib.request.urlopen(req, timeout=90)
-            d = json.loads(resp.read())
-            ai_text = d.get("choices",[{}])[0].get("message",{}).get("content","")
+            ai_text, model = _agent_model_call(keys, messages, model)
         except Exception as e:
             yield _sse_event({"type":"error","content":f"AI call failed: {e}"})
             return

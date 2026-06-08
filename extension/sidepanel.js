@@ -110,7 +110,7 @@ function updateCtxBar() {
   getActiveTab().then(t => { if (t) $('#ctxTabTitle').textContent = t.title || ''; });
 }
 
-// ── AI chat (routes through local dashboard's /api/ai) ────────────────
+// ── AI chat (routes through local dashboard's /api/chat) ──────────────
 async function sendMessage(text) {
   if (!text.trim()) return;
   addMsg('user', text);
@@ -129,7 +129,7 @@ async function sendMessage(text) {
     // Try local dashboard AI first
     let reply = '';
     try {
-      const r = await api('/api/ai', { method: 'POST', body: JSON.stringify(payload) });
+      const r = await api('/api/chat', { method: 'POST', body: JSON.stringify({ ...payload, system: context }) });
       reply = r.reply || r.response || r.text || JSON.stringify(r);
     } catch {
       // Fallback: direct call instructions
@@ -288,7 +288,7 @@ async function autofillForm() {
     const prompt = `Fill these form fields with realistic sample values. Return ONLY JSON {fieldName: value}. Fields: ${JSON.stringify(fields)}`;
     let values = {};
     try {
-      const r = await api('/api/ai', { method: 'POST', body: JSON.stringify({ message: prompt }) });
+      const r = await api('/api/chat', { method: 'POST', body: JSON.stringify({ message: prompt }) });
       const txt = (r.reply || r.response || '').replace(/```json|```/g, '').trim();
       values = JSON.parse(txt);
     } catch {
@@ -306,6 +306,26 @@ async function autofillForm() {
 // ── Panels ─────────────────────────────────────────────────────────────
 function openPanel(id) { $$('.panel').forEach(p => p.classList.remove('open')); $('#' + id).classList.add('open'); }
 function closePanel(id) { $('#' + id).classList.remove('open'); }
+
+async function runBrowserAutomation(action, value = '') {
+  const out = $('#browserOut');
+  const tab = await getActiveTab();
+  if (out) out.textContent = 'Running...';
+  try {
+    const res = await chrome.tabs.sendMessage(tab.id, {
+      type: 'BROWSER_AUTOMATION',
+      action,
+      value,
+    });
+    const text = res?.summary || res?.result || JSON.stringify(res || {});
+    if (out) out.textContent = text;
+    if (action === 'extract') addMsg('ai', text);
+    else toast(text);
+  } catch (e) {
+    if (out) out.textContent = 'Automation failed. Reload the page and try again.';
+    toast('Automation failed');
+  }
+}
 
 async function openTabsPicker() {
   const tabs = await chrome.tabs.query({ currentWindow: true });
@@ -342,6 +362,7 @@ function handleAction(act) {
     case 'music': case 'music-quick': musicControl('playpause'); break;
     case 'generate-music': openPanel('musicGenPanel'); break;
     case 'autofill': autofillForm(); break;
+    case 'browser-tools': openPanel('browserPanel'); break;
     case 'screenshot': screenshot(); break;
     case 'clone': clonePage(); break;
     case 'settings': chrome.tabs.create({ url: API }); break;
@@ -392,6 +413,12 @@ document.addEventListener('DOMContentLoaded', () => {
     state.selectedTabIds = [...$$('#tabsList input:checked')].map(i => parseInt(i.value));
     state.contextMode = 'selected';
     updateCtxBar(); closePanel('tabsPanel');
+  });
+
+  $$('[data-browser-act]').forEach(b => b.addEventListener('click', () => runBrowserAutomation(b.dataset.browserAct)));
+  $('#browserClickRun').addEventListener('click', () => {
+    const value = $('#browserClickText').value.trim();
+    if (value) runBrowserAutomation(/^\d+$/.test(value) ? 'click-index' : 'click-text', value);
   });
 
   // Listen for new-chat command from background

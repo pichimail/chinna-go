@@ -37,6 +37,7 @@
           <div class="menu-item" data-act="music"><span class="mi-ic">♪</span> Music control</div>
           <div class="menu-item" data-act="generate-music"><span class="mi-ic">✧</span> Generate music</div>
           <div class="menu-item" data-act="autofill"><span class="mi-ic">⌨</span> Fill this form</div>
+          <div class="menu-item" data-act="browser-tools"><span class="mi-ic">◫</span> Browser automation</div>
           <div class="menu-item" data-act="screenshot"><span class="mi-ic">⛶</span> Screenshot</div>
           <div class="menu-item" data-act="clone"><span class="mi-ic">⧉</span> Clone page</div>
           <div class="menu-sep"></div>
@@ -78,6 +79,7 @@
         <button class="suggest" data-act="terminal-quick">▷_ Run a command</button>
         <button class="suggest" data-act="music-quick">♪ Play my music</button>
         <button class="suggest" data-act="autofill">⌨ Fill this form</button>
+        <button class="suggest" data-act="browser-tools">◫ Control browser</button>
         <button class="suggest" data-act="generate-music">✧ Generate a song</button>
       </div>
     </div>
@@ -133,6 +135,27 @@
     <button class="run-btn full" id="tabsApply">Use selected tabs</button>
   </div>
 
+  <!-- Browser automation panel -->
+  <div class="panel browser-panel" id="browserPanel">
+    <div class="panel-head">
+      <span class="panel-title">◫ Browser Automation</span>
+      <button class="icon-btn sm" data-close="browserPanel">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="automation-grid">
+        <button class="run-btn" data-browser-act="highlight">Highlight click targets</button>
+        <button class="run-btn" data-browser-act="extract">Extract page data</button>
+        <button class="run-btn" data-browser-act="scroll-down">Scroll down</button>
+        <button class="run-btn" data-browser-act="scroll-top">Scroll top</button>
+      </div>
+      <div class="click-row">
+        <input type="text" id="browserClickText" placeholder="Button/link text or target number">
+        <button class="run-btn" id="browserClickRun">Click</button>
+      </div>
+      <div class="automation-out" id="browserOut">Ready.</div>
+    </div>
+  </div>
+
   <!-- Composer -->
   <div class="composer">
     <div class="composer-tools">
@@ -140,6 +163,7 @@
       <button class="tool-chip" data-act="music" title="Music">♪</button>
       <button class="tool-chip" data-act="screenshot" title="Screenshot">⛶</button>
       <button class="tool-chip" data-act="autofill" title="Autofill form">⌨</button>
+      <button class="tool-chip" data-act="browser-tools" title="Browser automation">◫</button>
       <button class="tool-chip" data-act="clone" title="Clone page">⧉</button>
     </div>
     <div class="input-row">

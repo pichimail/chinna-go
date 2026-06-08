@@ -12,6 +12,7 @@
     <div class="sidebar-logo">
       <div class="logo-mark">C</div>
       <div><div class="logo-text">CHINNA <span class="logo-ver">V6.5</span></div></div>
+      <button id="themeToggle" class="theme-toggle" type="button" onclick="toggleDashboardTheme()" title="Toggle light / dark mode">◐</button>
       <button id="sidebarToggle" class="sidebar-toggle" title="Toggle sidebar">⇐</button>
     </div>
     <div id="sidebarResize"></div>
@@ -61,6 +62,11 @@
       <button class="mode-btn" data-mode="plan" onclick="agentSetMode('plan')" title="Plan — generate plan first">Plan</button>
     </div>
     <button class="bigbtn ghost smallbtn" onclick="agentClearHistory()" title="New session">↺ New</button>
+    <div class="agent-view-toggle" role="group" aria-label="Artifact view">
+      <button class="mode-btn active" id="agentCodeToggle" type="button" onclick="agentSetArtifactView('code')" title="Show code">Code</button>
+      <button class="mode-btn" id="agentPreviewToggle" type="button" onclick="agentSetArtifactView('preview')" title="Show preview">Preview</button>
+    </div>
+    <button class="bigbtn danger smallbtn" id="agentRepairBtn" type="button" onclick="agentRepairPreview()" style="display:none">Resolve preview issue</button>
   </div>
 
   <!-- Plan checklist (slides down when in plan mode) -->
@@ -128,6 +134,7 @@
         <div style="padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-shrink:0">
           <span style="font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t3)">Artifacts</span>
           <span id="agentArtifactCount" style="font-size:10px;font-weight:700;padding:2px 7px;background:var(--acc-bg);color:var(--acc);border-radius:99px;border:1px solid var(--acc-bd)">0</span>
+          <span id="agentPreviewState" class="agent-preview-state">No preview</span>
           <div class="spacer"></div>
           <button class="bigbtn ghost smallbtn" onclick="agentCloseArtifacts()" style="padding:3px 8px">✕</button>
         </div>
@@ -152,6 +159,7 @@
 </div>
 <div class="view on" id="view-overview"><div class="vhead"><h2>Overview</h2></div>
         <div class="vbody">
+          <div class="widget-deck" id="overview-widget-deck"></div>
           <div class="gauges" id="gauges"></div>
           <div class="infogrid" id="ov-info"></div>
 
@@ -545,103 +553,74 @@
 <div class="view" id="view-onboarding"><div class="vhead"><h2>Welcome to Chinna on Mac</h2></div>
         <div class="vbody">
           <div class="onboard-shell">
-            <div class="onboard-hero glass">
+            <div class="onboard-hero">
               <div class="onboard-top">
                 <img class="launch-mark" src="/assets/chinna-icon.svg" alt="Chinna">
                 <div>
-                  <div class="onboard-title">A Mac app feel from the first launch</div>
-                  <div class="onboard-sub">Pick the macOS theme, install the native app wrapper, and add SwiftBar quick actions in one pass.</div>
+                  <div class="onboard-title">Connect Chinna AI first</div>
+                  <div class="onboard-sub">Add OpenRouter or OpenAI once. The dashboard, agent, artifacts, voice fallback, and browser companion all read the same saved keys dynamically.</div>
                 </div>
               </div>
 
-              <div class="onboard-grid">
-                <div class="onboard-step">
-                  <div class="onboard-step-num">1</div>
-                  <div class="onboard-step-title">Install Chinna.app</div>
-                  <div class="onboard-step-copy">Create the branded app bundle in Applications for Dock, Spotlight, and native-style launching.</div>
-                </div>
-                <div class="onboard-step">
-                  <div class="onboard-step-num">2</div>
-                  <div class="onboard-step-title">Add SwiftBar actions</div>
-                  <div class="onboard-step-copy">Put Purge, Clean, Update, and dashboard actions in the menu bar near the notch.</div>
-                </div>
-                <div class="onboard-step">
-                  <div class="onboard-step-num">3</div>
-                  <div class="onboard-step-title">Use the macOS theme</div>
-                  <div class="onboard-step-copy">Switch to the glassy macOS look for the dashboard, built for a lighter and more native feel.</div>
-                </div>
-                <div class="onboard-step">
-                  <div class="onboard-step-num">4</div>
-                  <div class="onboard-step-title">Continue to tools</div>
-                  <div class="onboard-step-copy">Open macOS Tools, then move into the rest of the dashboard once setup is complete.</div>
-                </div>
+              <div class="setup-grid">
+                <label class="setup-field"><span>OpenRouter API key</span><input id="onboard-or" class="field" type="password" autocomplete="new-password" placeholder="sk-or-v1-..."></label>
+                <label class="setup-field"><span>OpenAI API key</span><input id="onboard-oa" class="field" type="password" autocomplete="new-password" placeholder="sk-..."></label>
+                <div class="setup-status" id="onboard-ai-status">Checking AI key status...</div>
               </div>
 
               <div class="onboard-actions">
-                <button type="button" class="bigbtn solid" onclick="installMacApp()">Install Chinna.app</button>
+                <button type="button" class="bigbtn solid" onclick="saveOnboardingKeys()">Save AI keys</button>
+                <button type="button" class="bigbtn" onclick="installBrowserExtension()">Install browser companion</button>
+                <button type="button" class="bigbtn" onclick="installMacApp()">Install Chinna.app</button>
                 <button type="button" class="bigbtn" onclick="installSwiftBarQuickActions()">Install SwiftBar quick actions</button>
-                <button type="button" class="bigbtn ghost" onclick="applyTheme('macos')">Use macOS theme</button>
                 <button type="button" class="bigbtn ghost" onclick="completeMacOnboarding()">Skip to dashboard</button>
               </div>
             </div>
 
-            <div class="onboard-side glass">
-              <div class="side-title">What you get</div>
+            <div class="onboard-side">
+              <div class="side-title">Setup path</div>
               <div class="side-list">
-                <div>• Real Chinna.app wrapper with branded icon</div>
-                <div>• Menu-bar quick actions for the notch / SwiftBar</div>
-                <div>• macOS theme that stays selected for this device</div>
-                <div>• One-click launch path for new users</div>
+                <div><span>1</span> Save an AI key</div>
+                <div><span>2</span> Install the Chrome companion</div>
+                <div><span>3</span> Install the Mac app wrapper</div>
+                <div><span>4</span> Start building artifacts in Agent</div>
               </div>
-              <div class="side-callout">
-                First-time users should start here. Existing users can skip directly into the tools.
-              </div>
+              <div class="side-callout" id="extension-install-note">Chrome requires one manual confirmation: enable Developer Mode, click Load unpacked, then select the Chinna extension folder that opens.</div>
             </div>
           </div>
         </div></div>
 <div class="view" id="view-settings"><div class="vhead"><h2>Settings</h2></div>
-        <div class="vbody" style="max-width:520px">
-          <div class="navlabel" style="margin-left:0">OpenRouter key — Chinna AI</div>
-          <input class="field" id="set-or" type="password" autocomplete="new-password" placeholder="sk-or-v1-…">
-          <div class="navlabel" style="margin-left:0">OpenAI key — optional (Whisper/GPT)</div>
-          <input class="field" id="set-oa" type="password" autocomplete="new-password" placeholder="sk-…">
-          <div class="navlabel" style="margin-left:0">WebRTC TURN fallback (optional)</div>
-          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);margin-top:6px">
-            <input id="set-turn-enabled" type="checkbox" style="accent-color:var(--acc)">
-            Enable TURN fallback for stricter networks
-          </label>
-          <input class="field" id="set-turn-urls" placeholder="turn:turn.example.com:3478?transport=udp, turns:turn.example.com:5349?transport=tcp">
-          <input class="field" id="set-turn-user" placeholder="TURN username (optional)">
-          <input class="field" id="set-turn-cred" type="password" autocomplete="new-password" placeholder="TURN credential (optional)">
-          <div class="navlabel" style="margin-left:0">Secure Chat relay URL (optional)</div>
-          <input class="field" id="set-chat-relay" placeholder="http://localhost:7777 or https://your-public-relay.example">
-          <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-            <button type="button" class="bigbtn ghost smallbtn" id="turn-gen-btn" onclick="generateTurnCredentials()">Generate TURN Credentials</button>
-            <button type="button" class="bigbtn ghost smallbtn" id="turn-test-btn" onclick="testTurnConnectivity()">Test TURN Relay</button>
-            <div id="turn-test-status" style="font-size:11px;color:var(--t3)">No TURN test yet.</div>
-          </div>
-          <button type="button" class="bigbtn solid" style="margin-top:16px" onclick="saveKeys()">Save Keys</button>
-          <div class="installappcard">
-            <div class="installapphead">
-              <img class="installappicon" src="/assets/chinna-icon.svg" alt="Chinna icon">
-              <div>
-                <div class="installapptitle">Install Chinna.app</div>
-                <div class="installappsub">Create a proper Mac app in your Applications folder with the Chinna icon, Dock presence, Spotlight launch, and a clean one-click entry point for first-time users.</div>
-              </div>
+        <div class="vbody settings-page">
+          <section class="settings-section">
+            <div class="section-head"><div><h3>AI keys</h3><p id="settings-ai-status">Checking key status...</p></div><button type="button" class="bigbtn solid" onclick="saveKeys()">Save keys</button></div>
+            <div class="settings-grid">
+              <label class="setup-field"><span>OpenRouter</span><input class="field" id="set-or" type="password" autocomplete="new-password" placeholder="sk-or-v1-..."></label>
+              <label class="setup-field"><span>OpenAI</span><input class="field" id="set-oa" type="password" autocomplete="new-password" placeholder="sk-..."></label>
             </div>
-            <div class="installappmeta">
-              <span class="chip">One click</span>
-              <span class="chip">Applications</span>
-              <span class="chip">Dock + Spotlight</span>
-              <span class="chip">SwiftBar-ready</span>
-            </div>
-            <div class="installappactions">
+          </section>
+          <section class="settings-section">
+            <div class="section-head"><div><h3>Installers</h3><p id="install-app-note">Install the Mac wrapper, browser companion, and menu-bar actions.</p></div></div>
+            <div class="install-row">
               <button type="button" class="bigbtn solid" id="install-app-btn" onclick="installMacApp()">Install Chinna.app</button>
+              <button type="button" class="bigbtn" id="install-extension-btn" onclick="installBrowserExtension()">Install browser companion</button>
               <button type="button" class="bigbtn" id="install-swiftbar-btn" onclick="installSwiftBarQuickActions()">Install SwiftBar quick actions</button>
-              <button type="button" class="bigbtn ghost smallbtn" onclick="window.open(location.origin,'_blank')">Open in Browser</button>
+              <button type="button" class="bigbtn ghost smallbtn" onclick="window.open(location.origin,'_blank')">Open dashboard tab</button>
             </div>
-            <div class="installappfine" id="install-app-note">Best for initial users who want Chinna to behave like a regular Mac app from day one.</div>
-          </div>
+          </section>
+          <section class="settings-section">
+            <div class="section-head"><div><h3>Secure chat relay</h3><p id="turn-test-status">No TURN test yet.</p></div></div>
+            <label class="toggle-row"><input id="set-turn-enabled" type="checkbox"> Enable TURN fallback for stricter networks</label>
+            <div class="settings-grid">
+              <input class="field" id="set-turn-urls" placeholder="turn:turn.example.com:3478?transport=udp">
+              <input class="field" id="set-turn-user" placeholder="TURN username">
+              <input class="field" id="set-turn-cred" type="password" autocomplete="new-password" placeholder="TURN credential">
+              <input class="field" id="set-chat-relay" placeholder="Secure Chat relay URL">
+            </div>
+            <div class="install-row">
+              <button type="button" class="bigbtn ghost smallbtn" id="turn-gen-btn" onclick="generateTurnCredentials()">Generate TURN credentials</button>
+              <button type="button" class="bigbtn ghost smallbtn" id="turn-test-btn" onclick="testTurnConnectivity()">Test TURN relay</button>
+            </div>
+          </section>
           <div class="panelgrid">
             <div class="paircard">
               <h4>Telegram Pairing</h4>

@@ -1043,7 +1043,7 @@ cmd_audit() {
     local report="$audit_dir/audit-$timestamp.txt"
 
     {
-        echo "CHINNA V5 AUDIT REPORT"
+        echo "CHINNA V6 AUDIT REPORT"
         echo "Generated: $(date)"
         echo "Path: $(pwd)"
         echo "Stack: $(detect_stack .)"
@@ -1245,6 +1245,76 @@ cmd_app() {
 # ═══════════════════════════════════════════════════════════════
 # COMMAND: uninstall
 # ═══════════════════════════════════════════════════════════════
+remove_chinna_path() {
+    local target="$1"
+    [ -e "$target" ] || [ -L "$target" ] || return 0
+    rm -rf "$target" 2>/dev/null || sudo rm -rf "$target" 2>/dev/null || true
+}
+
+remove_chinna_glob() {
+    local pattern="$1"
+    local match
+    while IFS= read -r match; do
+        [ -n "$match" ] || continue
+        remove_chinna_path "$match"
+    done < <(compgen -G "$pattern" 2>/dev/null || true)
+}
+
+remove_zsh_chinna_block() {
+    local zshrc="$HOME/.zshrc"
+    [ -f "$zshrc" ] || return 0
+    python3 - "$zshrc" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+lines = path.read_text().splitlines(True)
+start = '# ── Chinna V6 ──────────────────────────────────────────'
+block_len = 6  # marker + PATH/CHINNA_HOME/env/models/alias
+out = []
+i = 0
+changed = False
+while i < len(lines):
+    if lines[i].startswith(start):
+        changed = True
+        if out and out[-1].strip() == '':
+            out.pop()
+        i += block_len
+        continue
+    out.append(lines[i])
+    i += 1
+
+if changed:
+    path.write_text(''.join(out))
+PY
+}
+
+stop_chinna_services() {
+    launchctl unload "$HOME/Library/LaunchAgents/com.chinna.daemon.plist" 2>/dev/null || true
+    [ -f "$CHINNA_HOME/dashboard.pid" ] && kill "$(cat "$CHINNA_HOME/dashboard.pid" 2>/dev/null)" 2>/dev/null || true
+    [ -f "$CHINNA_HOME/chinna.pid" ] && kill "$(cat "$CHINNA_HOME/chinna.pid" 2>/dev/null)" 2>/dev/null || true
+    pkill -f "$CHINNA_HOME/dashboard_server.py" 2>/dev/null || true
+    pkill -f "$CHINNA_HOME/whatsapp_bridge/server.js" 2>/dev/null || true
+    rm -f "$HOME/Library/LaunchAgents/com.chinna.daemon.plist"
+    rm -f "$CHINNA_HOME/dashboard.pid" "$CHINNA_HOME/chinna.pid" 2>/dev/null || true
+}
+
+cleanup_chinna_installation_traces() {
+    remove_chinna_path "$HOME/.local/bin/chinna"
+    remove_chinna_path "/usr/local/bin/chinna"
+    remove_chinna_path "/opt/homebrew/bin/chinna"
+    remove_chinna_path "$HOME/Applications/Chinna.app"
+    remove_chinna_path "/Applications/Chinna.app"
+    remove_chinna_path "$HOME/Library/Application Support/SwiftBar/Plugins/chinna.1m.sh"
+    remove_chinna_glob "$HOME/Library/Application Support/SwiftBar/Plugins/chinna*"
+    remove_chinna_glob "$HOME/Library/Preferences/com.chinna*"
+    remove_chinna_glob "$HOME/Library/Saved Application State/com.chinna*"
+    remove_chinna_glob "$HOME/Library/Caches/com.chinna*"
+    remove_chinna_glob "$HOME/Library/Logs/com.chinna*"
+    remove_chinna_glob "$HOME/Library/Logs/Chinna*"
+    remove_zsh_chinna_block
+}
+
 cmd_uninstall() {
     banner
     echo -e "   ${BOLD}${R}🗑️  UNINSTALL${RESET}"; echo ""
@@ -1253,17 +1323,15 @@ cmd_uninstall() {
         --purge|--full|-f) purge=1 ;;
     esac
 
-    launchctl unload "$HOME/Library/LaunchAgents/com.chinna.daemon.plist" 2>/dev/null || true
-    rm -f "$HOME/Library/LaunchAgents/com.chinna.daemon.plist"
-    rm -f "$CHINNA_HOME/dashboard.pid" "$CHINNA_HOME/chinna.pid" 2>/dev/null || true
-
     if [ "$purge" -eq 1 ]; then
-        warn "This will delete the entire Chinna home, caches, configs, and API keys."
+        warn "This will delete the entire Chinna home, caches, configs, API keys, shell setup, and app traces."
         echo -ne "   ${Y}Type 'purge' to confirm:${RESET} "
         read -r yn
         if [ "$yn" = "purge" ]; then
+            stop_chinna_services
+            cleanup_chinna_installation_traces
+            remove_chinna_glob "$HOME/.zshrc.backup.*"
             rm -rf "$CHINNA_HOME"
-            sudo rm -f /usr/local/bin/chinna /opt/homebrew/bin/chinna 2>/dev/null || true
             ok "Chinna fully removed from this Mac"
         else
             info "Cancelled"
@@ -1271,12 +1339,14 @@ cmd_uninstall() {
         return 0
     fi
 
-    warn "This removes the app code but keeps your config, API keys, and user data."
+    warn "This removes the app code and command but keeps your config, API keys, and user data."
     echo -ne "   ${Y}Type 'yes' to confirm:${RESET} "
     read -r yn
     if [ "$yn" = "yes" ]; then
+        stop_chinna_services
+        cleanup_chinna_installation_traces
         rm -rf "$CHINNA_HOME/bin" "$CHINNA_HOME/lib" "$CHINNA_HOME/dashboard" "$CHINNA_HOME/install" "$CHINNA_HOME/dashboard_server.py"
-        sudo rm -f /usr/local/bin/chinna /opt/homebrew/bin/chinna 2>/dev/null || true
+        rm -f "$HOME/.local/bin/chinna" 2>/dev/null || true
         ok "Chinna removed. Your data and keys were preserved."
     else
         info "Cancelled"

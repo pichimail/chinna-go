@@ -111,6 +111,11 @@ input,textarea{font-family:var(--font);color-scheme:dark}
 .tab-item .ti-fav{width:16px;height:16px;border-radius:3px;flex-shrink:0}
 .tab-item .ti-title{flex:1;min-width:0;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tabs-panel .run-btn{margin:8px 14px 12px}
+.automation-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.click-row{display:flex;gap:7px;margin-top:9px}
+#browserClickText{flex:1;background:var(--s1);border:1px solid var(--line2);border-radius:var(--r-sm);padding:8px 10px;color:var(--t1);font-size:12px;outline:none}
+#browserClickText:focus{border-color:var(--acc)}
+.automation-out{margin-top:10px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px;font-family:var(--mono);font-size:11px;color:var(--t2);line-height:1.55;white-space:pre-wrap;max-height:170px;overflow:auto}
 
 /* Composer */
 .composer{flex-shrink:0;border-top:1px solid var(--line);background:var(--s0);padding:10px 12px}
