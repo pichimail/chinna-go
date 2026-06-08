@@ -2596,8 +2596,13 @@ fi
 
     def check_update(self):
         try:
-            with urllib.request.urlopen(f"https://raw.githubusercontent.com/pichimail/chinna-go/main/VERSION", timeout=5) as resp:
-                latest = resp.read().decode().strip()
+            req = urllib.request.Request(
+                f"https://api.github.com/repos/pichimail/chinna-go/contents/VERSION?ref=main",
+                headers={'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'chinna-go'}
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                payload = json.load(resp)
+            latest = base64.b64decode(payload.get('content', '')).decode().strip()
             if not latest:
                 latest = CHINNA_VERSION
             snoozed_until = self._update_snooze_until()
