@@ -4,7 +4,7 @@ Chinna is a local Mac sidekick for cleanup, system checks, disk exploration, AI 
 
 ## One-Touch Install
 
-Copy and paste this into Terminal on macOS to install or replace any older Chinna version with V5:
+Copy and paste this into Terminal on macOS to install or replace any older Chinna version with V6:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
@@ -18,7 +18,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/ins
 
 What it does:
 - Installs the latest Chinna V6 app files
-- Replaces older installed Chinna code with V5
+- Replaces older installed Chinna code with V6
 - Sets up the local command in your shell path
 - Keeps your user data and API keys separate from app code
 
@@ -31,7 +31,7 @@ curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/in
 ```
 
 This will:
-- Replace the old app code with V5
+- Replace the old app code with V6
 - Preserve your local data, config, and API keys
 - Refresh the command so `chinna` points to the new version
 
@@ -97,10 +97,18 @@ Remove the app code but keep your local data and keys:
 chinna uninstall
 ```
 
-Remove everything from the Mac, including Chinna home, caches, and keys:
+This removes the CLI shim, launch agent, macOS app bundle, SwiftBar quick-action plugin, and Chinna app code, but it keeps your config and API keys in `~/.chinna`.
+
+Remove everything from the Mac, including Chinna home, caches, keys, shell setup, and leftover app traces:
 
 ```bash
 chinna uninstall --purge
+```
+
+After a successful purge, opening a new Terminal tab and running `chinna` should return:
+
+```bash
+zsh: command not found: chinna
 ```
 
 ## Troubleshooting

@@ -1,7 +1,9 @@
+
 .env.local
-.DS_Store
-*.log
+*.env
+lib/server_v4.py
+install/chinna_v5.py
 __pycache__/
 *.pyc
-.chinna/
-extension/dist/*.zip
+.DS_Store
+node_modules/

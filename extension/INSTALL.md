@@ -1,23 +1,25 @@
-# Chinna Tab Assistant — Chrome Extension
+# Chinna Companion — Chrome Extension v2.0
 
-A conversational AI in your browser side panel that watches the current tab.
+A tab-aware AI sidebar that connects to your local Chinna-Go dashboard.
 
-## One-click install (macOS)
-Run this in Terminal:
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/extension/install-extension.sh)
-```
-It copies the extension to `~/.chinna/extension`, opens `chrome://extensions`, and reveals the folder. Then just:
-1. Toggle **Developer mode** (top-right)
-2. Click **Load unpacked**
-3. Select the folder that opened in Finder
-4. Pin the ◆ icon and click it (or press ⌘⇧K)
+## Features
+- **AI chat** about the current tab, all tabs, or hand-picked tabs
+- **Terminal** — run any shell command on your Mac (via Chinna-Go)
+- **Mac music control** — play/pause/next/prev Apple Music from the sidebar
+- **AI music generation** — uses ACCOUSTICA_API_KEY / KIE_API_KEY from your dashboard Settings
+- **Form autofill** — AI fills any form on the page
+- **Screenshot & page clone** — capture or save the current page
+- **Chat history** — all conversations saved locally
+- **New chat** — pen icon or ⌘⇧O
+- **Context menu** — right-click any selection → "Ask Chinna"
 
-## What it does
-- **Chat** about the page you're viewing (tab-aware)
-- **2–3 smart suggestions** that auto-switch when you change tabs
-- **Summarize / Scrape / Links** the current page
-- **Screenshot** the tab, **Record** the screen
-- **Clone** any page into one responsive HTML file (images inlined, CSS bundled, hover & transitions kept) — one-click download
+## Install (developer mode)
+1. Start your dashboard: `chinna dashboard` (must be running on :7777)
+2. Open `chrome://extensions`
+3. Enable **Developer mode** (top-right)
+4. Click **Load unpacked** → select this `extension/` folder
+5. Pin the Chinna icon, click it (or ⌘⇧K) to open the sidebar
 
-Needs the Chinna dashboard running (`chinna dashboard`) for AI chat — it reuses your model + key.
+## Keyboard shortcuts
+- `⌘⇧K` — open Chinna sidebar
+- `⌘⇧O` — new chat

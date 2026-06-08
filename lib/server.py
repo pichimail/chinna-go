@@ -1328,9 +1328,12 @@ TOOLS.append({
     }
 })
 
-def execute_tool(name, args):
+def execute_tool(name, args, session_state=None):
     """Execute a tool safely. Returns (result_text, is_long_job)."""
+    session_state = session_state or {}
     try:
+        if session_state.get("sandbox") and name in {"kill_process", "trash_path", "reveal_in_finder", "purge_ram", "deep_clean", "mac_control"}:
+            return "Blocked in sandbox build mode. Switch out of Build for system actions.", False
         if name == "get_system_status":
             with cache_lock:
                 s = dict(stats_cache)
@@ -1359,7 +1362,10 @@ def execute_tool(name, args):
             q = args.get("query", "").strip()
             lim = int(args.get("limit", 12))
             if not q: return "[]", False
-            out = sh(f"find ~ -maxdepth 7 -iname '*{q}*' -not -path '*/.Trash/*' -not -path '*/node_modules/*' 2>/dev/null | head -{lim}", 8)
+            search_root = HOME
+            if session_state.get("sandbox"):
+                search_root = ensure_agent_sandbox(session_state)["repo"]
+            out = sh(f"find {shq(search_root)} -maxdepth 7 -iname '*{q}*' -not -path '*/.Trash/*' -not -path '*/node_modules/*' 2>/dev/null | head -{lim}", 8)
             hits = [x for x in out.splitlines() if x.strip()]
             return json.dumps(hits), False
 
@@ -1388,12 +1394,24 @@ def execute_tool(name, args):
             return json.dumps({"job_id": jid, "status": "started"}), False
 
         elif name == "get_disk_usage":
-            target = os.path.expanduser(args.get("path") or HOME)
+            target = args.get("path") or (ensure_agent_sandbox(session_state)["repo"] if session_state.get("sandbox") else HOME)
+            if session_state.get("sandbox"):
+                target, err = _sandbox_resolve_path(session_state, target, must_exist=False)
+                if not target:
+                    return err, False
+            else:
+                target = os.path.expanduser(target)
             data = storage_breakdown(target, limit=10, offset=0)
             return json.dumps(data), False
 
         elif name == "read_file_snippet":
-            p = os.path.expanduser(args.get("path", ""))
+            p = args.get("path", "")
+            if session_state.get("sandbox"):
+                p, err = _sandbox_resolve_path(session_state, p, must_exist=True)
+                if not p:
+                    return err, False
+            else:
+                p = os.path.expanduser(p)
             maxl = int(args.get("max_lines", 30))
             if not os.path.exists(p): return "File not found", False
             return file_snippet(p, max_lines=maxl) or "(empty or binary)", False
@@ -1404,7 +1422,19 @@ def execute_tool(name, args):
                 return "No command provided", False
             if not is_safe_terminal_command(cmd):
                 return "Command blocked for safety. Only read-only / informational commands are allowed.", False
-            out = sh(cmd, timeout=18)
+            if session_state.get("sandbox") and not _sandbox_command_is_local(cmd):
+                return "Blocked in sandbox build mode. Use relative paths inside the sandbox workspace.", False
+            if session_state.get("sandbox"):
+                script = os.path.join(ensure_agent_sandbox(session_state)["tmp"], "terminal.sh")
+                with open(script, "w", encoding="utf-8") as f:
+                    f.write(cmd + "\n")
+                try:
+                    os.chmod(script, 0o755)
+                except Exception:
+                    pass
+                out = _run_in_sandbox(session_state, ["/bin/bash", script], timeout=18)
+            else:
+                out = sh(cmd, timeout=18)
             return out[:1800] or "(no output)", False
 
         elif name == "save_to_memory":
@@ -1540,6 +1570,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             })
         elif p == '/api/version':
             self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6'})
+        elif p.startswith('/api/ext/key'):
+            self.ext_get_apikey(q)
         elif p == '/api/artifacts':
             self.serve_artifacts_list()
         elif p.startswith('/api/artifact/') and p.endswith('/preview'):
@@ -1708,6 +1740,12 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.handle_project_action(q, b)
         elif p == '/api/plugins/action':
             self.plugin_action(b)
+        elif p == '/api/ext/music':
+            self.ext_music(b)
+        elif p == '/api/ext/generate-music':
+            self.ext_generate_music(b)
+        elif p == '/api/ext/shell':
+            self.ext_shell(b)
         elif p == '/api/agent':
             self.serve_agent(b)
         elif p == '/api/shell':
@@ -1742,6 +1780,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.install_dashboard_app()
         elif p == '/api/install-swiftbar':
             self._json(self.install_swiftbar_quick_actions())
+        elif p == '/api/install-extension':
+            self._json(self.prepare_browser_extension())
         else:
             self._json({'error': f'unknown {p}'}, 404)
 
@@ -1963,6 +2003,30 @@ fi
                 'plugin_path': plugin_path,
                 'swiftbar_app': swiftbar_exists,
                 'result': 'SwiftBar quick actions installed'
+            }
+        except Exception as e:
+            return {'error': safe_text(str(e))}
+
+    def prepare_browser_extension(self):
+        try:
+            src_candidates = [
+                os.path.join(REPO_ROOT, 'extension'),
+                os.path.join(CHINNA_HOME, 'extension'),
+            ]
+            src = next((x for x in src_candidates if os.path.exists(os.path.join(x, 'manifest.json'))), '')
+            if not src:
+                return {'error': 'Chinna extension source not found'}
+            dest = os.path.join(CHINNA_HOME, 'extension')
+            if os.path.abspath(src) != os.path.abspath(dest):
+                if os.path.exists(dest):
+                    shutil.rmtree(dest)
+                shutil.copytree(src, dest, ignore=shutil.ignore_patterns('dist'))
+            subprocess.run(['open', dest], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(['open', '-a', 'Google Chrome', 'chrome://extensions'], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return {
+                'ok': True,
+                'extension_path': dest,
+                'result': 'Extension folder ready. In Chrome, enable Developer Mode, choose Load unpacked, then select this folder.'
             }
         except Exception as e:
             return {'error': safe_text(str(e))}
@@ -2243,7 +2307,7 @@ fi
                         except:
                             args = {}
 
-                        result_text, is_long = execute_tool(name, args)
+                        result_text, is_long = execute_tool(name, args, session_state)
                         tool_traces.append({"tool": name, "args": args, "result": result_text[:800]})
 
                         # Feed result back as a tool message
@@ -2792,6 +2856,10 @@ from http.server import BaseHTTPRequestHandler
 
 ARTIFACTS_DIR = os.path.join(CHINNA_HOME, "artifacts")
 os.makedirs(ARTIFACTS_DIR, exist_ok=True)
+SANDBOX_ROOT = os.path.join(CHINNA_HOME, "sandboxes")
+os.makedirs(SANDBOX_ROOT, exist_ok=True)
+SANDBOX_EXEC_AVAILABLE = None
+SANDBOX_LAST_CLEANUP = 0
 
 AGENT_TOOLS = {
     "bash": "Run a shell command on this Mac (macOS-native: osascript, brew, xcode-select…)",
@@ -2808,6 +2876,219 @@ AGENT_TOOLS = {
 PLAN_MODE_TOOLS = {"ask_user", "update_plan"}  # read-only in plan mode
 MAX_AGENT_ROUNDS = 12
 AGENT_TIMEOUT_SECS = 60
+
+def _sandbox_session_id():
+    return hashlib.md5(f"{time.time()}-{secrets.token_hex(6)}".encode()).hexdigest()[:12]
+
+def _sandbox_session_paths(session_state: dict):
+    sid = session_state.get("sandbox_id")
+    if not sid:
+        sid = _sandbox_session_id()
+        session_state["sandbox_id"] = sid
+    root = os.path.join(SANDBOX_ROOT, sid)
+    repo_root = os.path.join(root, "repo")
+    tmp_dir = os.path.join(root, "tmp")
+    cache_dir = os.path.join(root, "cache")
+    return {"id": sid, "root": root, "repo": repo_root, "tmp": tmp_dir, "cache": cache_dir}
+
+def _seed_sandbox_repo(repo_root: str):
+    if os.path.exists(repo_root) and os.path.isdir(repo_root) and os.listdir(repo_root):
+        return
+    os.makedirs(repo_root, exist_ok=True)
+    ignore_names = {
+        ".git", ".DS_Store", "__pycache__", ".pytest_cache", ".mypy_cache",
+        "node_modules", ".venv", "dist", "build", ".next", ".turbo"
+    }
+
+    def _ignore(_, names):
+        return [n for n in names if n in ignore_names or n.endswith(".pyc")]
+
+    for name in os.listdir(REPO_ROOT):
+        if name in ignore_names:
+            continue
+        src = os.path.join(REPO_ROOT, name)
+        dst = os.path.join(repo_root, name)
+        try:
+            if os.path.isdir(src):
+                shutil.copytree(src, dst, ignore=_ignore, dirs_exist_ok=True)
+            else:
+                shutil.copy2(src, dst)
+        except Exception:
+            pass
+
+def cleanup_old_sandboxes(max_age_hours=48):
+    global SANDBOX_LAST_CLEANUP
+    now = time.time()
+    if now - SANDBOX_LAST_CLEANUP < 3600:
+        return
+    SANDBOX_LAST_CLEANUP = now
+    cutoff = now - max_age_hours * 3600
+    try:
+        for name in os.listdir(SANDBOX_ROOT):
+            path = os.path.join(SANDBOX_ROOT, name)
+            try:
+                if not os.path.isdir(path):
+                    continue
+                mtime = os.path.getmtime(path)
+                if mtime < cutoff:
+                    shutil.rmtree(path, ignore_errors=True)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+def ensure_agent_sandbox(session_state: dict):
+    cleanup_old_sandboxes()
+    paths = _sandbox_session_paths(session_state)
+    if not session_state.get("sandbox_ready"):
+        os.makedirs(paths["root"], exist_ok=True)
+        os.makedirs(paths["tmp"], exist_ok=True)
+        os.makedirs(paths["cache"], exist_ok=True)
+        _seed_sandbox_repo(paths["repo"])
+        session_state["sandbox_ready"] = True
+        session_state["sandbox_repo"] = paths["repo"]
+        session_state["sandbox_tmp"] = paths["tmp"]
+        session_state["sandbox_cache"] = paths["cache"]
+    return paths
+
+def _sandbox_profile():
+    return """
+(version 1)
+(deny default)
+(debug deny)
+(allow process-exec)
+(allow process-fork)
+(allow signal (target self))
+(allow file-read*
+    (subpath "/bin")
+    (subpath "/usr")
+    (subpath "/System")
+    (subpath "/Library")
+    (subpath "/private/etc")
+    (subpath "/etc")
+    (subpath "/dev")
+    (subpath "/private/var/db/dyld")
+    (subpath "/private/var/folders"))
+(allow file-write*
+    (subpath (param "workspace_dir"))
+    (subpath (param "sandbox_tmp_dir"))
+    (subpath (param "sandbox_cache_dir"))
+    (mount-relative-regex #"^/\\.TemporaryItems(/|$)"))
+(allow file-ioctl)
+(allow file-fsctl)
+(allow sysctl*)
+(if (defined? 'system-socket)
+    (deny system-socket))
+""".strip()
+
+def sandbox_exec_available():
+    global SANDBOX_EXEC_AVAILABLE
+    if SANDBOX_EXEC_AVAILABLE is not None:
+        return SANDBOX_EXEC_AVAILABLE
+    try:
+        with _tempfile.TemporaryDirectory(prefix="chinna-sb-check-") as tmp:
+            repo = os.path.join(tmp, "repo")
+            work = os.path.join(repo, "workspace")
+            temp = os.path.join(tmp, "tmp")
+            cache = os.path.join(tmp, "cache")
+            os.makedirs(work, exist_ok=True)
+            os.makedirs(temp, exist_ok=True)
+            os.makedirs(cache, exist_ok=True)
+            script = os.path.join(temp, "check.py")
+            with open(script, "w", encoding="utf-8") as f:
+                f.write("print('ok')\n")
+            proc = subprocess.run([
+                "sandbox-exec",
+                "-D", f"workspace_dir={work}",
+                "-D", f"sandbox_tmp_dir={temp}",
+                "-D", f"sandbox_cache_dir={cache}",
+                "-p", _sandbox_profile(),
+                "/usr/bin/python3",
+                script,
+            ], capture_output=True, text=True, timeout=10)
+            SANDBOX_EXEC_AVAILABLE = proc.returncode == 0 and proc.stdout.strip() == "ok"
+    except Exception:
+        SANDBOX_EXEC_AVAILABLE = False
+    return SANDBOX_EXEC_AVAILABLE
+
+def _sandbox_env(session_state: dict):
+    paths = ensure_agent_sandbox(session_state)
+    return {
+        "HOME": paths["repo"],
+        "TMPDIR": paths["tmp"],
+        "TMP": paths["tmp"],
+        "TEMP": paths["tmp"],
+        "PWD": paths["repo"],
+        "USER": os.environ.get("USER", "chinna"),
+        "LOGNAME": os.environ.get("LOGNAME", "chinna"),
+        "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
+        "LANG": os.environ.get("LANG", "en_US.UTF-8"),
+        "LC_ALL": os.environ.get("LC_ALL", "en_US.UTF-8"),
+        "CHINNA_HOME": CHINNA_HOME,
+        "CHINNA_SANDBOX_ROOT": paths["root"],
+        "CHINNA_SANDBOX_REPO": paths["repo"],
+    }
+
+def _sandbox_resolve_path(session_state: dict, path: str, must_exist=False, for_write=False):
+    paths = ensure_agent_sandbox(session_state)
+    repo_root = os.path.abspath(paths["repo"])
+    raw = safe_text(path or "")
+    if not raw:
+        return None, "path required"
+    if raw == "~":
+        raw = ""
+    elif raw.startswith("~/"):
+        raw = raw[2:]
+    candidate = os.path.abspath(os.path.join(repo_root, raw)) if not os.path.isabs(raw) else os.path.abspath(os.path.expanduser(raw))
+    if candidate != repo_root and not candidate.startswith(repo_root + os.sep):
+        return None, "Sandbox path blocked. Use files inside the sandbox workspace only."
+    if must_exist and not os.path.exists(candidate):
+        return None, "Path not found in sandbox workspace"
+    if for_write:
+        os.makedirs(os.path.dirname(candidate) or repo_root, exist_ok=True)
+    return candidate, ""
+
+def _run_in_sandbox(session_state: dict, argv, cwd=None, timeout=AGENT_TIMEOUT_SECS, input_text=None):
+    paths = ensure_agent_sandbox(session_state)
+    env = _sandbox_env(session_state)
+    workdir = cwd or paths["repo"]
+    cmd = list(argv)
+    if sandbox_exec_available():
+        cmd = [
+            "sandbox-exec",
+            "-D", f"workspace_dir={paths['repo']}",
+            "-D", f"sandbox_tmp_dir={paths['tmp']}",
+            "-D", f"sandbox_cache_dir={paths['cache']}",
+            "-p", _sandbox_profile(),
+        ] + list(argv)
+    proc = subprocess.run(
+        cmd,
+        cwd=workdir,
+        env=env,
+        input=input_text,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+    out = (proc.stdout or "").strip()
+    err = (proc.stderr or "").strip()
+    if err and not out:
+        return f"stderr: {err[:3000]}"
+    if err:
+        return f"{out[:2000]}\nstderr: {err[:1000]}".strip()
+    return out[:4000] or "(no output)"
+
+def _sandbox_command_is_local(cmd: str) -> bool:
+    cmd = safe_text(cmd)
+    lowered = cmd.lower()
+    if "~" in cmd or "$home" in lowered or "${home}" in lowered:
+        return False
+    tokens = re.findall(r'''(?:[^\s"']+|"[^"]*"|'[^']*')+''', cmd)
+    for token in tokens:
+        token = token.strip("'\"")
+        if token.startswith("/"):
+            return False
+    return True
 
 def _agent_system_prompt(mode: str, model_name: str = "") -> str:
     tools_block = "\n".join(f"- **`{name}`** — {desc}" for name, desc in AGENT_TOOLS.items())
@@ -2850,7 +3131,9 @@ You may use ask_user to clarify what the user wants before committing to an appr
         base += """
 
 **BUILD MODE ACTIVE** — Full tool access. Be decisive and take action.
-Do not ask for clarification on small details — use your best judgment and iterate."""
+All code execution and file writes happen inside a private sandbox copy of the repo.
+Use relative paths inside that sandbox workspace whenever possible.
+Do not touch the user's live filesystem unless the task explicitly requires it."""
 
     return base
 
@@ -2930,24 +3213,59 @@ def _parse_create_artifact(content: str) -> dict:
 
 def _execute_tool(tool: str, content: str, session_state: dict) -> str:
     """Execute a single tool block and return string result."""
+    sandbox_mode = bool(session_state.get("sandbox"))
     if tool == "bash":
+        if sandbox_mode:
+            script = os.path.join(ensure_agent_sandbox(session_state)["tmp"], "agent.sh")
+            with open(script, "w", encoding="utf-8") as f:
+                f.write(content)
+            try:
+                os.chmod(script, 0o755)
+            except Exception:
+                pass
+            return _run_in_sandbox(session_state, ["/bin/bash", script])
         return _exec_bash(content)
     elif tool == "python":
+        if sandbox_mode:
+            script = os.path.join(ensure_agent_sandbox(session_state)["tmp"], "agent.py")
+            with open(script, "w", encoding="utf-8") as f:
+                f.write(content)
+            return _run_in_sandbox(session_state, ["/usr/bin/python3", script])
         return _exec_python(content)
     elif tool == "write_file":
         lines = content.split("\n")
         path = ""
         for line in lines:
             if line.startswith("path:"):
-                path = os.path.expanduser(line.split(":",1)[1].strip()); break
+                path = line.split(":",1)[1].strip(); break
         body = "\n".join(l for l in lines if not l.startswith("path:"))
         if not path: return "Error: no path: line in write_file block"
+        if sandbox_mode:
+            abs_path, err = _sandbox_resolve_path(session_state, path, for_write=True)
+            if not abs_path:
+                return f"Error: {err}"
+            try:
+                with open(abs_path, "w", encoding="utf-8") as f:
+                    f.write(body)
+                return f"Written: {abs_path} ({len(body)} chars)"
+            except Exception as e:
+                return f"Error writing file: {e}"
         try:
+            path = os.path.expanduser(path)
             os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
             with open(path,"w") as f: f.write(body)
             return f"Written: {path} ({len(body)} chars)"
         except Exception as e: return f"Error writing file: {e}"
     elif tool == "read_file":
+        if sandbox_mode:
+            abs_path, err = _sandbox_resolve_path(session_state, content.strip(), must_exist=True)
+            if not abs_path:
+                return f"Error: {err}"
+            try:
+                txt = open(abs_path, encoding="utf-8", errors="replace").read()
+                return txt[:8000] + ("\n... (truncated)" if len(txt)>8000 else "")
+            except Exception as e:
+                return f"Error: {e}"
         path = os.path.expanduser(content.strip())
         try:
             txt = open(path).read()
@@ -2964,6 +3282,8 @@ def _execute_tool(tool: str, content: str, session_state: dict) -> str:
         session_state["plan"] = content.strip()
         return f"Plan updated ({len(content.splitlines())} steps)"
     elif tool == "mac_control":
+        if sandbox_mode:
+            return "Blocked in sandbox build mode."
         return _exec_bash(f"osascript -e '{content}' 2>/dev/null || echo 'osascript returned non-zero'")
     elif tool == "web_search":
         # Basic: use the existing search if available, else fallback
@@ -2985,6 +3305,41 @@ def _execute_tool(tool: str, content: str, session_state: dict) -> str:
 def _sse_event(data: dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
 
+def _agent_model_call(keys: dict, messages: list, model: str):
+    import urllib.request
+
+    if keys.get("OPENROUTER_API_KEY"):
+        endpoint = "https://openrouter.ai/api/v1/chat/completions"
+        api_key = keys["OPENROUTER_API_KEY"]
+        chosen_model = model or "meta-llama/llama-3.3-70b-instruct:free"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": "http://localhost:7777",
+            "X-Title": "Chinna Dashboard",
+        }
+    elif keys.get("OPENAI_API_KEY"):
+        endpoint = "https://api.openai.com/v1/chat/completions"
+        api_key = keys["OPENAI_API_KEY"]
+        chosen_model = model if str(model).startswith(("gpt-", "o1", "o3", "o4")) else "gpt-4o-mini"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+    else:
+        raise RuntimeError("No API key configured")
+
+    payload = json.dumps({
+        "model": chosen_model,
+        "messages": messages,
+        "max_tokens": 4000,
+        "stream": False,
+    }).encode()
+    req = urllib.request.Request(endpoint, data=payload, headers=headers)
+    resp = urllib.request.urlopen(req, timeout=90)
+    d = json.loads(resp.read())
+    return d.get("choices", [{}])[0].get("message", {}).get("content", ""), chosen_model
+
 async def _run_agent_loop(message: str, history: list, mode: str, model: str, keys: dict):
     """Core async generator that yields SSE events."""
     import asyncio
@@ -3001,32 +3356,19 @@ async def _run_agent_loop(message: str, history: list, mode: str, model: str, ke
         messages.append(h)
     messages.append({"role":"user","content":message})
 
-    session_state = {"artifacts": [], "plan": "", "round": 0}
+    session_state = {"artifacts": [], "plan": "", "round": 0, "sandbox": mode == "build"}
+    if session_state["sandbox"]:
+        ensure_agent_sandbox(session_state)
     yield _sse_event({"type":"mode","mode":mode})
+    if session_state["sandbox"]:
+        yield _sse_event({"type":"sandbox","enabled": True, "workspace": session_state.get("sandbox_repo", "")})
 
     for round_num in range(MAX_AGENT_ROUNDS):
         session_state["round"] = round_num
         yield _sse_event({"type":"round_start","round":round_num})
 
-        # Call AI
-        payload = json.dumps({
-            "model": model,
-            "messages": messages,
-            "max_tokens": 4000,
-            "stream": False,
-        }).encode()
-
         try:
-            req = urllib.request.Request(
-                "https://openrouter.ai/api/v1/chat/completions",
-                data=payload,
-                headers={"Content-Type":"application/json",
-                         "Authorization":f"Bearer {api_key}",
-                         "HTTP-Referer":"http://localhost:7777"}
-            )
-            resp = urllib.request.urlopen(req, timeout=90)
-            d = json.loads(resp.read())
-            ai_text = d.get("choices",[{}])[0].get("message",{}).get("content","")
+            ai_text, model = _agent_model_call(keys, messages, model)
         except Exception as e:
             yield _sse_event({"type":"error","content":f"AI call failed: {e}"})
             return
@@ -3177,6 +3519,71 @@ def exec_shell_direct(self, b):
     self._json({"result": result, "lang": lang})
 # ── END AGENT CODE ───────────────────────────────────────────────────────────
 
+
+# ── EXTENSION SUPPORT ENDPOINTS ──────────────────────────────────────────────
+def ext_get_apikey(self, q):
+    """GET /api/ext/key?name=KIE_API_KEY — return a single key for extension use."""
+    name = q.get('name', '') if isinstance(q, dict) else ''
+    keys = load_keys()
+    # Music gen key aliases
+    aliases = {
+        'ACCOUSTICA_API_KEY': ['ACCOUSTICA_API_KEY','KIE_AI_API_KEY','KIE_API_KEY'],
+        'KIE_API_KEY': ['KIE_API_KEY','KIE_AI_API_KEY','ACCOUSTICA_API_KEY'],
+        'KIE_AI_API_KEY': ['KIE_AI_API_KEY','KIE_API_KEY','ACCOUSTICA_API_KEY'],
+    }
+    val = ''
+    for cand in aliases.get(name, [name]):
+        if keys.get(cand):
+            val = keys[cand]; break
+    self._json({'name': name, 'value': val, 'present': bool(val)})
+
+def ext_music(self, b):
+    """POST /api/ext/music — control Apple Music from extension."""
+    action = b.get('action', 'playpause')
+    result = self.music_control(action) if hasattr(self, 'music_control') else {'ok': False}
+    self._json(result if isinstance(result, dict) else {'ok': True, 'result': str(result)})
+
+def ext_generate_music(self, b):
+    """POST /api/ext/generate-music — generate music via KIE/Accoustica API."""
+    import urllib.request
+    keys = load_keys()
+    api_key = keys.get('ACCOUSTICA_API_KEY') or keys.get('KIE_AI_API_KEY') or keys.get('KIE_API_KEY') or ''
+    if not api_key:
+        self._json({'error': 'No music API key. Set ACCOUSTICA_API_KEY (or KIE_API_KEY) in Settings.'}, 400); return
+    prompt = b.get('prompt', '')
+    if not prompt:
+        self._json({'error': 'No prompt'}, 400); return
+    try:
+        payload = json.dumps({
+            'prompt': prompt,
+            'customMode': b.get('customMode', False),
+            'instrumental': b.get('instrumental', False),
+            'model': b.get('model', 'V4'),
+        }).encode()
+        req = urllib.request.Request(
+            'https://api.kie.ai/api/v1/generate',
+            data=payload,
+            headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {api_key}'}
+        )
+        resp = urllib.request.urlopen(req, timeout=30)
+        self._json(json.loads(resp.read()))
+    except Exception as e:
+        self._json({'error': str(e)}, 500)
+
+def ext_shell(self, b):
+    """POST /api/ext/shell — run terminal command from extension (same as /api/shell)."""
+    if hasattr(self, 'exec_shell_direct'):
+        self.exec_shell_direct(b); return
+    lang = b.get('lang', 'bash'); code = b.get('code', '')
+    if not code: self._json({'error': 'no code'}, 400); return
+    try:
+        r = subprocess.run(code, shell=True, capture_output=True, text=True, timeout=60, executable='/bin/bash')
+        out = (r.stdout or '').strip(); err = (r.stderr or '').strip()
+        self._json({'result': out + (('\nstderr: ' + err) if err else ''), 'lang': lang})
+    except Exception as e:
+        self._json({'error': str(e)}, 500)
+# ── END EXTENSION SUPPORT ────────────────────────────────────────────────────
+
     def job_purge(self, jid):
         job_log(jid, "Requesting RAM purge (may prompt for sudo in your terminal)...")
         sh("sudo purge 2>/dev/null", 30)
@@ -3214,6 +3621,10 @@ def exec_shell_direct(self, b):
 
 
 # ── Bind agent methods onto handler class ────────────────────────────────────
+H.ext_get_apikey = ext_get_apikey
+H.ext_music = ext_music
+H.ext_generate_music = ext_generate_music
+H.ext_shell = ext_shell
 H.serve_agent = serve_agent
 H.serve_artifacts_list = serve_artifacts_list
 H.serve_artifact_content = serve_artifact_content
