@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Chinna V6 — Dashboard Server (Python stdlib only, zero deps)."""
+"""Chinna V6.5 — Dashboard Server (Python stdlib only, zero deps)."""
 import base64, hashlib, http.server, json, os, plistlib, re, secrets, shutil, subprocess, sys, tempfile, threading, time, traceback, unicodedata, urllib.error, urllib.parse, urllib.request
 from datetime import datetime, timezone
 
-CHINNA_VERSION = "6.0.0"
+CHINNA_VERSION = "6.5.0"
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 7777
 CHINNA_HOME = os.environ.get('CHINNA_HOME', os.path.expanduser('~/.chinna'))
 DASHBOARD_DIR = os.path.join(CHINNA_HOME, 'dashboard')
 HOME = os.path.expanduser('~')
 API_KEYS_FILE = os.path.join(CHINNA_HOME, 'api_keys.json')
+UPDATE_PROMPT_FILE = os.path.join(CHINNA_HOME, 'update_prompted_version')
+UPDATE_SNOOZE_FILE = os.path.join(CHINNA_HOME, 'update_snooze_until')
+UPDATE_INSTALL_URL = 'https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh'
 PAIR_STATE_FILE = os.path.join(CHINNA_HOME, 'telegram_pair.json')
 CHAT_DB_FILE = os.path.join(CHINNA_HOME, 'state/chat_db.json')
 WHATSAPP_DIR = os.path.join(CHINNA_HOME, 'whatsapp')
@@ -18,6 +21,20 @@ WHATSAPP_BRIDGE_PID_FILE = os.path.join(WHATSAPP_DIR, 'bridge.pid')
 WHATSAPP_BRIDGE_LOG = os.path.join(WHATSAPP_DIR, 'bridge.log')
 SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(SERVER_DIR, '..'))
+
+
+def version_tuple(value):
+    parts = [int(p) for p in re.findall(r'\d+', str(value or ''))]
+    return tuple(parts or [0])
+
+
+def version_gt(a, b):
+    pa = version_tuple(a)
+    pb = version_tuple(b)
+    width = max(len(pa), len(pb))
+    pa = pa + (0,) * (width - len(pa))
+    pb = pb + (0,) * (width - len(pb))
+    return pa > pb
 
 # Shared TURN fallback for first-run users. Override via env if needed.
 DEFAULT_TURN_URLS = os.environ.get(
@@ -1569,7 +1586,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 'chat_default_relay_url': dashboard_origin(),
             })
         elif p == '/api/version':
-            self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6'})
+            self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6.5'})
         elif p.startswith('/api/ext/key'):
             self.ext_get_apikey(q)
         elif p == '/api/artifacts':
@@ -1640,6 +1657,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             if b.get('turn_credential') is not None: d['TURN_CREDENTIAL'] = safe_text(b.get('turn_credential', ''))[:200]
             if b.get('chat_relay_url') is not None: d['CHAT_RELAY_URL'] = normalize_relay_url(b.get('chat_relay_url', ''))[:300]
             save_keys(d); self._json({'result':'✅ Keys saved'})
+        elif p == '/api/update':
+            self._json(self.update_action(b))
         elif p == '/api/turn/generate':
             uname, cred = generate_turn_credentials()
             d = {
@@ -2548,14 +2567,98 @@ fi
             self._json({'error': safe_text(str(e))}, 500)
 
 
+    def _update_snooze_until(self):
+        try:
+            with open(UPDATE_SNOOZE_FILE) as f:
+                return int((f.read().strip() or "0"))
+        except Exception:
+            return 0
+
+    def _set_update_snooze(self, seconds):
+        until = int(time.time()) + max(60, int(seconds or 0))
+        os.makedirs(CHINNA_HOME, exist_ok=True)
+        with open(UPDATE_SNOOZE_FILE, 'w') as f:
+            f.write(str(until))
+        return until
+
+    def _clear_update_snooze(self):
+        for path in (UPDATE_SNOOZE_FILE, UPDATE_PROMPT_FILE):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+
+    def _install_script_command(self, fresh=False):
+        script = UPDATE_INSTALL_URL
+        if fresh:
+            return ['/bin/bash', '-lc', f'curl -fsSL "{script}" | bash -s -- --fresh']
+        return ['/bin/bash', '-lc', f'curl -fsSL "{script}" | bash']
+
     def check_update(self):
         try:
-            import urllib.request
-            url = "https://raw.githubusercontent.com/pichimail/chinna-go/main/VERSION"
-            latest = urllib.request.urlopen(url, timeout=5).read().decode().strip()
-            return {"current": CHINNA_VERSION, "latest": latest, "update_available": latest != CHINNA_VERSION}
-        except:
-            return {"current": CHINNA_VERSION, "latest": CHINNA_VERSION, "update_available": False, "error": "offline"}
+            with urllib.request.urlopen(f"https://raw.githubusercontent.com/pichimail/chinna-go/main/VERSION", timeout=5) as resp:
+                latest = resp.read().decode().strip()
+            if not latest:
+                latest = CHINNA_VERSION
+            snoozed_until = self._update_snooze_until()
+            now = int(time.time())
+            update_available = version_gt(latest, CHINNA_VERSION)
+            should_prompt = bool(update_available and (snoozed_until <= now))
+            return {
+                "current": CHINNA_VERSION,
+                "latest": latest,
+                "update_available": update_available,
+                "should_prompt": should_prompt,
+                "snoozed_until": snoozed_until,
+                "install_url": UPDATE_INSTALL_URL,
+                "fresh_install_command": f'curl -fsSL "{UPDATE_INSTALL_URL}" | bash -s -- --fresh',
+                "update_command": f'curl -fsSL "{UPDATE_INSTALL_URL}" | bash',
+                "release_title": f"Chinna v{latest}",
+                "release_message": "A newer version is ready. Your data, config, and API keys stay intact.",
+            }
+        except Exception:
+            return {
+                "current": CHINNA_VERSION,
+                "latest": CHINNA_VERSION,
+                "update_available": False,
+                "should_prompt": False,
+                "snoozed_until": 0,
+                "install_url": UPDATE_INSTALL_URL,
+                "fresh_install_command": f'curl -fsSL "{UPDATE_INSTALL_URL}" | bash -s -- --fresh',
+                "update_command": f'curl -fsSL "{UPDATE_INSTALL_URL}" | bash',
+                "error": "offline",
+            }
+
+    def update_action(self, body):
+        action = safe_text(body.get('action', 'update')).lower()
+        fresh = bool(body.get('fresh', False))
+
+        if action in ('later', 'snooze'):
+            minutes = int(body.get('minutes') or 180)
+            until = self._set_update_snooze(minutes * 60)
+            return {'ok': True, 'result': 'Update reminder snoozed', 'snoozed_until': until}
+
+        if action in ('dismiss', 'hide'):
+            self._clear_update_snooze()
+            return {'ok': True, 'result': 'Update prompt cleared'}
+
+        if action in ('fresh', 'reinstall'):
+            fresh = True
+
+        cmd = self._install_script_command(fresh=fresh)
+        env = os.environ.copy()
+        env['CHINNA_HOME'] = CHINNA_HOME
+        log_path = os.path.join(CHINNA_HOME, 'update.log')
+        os.makedirs(CHINNA_HOME, exist_ok=True)
+        with open(log_path, 'a') as log:
+            subprocess.Popen(cmd, env=env, stdout=log, stderr=log, stdin=subprocess.DEVNULL, start_new_session=True)
+        return {
+            'ok': True,
+            'result': 'Update started',
+            'fresh': fresh,
+            'log': log_path,
+            'install_url': UPDATE_INSTALL_URL,
+        }
 
     def list_models(self):
         models_file = os.path.join(CHINNA_HOME, "models")
@@ -2721,7 +2824,7 @@ fi
         out = os.path.join(HOME, "Desktop", f"chinna-audit-{int(time.time())}.txt")
         try:
             with open(out, "w") as f:
-                f.write(f"Chinna V6 Audit\n{'='*40}\nPath: {path}\nStack: {stack}\n\n")
+                f.write(f"Chinna V6.5 Audit\n{'='*40}\nPath: {path}\nStack: {stack}\n\n")
                 f.write(f"--- Top Directories ---\n{sizes}\n\n")
                 f.write(f"--- Git Status ---\n{git_s or 'clean'}\n\n")
                 f.write(f"--- Large Files ---\n{big or 'none'}\n\n")
@@ -3633,7 +3736,7 @@ H.delete_artifact = delete_artifact
 H.exec_shell_direct = exec_shell_direct
 
 if __name__ == '__main__':
-    print(f"Chinna V6 -> http://localhost:{PORT}")
+    print(f"Chinna V6.5 -> http://localhost:{PORT}")
     print(f"serving {DASHBOARD_DIR}")
     threading.Thread(target=stats_loop, daemon=True).start()
     try:

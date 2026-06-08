@@ -6,7 +6,7 @@
 # ╚══════════════════════════════════════════════════════════════╝
 set -uo pipefail
 
-CHINNA_VERSION="6.0.0"
+CHINNA_VERSION="6.5.0"
 CHINNA_REPO="pichimail/chinna-go"
 CHINNA_HOME="${CHINNA_HOME:-$HOME/.chinna}"
 CHINNA_CONFIG="$CHINNA_HOME/config"
@@ -214,6 +214,44 @@ apply_update() {
     rc=$?
 
     rm -f "$CHINNA_HOME/update_prompted_version" 2>/dev/null || true
+
+    case "$installer" in
+        "$CHINNA_HOME"/*|*"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"/*) ;;
+        *) rm -f "$installer" 2>/dev/null || true ;;
+    esac
+
+    return "$rc"
+}
+
+cmd_reinstall() {
+    banner
+    echo -e "   ${BOLD}${ORANGE}♻️  FRESH REINSTALL${RESET}"; echo ""
+
+    local installer
+    installer="$(resolve_remote_installer)" || installer="$(resolve_installer)" || { fail "Installer unavailable"; return 1; }
+    local rc=0
+
+    info "This preserves your API keys, config, and local data while refreshing app code."
+
+    if [ ! -t 0 ] || [ "${1:-}" = "--apply" ] || [ "${1:-}" = "-y" ] || [ "${1:-}" = "--yes" ]; then
+        bash "$installer" --fresh
+        rc=$?
+    else
+        local choice
+        choice=$(chinna_toast_action \
+            "Chinna Fresh Reinstall" \
+            "Refresh app code and clear cached app files while keeping keys and config?" \
+            "Reinstall Now|Later" 2>/dev/null)
+        [ -n "$choice" ] || choice="Later"
+
+        if [ "$choice" = "Reinstall Now" ]; then
+            bash "$installer" --fresh
+            rc=$?
+        else
+            info "Reinstall postponed"
+            rc=0
+        fi
+    fi
 
     case "$installer" in
         "$CHINNA_HOME"/*|*"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"/*) ;;
@@ -1269,7 +1307,7 @@ import sys
 
 path = Path(sys.argv[1])
 lines = path.read_text().splitlines(True)
-start = '# ── Chinna V6 ──────────────────────────────────────────'
+start = '# ── Chinna V6.5 ───────────────────────────────────────'
 block_len = 6  # marker + PATH/CHINNA_HOME/env/models/alias
 out = []
 i = 0
@@ -1517,6 +1555,7 @@ show_help() {
      ${C}publish${RESET}                Push update to GitHub
      ${C}doctor${RESET}                 Health check
      ${C}update${RESET}                 Self-update Chinna
+     ${C}reinstall${RESET}              Fresh reinstall, preserving keys and config
     ${C}app-install${RESET}            Install Chinna as a 1-click Mac app
     ${C}notch${RESET}                  Install menu-bar quick actions (Purge/Clean/Update)
      ${C}uninstall${RESET} [--purge]    Remove Chinna app or fully purge everything
@@ -1590,6 +1629,7 @@ main() {
         projects)                   shift; cmd_projects "$@" ;;
         plugin|plugins)             shift; cmd_plugins "$@" ;;
         update|upgrade)             shift; cmd_update "$@" ;;
+        reinstall|refresh)          shift; cmd_reinstall "$@" ;;
         app-install|install-app)    cmd_app_install ;;
         app)                        shift; cmd_app "$@" ;;
         notch|quickbar|menubar)     cmd_notch ;;

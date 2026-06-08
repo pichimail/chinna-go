@@ -666,7 +666,7 @@
     <div class="v6-head">
       <div class="v6-title-row">
         <span class="v6-rocket">🚀</span>
-        <div><div class="v6-title">Chinna V6 is here!</div><div class="v6-subtitle">A major upgrade from V5</div></div>
+        <div><div class="v6-title">Chinna V6.5 is here!</div><div class="v6-subtitle">A sharper release with fresher onboarding, update prompts, and browser automation.</div></div>
       </div>
     </div>
     <div class="v6-body">
@@ -680,6 +680,30 @@
     </div>
     <div class="v6-foot">
       <button type="button" class="bigbtn v6-primary" onclick="dismissV6()">Got it, let's go!</button>
+    </div>
+  </div>
+</div>
+<div id="update-overlay" class="v6-overlay">
+  <div class="glass v6-card">
+    <div class="v6-head">
+      <div class="v6-title-row">
+        <span class="v6-rocket">⬆️</span>
+        <div>
+          <div class="v6-title" id="release-title">Chinna update available</div>
+          <div class="v6-subtitle" id="release-subtitle">Your data, config, and API keys stay intact.</div>
+        </div>
+      </div>
+      <button type="button" class="bigbtn ghost smallbtn" onclick="dismissUpdateOverlay()" aria-label="Close update prompt">✕</button>
+    </div>
+    <div class="v6-body">
+      <div class="meta-row" id="release-meta"></div>
+      <div id="release-notes">A newer version is ready. Update now or snooze it for later.</div>
+      <div class="fresh-box" id="release-fresh">Fresh reinstall keeps your keys and config while clearing app code and cache-like install traces.</div>
+    </div>
+    <div class="v6-foot">
+      <button type="button" class="bigbtn v6-secondary" onclick="laterUpdate()">Later</button>
+      <button type="button" class="bigbtn v6-secondary" onclick="copyFreshReinstallCommand()">Copy fresh reinstall</button>
+      <button type="button" class="bigbtn v6-primary" onclick="updateNow()">Update now</button>
     </div>
   </div>
 </div>

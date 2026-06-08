@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Chinna V6 — standalone installer (all 15 Godspeed features)
+Chinna V6.5 — standalone installer (all 15 Godspeed features)
 Run:   python3 chinna_v6.py
 Re-run any time — stops old server, writes fresh files, boots V6.
 
@@ -78,9 +78,9 @@ def main():
     if os.path.isdir(local_assets):
         shutil.copytree(local_assets, os.path.join(DASH, "assets"), dirs_exist_ok=True)
 
-    step("Writing VERSION = 6.0.0...")
+    step("Writing VERSION = 6.5.0...")
     with open(os.path.join(CHINNA, "VERSION"), "w") as f:
-        f.write("6.0.0")
+        f.write("6.5.0")
 
     # Migrate V4/V5 api_keys.json → env file
     old_keys = os.path.join(CHINNA, "api_keys.json")
@@ -123,20 +123,21 @@ MODEL_haiku4="anthropic/claude-3-haiku"
         import urllib.request, json as _json
         d = _json.loads(urllib.request.urlopen(
             f"http://localhost:{PORT}/api/version", timeout=5).read())
-        ok(f"{d.get('name','Chinna V6')} {d.get('version','')} — server ready!")
+        ok(f"{d.get('name','Chinna V6.5')} {d.get('version','')} — server ready!")
     except Exception as e:
         print(f"  ⚠ Server warming up ({e})")
 
     # macOS notification
-    os.system('''osascript -e 'display notification "All 15 Godspeed features active!" with title "🟢 Chinna V6 ready"' 2>/dev/null''')
+    os.system('''osascript -e 'display notification "All 15 Godspeed features active!" with title "🟢 Chinna V6.5 ready"' 2>/dev/null''')
 
     print()
     print("  " + "═"*54)
-    print(f"  ✅  CHINNA V6 READY  →  http://localhost:{PORT}")
+    print(f"  ✅  CHINNA V6.5 READY  →  http://localhost:{PORT}")
     print("  " + "═"*54)
     print()
     print("  Share with friends:")
     print("  curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash")
+    print("  curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash -s -- --fresh")
     print()
     print("  Quick commands (open a new terminal tab first):")
     print("    chinna doctor      → system health")

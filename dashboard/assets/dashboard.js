@@ -28,6 +28,8 @@ let deepCleanForce = false;
 let chinnaPlugins = [];
 let deepCleanForceRequired = new Set();
 let keyStatus = { chinna_ai_set: false, openai_set: false };
+let updateState = { latest: '', current: '', update_available: false, should_prompt: false, snoozed_until: 0, install_url: '', fresh_install_command: '', update_command: '', alerted_version: '', dismissed_version: '' };
+let updatePollTimer = null;
 let agentFiles = []; // Agent file uploads {name, mime, size, data}
 let aiFiles = []; // AI chat file uploads {name, mime, size, data}
 let chatxIdentity = null;
@@ -100,6 +102,85 @@ function completeMacOnboarding(){
 }
 
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;$('toasts').appendChild(t);setTimeout(()=>t.remove(),3500);}
+function setUpdateOverlayVisible(on){
+  const el = $('update-overlay');
+  if(!el) return;
+  el.style.display = on ? 'flex' : 'none';
+}
+function dismissUpdateOverlay(markSeen=true){
+  setUpdateOverlayVisible(false);
+  if(markSeen && updateState.latest) updateState.dismissed_version = updateState.latest;
+}
+function renderUpdateOverlay(info){
+  updateState = Object.assign(updateState, info || {});
+  const title = $('release-title');
+  const subtitle = $('release-subtitle');
+  const notes = $('release-notes');
+  const fresh = $('release-fresh');
+  const meta = $('release-meta');
+  if(title) title.textContent = info.release_title || `Chinna v${info.latest || '—'} is available`;
+  if(subtitle) subtitle.textContent = info.release_message || 'Your data, config, and API keys stay intact.';
+  if(notes){
+    const versionLine = info.current && info.latest ? `Current v${info.current} → latest v${info.latest}` : 'A newer version is ready.';
+    notes.innerHTML = `
+      <div>${escHtml(versionLine)}</div>
+      <div class="meta-row">
+        <span class="chip">Dashboard prompt</span>
+        <span class="chip">Daemon toast</span>
+        <span class="chip">Keys preserved</span>
+      </div>
+    `;
+  }
+  if(fresh) fresh.textContent = info.fresh_install_command || 'Fresh reinstall command will appear here.';
+  if(meta){
+    meta.innerHTML = `
+      <span class="chip">Current: ${escHtml(info.current || '—')}</span>
+      <span class="chip">Latest: ${escHtml(info.latest || '—')}</span>
+      <span class="chip">${info.update_available ? 'Update available' : 'Up to date'}</span>
+    `;
+  }
+}
+async function loadUpdateState(forceToast=false){
+  const info = await api('check-update').catch(()=>null);
+  if(!info || !info.latest){
+    setUpdateOverlayVisible(false);
+    return null;
+  }
+  updateState = Object.assign(updateState, info);
+  const shouldShow = !!info.update_available && !!info.should_prompt && updateState.dismissed_version !== info.latest;
+  if(shouldShow){
+    renderUpdateOverlay(info);
+    setUpdateOverlayVisible(true);
+    if(updateState.alerted_version !== info.latest || forceToast){
+      toast(`${info.release_title || `Chinna v${info.latest}`} is ready`);
+      updateState.alerted_version = info.latest;
+    }
+  }else if(!info.update_available){
+    setUpdateOverlayVisible(false);
+  }
+  return info;
+}
+async function updateNow(fresh=false){
+  const d = await api('update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:fresh?'fresh':'update',fresh})}).catch(()=>({error:'failed'}));
+  if(d.error){ toast('Update failed: '+d.error); return; }
+  toast(d.fresh ? 'Fresh reinstall started' : 'Update started');
+  dismissUpdateOverlay();
+}
+async function laterUpdate(){
+  const d = await api('update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'later',minutes:180})}).catch(()=>({error:'failed'}));
+  if(d.error){ toast('Could not snooze update: '+d.error); return; }
+  toast('Update snoozed for later');
+  dismissUpdateOverlay();
+}
+async function copyFreshReinstallCommand(){
+  const cmd = updateState.fresh_install_command || `curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash -s -- --fresh`;
+  try{
+    await navigator.clipboard.writeText(cmd);
+    toast('Fresh reinstall command copied');
+  }catch(e){
+    toast('Copy failed: '+(e?.message||'clipboard unavailable'));
+  }
+}
 function ficon(k){return {PDF:'📕',Video:'🎬',Audio:'🎵',Archive:'🗜',App:'📦','Disk Image':'💿',Installer:'📦',Code:'⌨',Data:'🗃',Image:'🖼',Doc:'📄',Sheet:'📊',Slides:'📽',Text:'📝'}[k]||'📄';}
 function color(p){return p>85?'var(--red)':p>65?'var(--amber)':'var(--acc)';}
 function fmtBytes(n){const x=Number(n||0);if(x>=1073741824)return (x/1073741824).toFixed(2)+' GB';if(x>=1048576)return (x/1048576).toFixed(1)+' MB';if(x>=1024)return Math.round(x/1024)+' KB';return x+' B';}
@@ -3643,6 +3724,8 @@ function initV6(){
   else window.setTimeout(()=>{ if(firstRun) go('onboarding'); }, 1150);
   loadKeySettings().catch(()=>{});
   loadModels();
+  loadUpdateState().catch(()=>{});
+  if(!updatePollTimer) updatePollTimer = setInterval(()=>loadUpdateState().catch(()=>{}), 5 * 60 * 1000);
 }
 function dismissV6(){
   localStorage.setItem('chinna_v6_welcomed','1');
@@ -4211,6 +4294,11 @@ initV6();
     // re-run widget setup if overview re-rendered (defensive, runs once)
     announce('Chinna dashboard ready. Press Command or Control K for the command palette.');
   }
+  W.dismissUpdateOverlay = dismissUpdateOverlay;
+  W.loadUpdateState = loadUpdateState;
+  W.updateNow = updateNow;
+  W.laterUpdate = laterUpdate;
+  W.copyFreshReinstallCommand = copyFreshReinstallCommand;
   if(D.readyState==='complete'||D.readyState==='interactive') setTimeout(init, 60);
   else D.addEventListener('DOMContentLoaded', ()=>setTimeout(init,60));
 })();

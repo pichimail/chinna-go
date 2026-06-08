@@ -1,10 +1,10 @@
-# Chinna V6
+# Chinna V6.5
 
-Chinna is a local Mac sidekick for cleanup, system checks, disk exploration, AI chat, Telegram control, and voice actions.
+Chinna is a local Mac sidekick for cleanup, system checks, disk exploration, AI chat, Telegram control, voice actions, and browser automation.
 
 ## One-Touch Install
 
-Copy and paste this into Terminal on macOS to install or replace any older Chinna version with V6:
+Copy and paste this into Terminal on macOS to install or replace any older Chinna version with V6.5:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
@@ -17,10 +17,13 @@ bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/ins
 ```
 
 What it does:
-- Installs the latest Chinna V6 app files
-- Replaces older installed Chinna code with V6
+- Installs the latest Chinna V6.5 app files
+- Replaces older installed Chinna code with V6.5
 - Sets up the local command in your shell path
 - Keeps your user data and API keys separate from app code
+
+Important:
+- Do not paste the raw URL by itself into Terminal. Use `curl -fsSL ... | bash`.
 
 ## Upgrade From Older Versions
 
@@ -31,9 +34,31 @@ curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/in
 ```
 
 This will:
-- Replace the old app code with V6
+- Replace the old app code with V6.5
 - Preserve your local data, config, and API keys
 - Refresh the command so `chinna` points to the new version
+
+If you want a clean refresh that keeps your keys and config but clears old app code and cache-like installation traces, use:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash -s -- --fresh
+```
+
+After install, you can also run:
+
+```bash
+chinna reinstall
+```
+
+## Browser Companion
+
+Install the browser extension from the dashboard button, or open this helper in Terminal to load the unpacked extension folder:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/extension/install-extension.sh | bash
+```
+
+That helper prints the exact `chrome://extensions` steps and points Chrome at the local `extension/` folder.
 
 ## Run Locally
 
@@ -66,14 +91,22 @@ Where files live:
 Chinna checks for newer releases dynamically.
 
 When a new version is available:
-- You get a prompt/notification in the app or daemon
-- The update only applies after your approval
+- You get a toast and overlay in the dashboard
+- The daemon also shows a macOS prompt
+- `Update now` applies the refresh after your approval
+- `Later` snoozes the reminder
 - Your data, config, and API keys stay intact
 
 If you want to update manually:
 
 ```bash
 chinna update
+```
+
+If you want a fresh reinstall while preserving keys and config:
+
+```bash
+chinna reinstall
 ```
 
 ## Configure
@@ -136,7 +169,7 @@ zsh: command not found: chinna
 
   ```bash
   chinna uninstall
-  bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh)
+  bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh) --fresh
   ```
 
 ## Notes
