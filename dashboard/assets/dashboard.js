@@ -16,6 +16,13 @@ const $ = id => document.getElementById(id);
 const api = (p,opt) => fetch('/api/'+p,opt).then(r=>r.json());
 const THEME_KEY = 'chinna_theme';
 const ONBOARDING_KEY = 'chinna_macos_onboarded';
+const MODEL_KEY = 'chinna_active_model';
+const KEY_STORAGE = {
+  openrouter: 'chinna_openrouter_key',
+  openai: 'chinna_openai_key',
+  telegram: 'chinna_telegram_token',
+};
+const DEFAULT_OPENROUTER_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
 let HOME_PATH = '~';
 let allFiles=[], curTab='large', allApps=[], dupeSel=new Set(), allDupes=[];
 let storStack=[], storState={path:'~', items:[], offset:0, hasMore:false, limit:40};
@@ -64,6 +71,108 @@ let waPollTimer = null;
 let waSelectedJid = '';
 let waChats = [];
 let waMessages = [];
+let currentModel = localStorage.getItem(MODEL_KEY) || DEFAULT_OPENROUTER_MODEL;
+
+function safeStorageGet(key){
+  try{ return localStorage.getItem(key) || ''; }catch(e){ return ''; }
+}
+
+function safeStorageSet(key, value){
+  try{
+    if(value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  }catch(e){}
+}
+
+function hydrateSavedKeyInputs(){
+  const orKey = safeStorageGet(KEY_STORAGE.openrouter);
+  const oaKey = safeStorageGet(KEY_STORAGE.openai);
+  const tgKey = safeStorageGet(KEY_STORAGE.telegram);
+  if($('onboard-or') && orKey && !$('onboard-or').value) $('onboard-or').value = orKey;
+  if($('set-or') && orKey && !$('set-or').value) $('set-or').value = orKey;
+  if($('onboard-oa') && oaKey && !$('onboard-oa').value) $('onboard-oa').value = oaKey;
+  if($('set-oa') && oaKey && !$('set-oa').value) $('set-oa').value = oaKey;
+  if($('tg-token') && tgKey && !$('tg-token').value) $('tg-token').value = tgKey;
+}
+
+function rememberSavedKeys(keys){
+  if(keys.openrouter) safeStorageSet(KEY_STORAGE.openrouter, keys.openrouter);
+  if(keys.openai) safeStorageSet(KEY_STORAGE.openai, keys.openai);
+  if(keys.telegram) safeStorageSet(KEY_STORAGE.telegram, keys.telegram);
+}
+
+function setCurrentModel(model, persist=true){
+  currentModel = model || DEFAULT_OPENROUTER_MODEL;
+  if(persist) safeStorageSet(MODEL_KEY, currentModel);
+  const act = $('model-active');
+  if(act) act.textContent = currentModel;
+  const pill = $('sidebarModelName');
+  if(pill) pill.textContent = currentModel;
+}
+
+const MODEL_UI_GROUPS = [
+  { title: 'chinna/auto', keys: ['auto'], order: ['auto'] },
+  { title: 'chinna/free', keys: ['free_router', 'free', 'kimi26', 'qwen3coder_free', 'deepseek_r1_free', 'llama70'], order: ['free_router', 'kimi26', 'qwen3coder_free', 'deepseek_r1_free', 'llama70', 'free'] },
+  { title: 'chinna/coding(free)', keys: ['qwen3coder_free', 'deepseek_v4_flash', 'qwen3coder'], order: ['deepseek_v4_flash', 'qwen3coder_free', 'qwen3coder'] },
+  { title: 'chinna/reasoning', keys: ['reasoning', 'deepseek_r1', 'deepseek_v4_pro', 'claude_sonnet_latest', 'claude_haiku_latest', 'sonnet4', 'opus4', 'haiku4'], order: ['deepseek_v4_pro', 'claude_sonnet_latest', 'sonnet4', 'opus4', 'deepseek_r1', 'deepseek_r1_free', 'claude_haiku_latest', 'haiku4'] },
+  { title: 'chinna/all-rounder', keys: ['small', 'gpt54mini', 'gemma'], order: ['gpt54mini', 'small', 'gemma'] },
+];
+
+const MODEL_UI_LABELS = {
+  auto: 'Auto router',
+  free_router: 'OpenRouter Free',
+  free: 'Llama Free',
+  kimi26: 'Kimi 2.6 Free',
+  qwen3coder_free: 'Qwen3 Coder Free',
+  deepseek_r1_free: 'DeepSeek R1 Free',
+  llama70: 'Llama 3.3 Free',
+  qwen3coder: 'Qwen3 Coder',
+  deepseek_v4_flash: 'DeepSeek V4 Flash',
+  reasoning: 'Claude 3.5 Sonnet',
+  deepseek_r1: 'DeepSeek R1',
+  deepseek_v4_pro: 'DeepSeek V4 Pro',
+  claude_sonnet_latest: 'Claude Sonnet Latest',
+  claude_haiku_latest: 'Claude Haiku Latest',
+  sonnet4: 'Claude Sonnet 4',
+  opus4: 'Claude Opus 4',
+  haiku4: 'Claude Haiku 4',
+  small: 'GPT-4o Mini',
+  gpt54mini: 'GPT-5.4 Mini',
+  gemma: 'Gemma 2 9B',
+};
+
+function renderModelPresetGroups(pres, presets){
+  if(!pres) return;
+  const used = new Set();
+  const sections = [];
+  const mkBtn = (key) => {
+    used.add(key);
+    const label = MODEL_UI_LABELS[key] || key;
+    return `<button type="button" class="bigbtn" style="font-size:11px" onclick="setModelPreset('${key}')">${label}</button>`;
+  };
+  for(const group of MODEL_UI_GROUPS){
+    const ordered = (group.order || group.keys).filter(k => presets[k] && group.keys.includes(k));
+    const buttons = ordered.map(mkBtn);
+    if(buttons.length){
+      sections.push(`
+        <section class="model-group">
+          <div class="model-group-title">${group.title}</div>
+          <div class="model-group-grid">${buttons.join('')}</div>
+        </section>
+      `);
+    }
+  }
+  const rest = Object.keys(presets).filter(k => !used.has(k));
+  if(rest.length){
+    sections.push(`
+      <section class="model-group">
+        <div class="model-group-title">chinna/other</div>
+        <div class="model-group-grid">${rest.map(mkBtn).join('')}</div>
+      </section>
+    `);
+  }
+  pres.innerHTML = sections.join('');
+}
 
 function applyTheme(theme, persist=true){
   const __alias = {dark:'obsidian', light:'solaris', macos:'aurora', oled:'obsidian'};
@@ -1434,17 +1543,17 @@ function storUp(){if(storStack.length>1){storStack.pop();loadStorage(storStack[s
 async function loadAIStatus(){
   const k=await api('get_keys');
   keyStatus = { chinna_ai_set: !!k.chinna_ai_set, openai_set: !!k.openai_set };
-  $('ai-status').textContent=(k.chinna_ai_set||k.openai_set)?'Connected · ready':'No API key — add one in Settings';
+  $('ai-status').textContent=(k.chinna_ai_set||k.openai_set)?'Ready':'Add a key in Settings';
   setVoiceButton();
 }
 async function loadKeySettings(){
   const k = await api('get_keys').catch(()=>null);
   if(!k) return;
   keyStatus = { chinna_ai_set: !!k.chinna_ai_set, openai_set: !!k.openai_set };
-  const statusText = k.chinna_ai_set && k.openai_set ? 'OpenRouter and OpenAI are saved.' :
-    k.chinna_ai_set ? 'OpenRouter is saved. Chinna AI, Agent, and extension are ready.' :
-    k.openai_set ? 'OpenAI is saved. Chinna AI, Agent, and extension are ready.' :
-    'No AI key saved yet. Add OpenRouter or OpenAI to activate Chinna AI, Agent, artifacts, and the extension.';
+  const statusText = k.chinna_ai_set && k.openai_set ? 'OpenRouter and OpenAI saved.' :
+    k.chinna_ai_set ? 'OpenRouter saved. AI ready.' :
+    k.openai_set ? 'OpenAI saved. AI ready.' :
+    'No AI key saved yet.';
   if($('settings-ai-status')) $('settings-ai-status').textContent = statusText;
   if($('onboard-ai-status')) $('onboard-ai-status').textContent = statusText;
   if($('set-turn-enabled')) $('set-turn-enabled').checked = !!k.turn_enabled;
@@ -1453,14 +1562,16 @@ async function loadKeySettings(){
   if($('set-turn-cred')) $('set-turn-cred').value = k.turn_credential || '';
   if($('set-chat-relay')) $('set-chat-relay').value = k.chat_relay_url || '';
   chatxRelayConfig = { url: k.chat_relay_url || '', defaultUrl: k.chat_default_relay_url || location.origin };
-  if($('turn-test-status')) $('turn-test-status').textContent = (k.turn_enabled && (k.turn_urls||'').trim()) ? 'TURN configured. Run test to verify relay.' : 'No TURN test yet.';
+  if($('turn-test-status')) $('turn-test-status').textContent = (k.turn_enabled && (k.turn_urls||'').trim()) ? 'TURN ready. Run test.' : 'TURN not tested yet.';
+  hydrateSavedKeyInputs();
 }
 async function loadTelegramStatus(){
   const d=await api('telegram/status');
   $('tg-bot').textContent=`Bot: ${d.bot_username?('@'+d.bot_username):'—'}`;
   $('tg-state').textContent=`State: ${d.paired?'paired':'not paired'}`;
-  $('tg-link').innerHTML=d.pair_url?`Pair link: <span class="muted">${d.pair_url}</span>`:'Pairing link will appear here after generating a code.';
+  $('tg-link').innerHTML=d.pair_url?`Pair link: <span class="muted">${d.pair_url}</span>`:'Pair link appears after you generate a code.';
   if(d.qr_url){ $('tg-qr').src=d.qr_url; } else { $('tg-qr').removeAttribute('src'); }
+  hydrateSavedKeyInputs();
 }
 
 // ===== SECURE CHAT (client-side E2E) =====
@@ -1758,13 +1869,13 @@ async function testTurnConnectivity(){
   const enabled = !!$('set-turn-enabled')?.checked;
   const urls = chatxParseTurnUrls(($('set-turn-urls')?.value||'').trim());
   if(!enabled || !urls.length){
-    if(out) out.textContent = 'Enable TURN and provide at least one TURN URL.';
+    if(out) out.textContent = 'Turn on TURN and add a URL.';
     return;
   }
   const username = ($('set-turn-user')?.value||'').trim();
   const credential = $('set-turn-cred')?.value || '';
   if(btn) btn.disabled = true;
-  if(out) out.textContent = 'Testing TURN relay...';
+  if(out) out.textContent = 'Testing TURN...';
   let pc = null;
   try{
     pc = new RTCPeerConnection({iceServers:[{urls, username, credential}], iceTransportPolicy:'relay'});
@@ -1781,17 +1892,17 @@ async function testTurnConnectivity(){
     await pc.setLocalDescription(offer);
     await new Promise(r=>setTimeout(r, 6500));
     if(relayFound){
-      if(out) out.textContent = 'TURN test passed: relay candidate received.';
+      if(out) out.textContent = 'TURN test passed.';
       toast('TURN relay reachable');
     }else if(candidateSeen){
-      if(out) out.textContent = 'TURN test failed: candidates were gathered, but none were usable relay candidates. Check TURN URL, username, credential, and firewall.';
+      if(out) out.textContent = 'TURN test failed: no relay candidate.';
       toast('TURN relay unavailable');
     }else{
-      if(out) out.textContent = 'TURN test failed: no ICE candidates gathered.';
+      if(out) out.textContent = 'TURN test failed: no candidates.';
       toast('TURN test failed: no candidates');
     }
   }catch(e){
-    if(out) out.textContent = `TURN test error: ${e?.message||'unknown error'}`;
+    if(out) out.textContent = `TURN error: ${e?.message||'unknown error'}`;
     toast('TURN test failed');
   }finally{
     if(pc){
@@ -1806,7 +1917,7 @@ async function generateTurnCredentials(){
   const out = $('turn-test-status');
   const turnUrls = ($('set-turn-urls')?.value||'').trim();
   if(btn) btn.disabled = true;
-  if(out) out.textContent = 'Generating TURN credentials...';
+  if(out) out.textContent = 'Generating TURN creds...';
   try{
     const d = await api('turn/generate', {
       method:'POST',
@@ -1818,11 +1929,11 @@ async function generateTurnCredentials(){
     if($('set-turn-user')) $('set-turn-user').value = d.turn_username || '';
     if($('set-turn-cred')) $('set-turn-cred').value = d.turn_credential || '';
     if($('set-turn-urls') && d.turn_urls) $('set-turn-urls').value = d.turn_urls;
-    if(out) out.textContent = 'TURN credentials generated and applied.';
+    if(out) out.textContent = 'TURN creds ready.';
     toast(d.result || 'TURN credentials generated');
     await chatxLoadRtcConfig().catch(()=>{});
   }catch(e){
-    if(out) out.textContent = `TURN generation failed: ${e?.message||'unknown error'}`;
+    if(out) out.textContent = `TURN creds failed: ${e?.message||'unknown error'}`;
     toast('TURN credential generation failed');
   }finally{
     if(btn) btn.disabled = false;
@@ -2905,14 +3016,14 @@ async function installMacApp(){
     btn.disabled=true;
     btn.textContent='Installing Chinna.app…';
   }
-  if(note) note.textContent='Building a branded Mac app in ~/Applications and opening it when ready…';
+  if(note) note.textContent='Building the Mac app and opening it when ready…';
   const d = await api('install-app',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>({error:'failed'}));
   if(d.error){
     if(btn){
       btn.disabled=false;
       btn.textContent='Install Chinna.app';
     }
-    if(note) note.textContent='Install failed. Check macOS permissions and try again.';
+    if(note) note.textContent='Install failed. Check permissions and try again.';
     toast('Install failed: '+d.error);
     return;
   }
@@ -2920,7 +3031,7 @@ async function installMacApp(){
     btn.disabled=false;
     btn.textContent='Reinstall Chinna.app';
   }
-  if(note) note.textContent='Installed at '+(d.app_path||'~/Applications/Chinna.app')+'. Launch it from Applications, Dock, Spotlight, or SwiftBar.';
+  if(note) note.textContent='Installed at '+(d.app_path||'~/Applications/Chinna.app')+'. Open it from Applications, Dock, Spotlight, or SwiftBar.';
   toast('Chinna.app installed at '+(d.app_path||'~/Applications/Chinna.app'));
 }
 
@@ -2953,18 +3064,18 @@ async function installBrowserExtension(){
     btn.disabled=true;
     btn.textContent='Opening Chrome installer...';
   }
-  if(note) note.textContent='Preparing the Chinna extension folder and opening Chrome extensions...';
+  if(note) note.textContent='Preparing the Chinna extension folder...';
   const d = await api('install-extension',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>({error:'failed'}));
   if(btn){
     btn.disabled=false;
     btn.textContent=d.error ? 'Install browser companion' : 'Reopen extension installer';
   }
   if(d.error){
-    if(note) note.textContent='Extension install failed. Check that the extension folder exists and Chrome is installed.';
+    if(note) note.textContent='Install failed. Check the extension folder and Chrome.';
     toast('Extension install failed: '+d.error);
     return;
   }
-  if(note) note.textContent=d.result || 'Chrome opened. Enable Developer Mode, click Load unpacked, and select the opened Chinna extension folder.';
+  if(note) note.textContent=d.result || 'Chrome opened. Enable Developer Mode, click Load unpacked, and choose the Chinna extension folder.';
   toast('Chrome extension folder ready');
 }
 
@@ -2994,6 +3105,7 @@ async function sendAI(forcedMsg,fromVoice=false){
     const payload = {
       message: msg,
       history: chatHistory.slice(0, -1),
+      model: currentModel,
       attachments: aiAttachments.length ? aiAttachments : undefined
     };
     d = await api('chat', {
@@ -3253,20 +3365,24 @@ async function reAttachPreviousFile(fileId, fileName, mime){
 /* keys */
 async function saveKeys(){
   const b={};
-  if($('set-or')?.value)b.chinna_ai_key=$('set-or').value;
-  if($('set-oa')?.value)b.openai_key=$('set-oa').value;
+  const orKey = $('set-or')?.value?.trim?.() || '';
+  const oaKey = $('set-oa')?.value?.trim?.() || '';
+  if(orKey)b.chinna_ai_key=orKey;
+  if(oaKey)b.openai_key=oaKey;
   b.turn_enabled = !!$('set-turn-enabled')?.checked;
   b.turn_urls = $('set-turn-urls')?.value?.trim?.() || '';
   b.turn_username = $('set-turn-user')?.value?.trim?.() || '';
   b.turn_credential = $('set-turn-cred')?.value || '';
   b.chat_relay_url = $('set-chat-relay')?.value?.trim?.() || '';
   const d=await api('save_keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  rememberSavedKeys({ openrouter: orKey, openai: oaKey });
   toast(d.result||'Saved');
   $('set-or').value='';
   $('set-oa').value='';
-  if($('turn-test-status')) $('turn-test-status').textContent = 'Settings saved. Run TURN test.';
+  if($('turn-test-status')) $('turn-test-status').textContent = 'Saved. Run TURN test.';
   await loadKeySettings().catch(()=>{});
   await loadAIStatus().catch(()=>{});
+  await loadModels().catch(()=>{});
   await chatxLoadRtcConfig().catch(()=>{});
   if(chatxIdentity) await chatxPublishInvite().catch(()=>{});
 }
@@ -3281,18 +3397,21 @@ async function saveOnboardingKeys(){
     return;
   }
   const d=await api('save_keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  rememberSavedKeys({ openrouter: orKey, openai: oaKey });
   if($('onboard-or')) $('onboard-or').value='';
   if($('onboard-oa')) $('onboard-oa').value='';
   localStorage.setItem(ONBOARDING_KEY, '1');
   toast(d.result||'AI keys saved');
   await loadKeySettings().catch(()=>{});
   await loadAIStatus().catch(()=>{});
+  await loadModels().catch(()=>{});
   go('agent');
 }
 async function saveTelegramToken(){
   const token=$('tg-token').value.trim();
   if(!token){ toast('Paste a Telegram bot token first.'); return; }
   const d=await api('save_keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telegram_token:token})});
+  rememberSavedKeys({ telegram: token });
   toast(d.result||'Telegram token saved');
   $('tg-token').value='';
   loadTelegramStatus();
@@ -3301,7 +3420,7 @@ async function createTelegramPair(){
   const d=await api('telegram/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
   if(d.error){ toast(d.error); return; }
   $('tg-qr').src=d.qr_url||'';
-  $('tg-link').innerHTML=`Pair link: <span class="muted">${d.pair_url}</span><div class="paircode" style="margin-top:6px">${d.code}</div>`;
+  $('tg-link').innerHTML=`Pair link: <span class="muted">${d.pair_url}</span><div class="paircode">${d.code}</div>`;
   toast('Pair code generated');
   loadTelegramStatus();
 }
@@ -3719,6 +3838,7 @@ function initV6(){
   if(!localStorage.getItem('chinna_v6_welcomed')){
     document.getElementById('v6overlay').style.display='flex';
   }
+  hydrateSavedKeyInputs();
   const initial=(window.location.hash||'').replace('#','');
   if(initial && $('view-'+initial)) window.setTimeout(()=>go(initial), 250);
   else window.setTimeout(()=>{ if(firstRun) go('onboarding'); }, 1150);
@@ -3785,14 +3905,9 @@ async function runAudit(){
 // ── MODELS ───────────────────────────────────────────────────
 async function loadModels(){
   const d=await api('models');
-  const act=document.getElementById('model-active');
-  if(act) act.textContent=d.active||'—';
+  setCurrentModel(d.active || currentModel || DEFAULT_OPENROUTER_MODEL);
   const pres=document.getElementById('model-presets');
-  if(pres && d.presets){
-    pres.innerHTML=Object.entries(d.presets).map(([k,v])=>
-      `<button type="button" class="bigbtn" style="font-size:11px" onclick="setModelPreset('${k}')">${k}</button>`
-    ).join('');
-  }
+  if(pres && d.presets) renderModelPresetGroups(pres, d.presets);
   // Also load automation
   try{
     const auto=document.getElementById('auto-val');
@@ -3802,8 +3917,7 @@ async function loadModels(){
 async function setModelPreset(preset){
   const d=await api('model-set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preset})});
   if(d.ok){
-    const act=document.getElementById('model-active');
-    if(act) act.textContent=d.active;
+    setCurrentModel(d.active);
     toast('Model: '+d.active);
   } else {
     toast('Error: '+d.error);
@@ -3813,7 +3927,7 @@ async function setCustomModel(){
   const m=document.getElementById('model-custom')?.value?.trim();
   if(!m){toast('Enter a model string');return;}
   const d=await api('model-set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({custom:m})});
-  if(d.ok){const act=document.getElementById('model-active');if(act)act.textContent=d.active;toast('Model set: '+d.active);}
+  if(d.ok){setCurrentModel(d.active);toast('Model set: '+d.active);}
   else toast('Error: '+d.error);
 }
 async function toggleAutomation(){
@@ -4596,7 +4710,7 @@ async function agentSend() {
       body: JSON.stringify({
         message, mode: agentMode,
         history: agentHistory.slice(-20),
-        model: ''
+        model: currentModel
       })
     });
 

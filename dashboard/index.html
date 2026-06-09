@@ -512,7 +512,7 @@
             </div>
             <button type="button" class="bigbtn" id="auto-btn" onclick="toggleAutomation()">Toggle</button>
           </div>
-          <div style="font-size:11px;color:var(--t3);line-height:1.6">When ON, AI commands run without confirmation prompts.</div>
+          <div style="font-size:11px;color:var(--t3);line-height:1.6">ON = AI commands skip confirmations.</div>
         </div></div>
 <div class="view" id="view-projects"><div class="vhead">
           <h2>Tracked Projects</h2>
@@ -558,7 +558,7 @@
                 <img class="launch-mark" src="/assets/chinna-icon.svg" alt="Chinna">
                 <div>
                   <div class="onboard-title">Connect Chinna AI first</div>
-                  <div class="onboard-sub">Add OpenRouter or OpenAI once. The dashboard, agent, artifacts, voice fallback, and browser companion all read the same saved keys dynamically.</div>
+                  <div class="onboard-sub">Add one AI key. Dashboard, agent, artifacts, voice fallback, and the companion all use it.</div>
                 </div>
               </div>
 
@@ -585,7 +585,7 @@
                 <div><span>3</span> Install the Mac app wrapper</div>
                 <div><span>4</span> Start building artifacts in Agent</div>
               </div>
-              <div class="side-callout" id="extension-install-note">Chrome requires one manual confirmation: enable Developer Mode, click Load unpacked, then select the Chinna extension folder that opens.</div>
+              <div class="side-callout" id="extension-install-note">Chrome: enable Developer Mode, click Load unpacked, then choose the Chinna extension folder.</div>
             </div>
           </div>
         </div></div>
@@ -599,7 +599,7 @@
             </div>
           </section>
           <section class="settings-section">
-            <div class="section-head"><div><h3>Installers</h3><p id="install-app-note">Install the Mac wrapper, browser companion, and menu-bar actions.</p></div></div>
+            <div class="section-head"><div><h3>Installers</h3><p id="install-app-note">Install the Mac wrapper, extension, and menu actions.</p></div></div>
             <div class="install-row">
               <button type="button" class="bigbtn solid" id="install-app-btn" onclick="installMacApp()">Install Chinna.app</button>
               <button type="button" class="bigbtn" id="install-extension-btn" onclick="installBrowserExtension()">Install browser companion</button>
@@ -608,8 +608,8 @@
             </div>
           </section>
           <section class="settings-section">
-            <div class="section-head"><div><h3>Secure chat relay</h3><p id="turn-test-status">No TURN test yet.</p></div></div>
-            <label class="toggle-row"><input id="set-turn-enabled" type="checkbox"> Enable TURN fallback for stricter networks</label>
+            <div class="section-head"><div><h3>Secure chat relay</h3><p id="turn-test-status">TURN not tested yet.</p></div></div>
+            <label class="toggle-row"><input id="set-turn-enabled" type="checkbox"> Use TURN fallback for strict networks</label>
             <div class="settings-grid">
               <input class="field" id="set-turn-urls" placeholder="turn:turn.example.com:3478?transport=udp">
               <input class="field" id="set-turn-user" placeholder="TURN username">
@@ -621,24 +621,26 @@
               <button type="button" class="bigbtn ghost smallbtn" id="turn-test-btn" onclick="testTurnConnectivity()">Test TURN relay</button>
             </div>
           </section>
-          <div class="panelgrid">
+          <div class="panelgrid telegram-grid">
             <div class="paircard">
-              <h4>Telegram Pairing</h4>
+              <h4>Telegram</h4>
               <div class="stack">
-                <input class="field" id="tg-token" type="password" autocomplete="off" placeholder="Telegram bot token">
-                <button type="button" class="bigbtn" onclick="saveTelegramToken()">Save Telegram Token</button>
-                <button type="button" class="bigbtn solid" onclick="createTelegramPair()">Generate Pair Code</button>
+                <input class="field" id="tg-token" type="password" autocomplete="off" placeholder="Bot token">
+                <div class="stack-actions">
+                  <button type="button" class="bigbtn" onclick="saveTelegramToken()">Save token</button>
+                  <button type="button" class="bigbtn solid" onclick="createTelegramPair()">Generate pair code</button>
+                </div>
               </div>
               <div class="chiprow">
                 <span class="chip" id="tg-bot">Bot: —</span>
                 <span class="chip" id="tg-state">State: —</span>
               </div>
-              <div class="pairhint" id="tg-link">Pairing link will appear here after generating a code.</div>
+              <div class="pairhint" id="tg-link">Pair link appears after you generate a code.</div>
             </div>
             <div class="statuscard">
-              <h4>Pair Card</h4>
+              <h4>Pair card</h4>
               <div class="pairqr"><img id="tg-qr" alt="Telegram pair QR"></div>
-              <div class="pairhint">Scan the QR or open the link on your phone, then tap Start in Telegram. The dashboard will bind that chat automatically.</div>
+              <div class="pairhint">Scan the QR or open the link, then tap Start in Telegram.</div>
               <button type="button" class="bigbtn ghost smallbtn" style="margin-top:10px" onclick="testTelegram()">Send test</button>
             </div>
           </div>
@@ -676,7 +678,7 @@
       🔍 Project Audit — full project report saved to Desktop<br>
       ⚡ Automation mode — toggle AI command prompts<br>
       📋 Smarter Projects registry with history<br>
-      🧬 Godspeed features — stack runner, plugin system, config sync<br>
+      🧬 Godspeed features — stack runner, plugins, config sync<br>
     </div>
     <div class="v6-foot">
       <button type="button" class="bigbtn v6-primary" onclick="dismissV6()">Got it, let's go!</button>
