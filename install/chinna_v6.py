@@ -100,13 +100,25 @@ def main():
     if not os.path.exists(models_file):
         with open(models_file, "w") as f:
             f.write('''ACTIVE_MODEL="meta-llama/llama-3.3-70b-instruct:free"
+MODEL_auto="openrouter/auto"
+MODEL_free_router="openrouter/free"
 MODEL_coder="openai/gpt-4o"
 MODEL_reasoning="anthropic/claude-3.5-sonnet"
 MODEL_small="openai/gpt-4o-mini"
+MODEL_gpt54mini="openai/gpt-5.4-mini"
 MODEL_free="meta-llama/llama-3.3-70b-instruct:free"
+MODEL_kimi26="moonshotai/kimi-k2.6:free"
+MODEL_qwen3coder_free="qwen/qwen3-coder:free"
+MODEL_qwen3coder="qwen/qwen3-coder"
+MODEL_deepseek_v4_flash="deepseek/deepseek-v4-flash"
+MODEL_deepseek_v4_pro="deepseek/deepseek-v4-pro"
+MODEL_deepseek_r1="deepseek/deepseek-r1"
+MODEL_deepseek_r1_free="deepseek/deepseek-r1:free"
 MODEL_sonnet4="anthropic/claude-3.5-sonnet"
 MODEL_opus4="anthropic/claude-3-opus"
 MODEL_haiku4="anthropic/claude-3-haiku"
+MODEL_claude_haiku_latest="~anthropic/claude-haiku-latest"
+MODEL_claude_sonnet_latest="~anthropic/claude-sonnet-latest"
 ''')
         os.chmod(models_file, 0o600)
         ok("Created models file with presets")

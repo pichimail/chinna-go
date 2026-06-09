@@ -185,6 +185,17 @@ text/*, .py, .js, .ts, .jsx, .tsx, .html, .css, .json, .md,
 
 ## 🎯 Technical Details
 
+### 7. Model Grouping + Update Notification
+**What Changed:**
+- Models page presets are grouped into `chinna/auto`, `chinna/free`, `chinna/coding(free)`, `chinna/reasoning`, and `chinna/all-rounder`.
+- Buttons inside each group are ordered by the requested priority: best free first, fastest first, and most capable first.
+- Existing users now get a one-time desktop notification when a newer app version is available.
+
+**Files Modified:**
+- `dashboard/assets/dashboard.js`
+- `lib/server.py`
+- `install/chinna_v6.py`
+
 ### CSS Variables Used
 ```css
 --bg, --s0, --s1, --s2, --s3        /* Background shades */

@@ -2588,6 +2588,32 @@ fi
             except Exception:
                 pass
 
+    def _notify_update_available(self, latest):
+        if not latest:
+            return
+        prompted = ''
+        try:
+            with open(UPDATE_PROMPT_FILE) as f:
+                prompted = f.read().strip()
+        except Exception:
+            prompted = ''
+        if prompted == latest:
+            return
+        try:
+            os.makedirs(CHINNA_HOME, exist_ok=True)
+            with open(UPDATE_PROMPT_FILE, 'w') as f:
+                f.write(str(latest))
+            if shutil.which('osascript'):
+                title = f'Chinna v{latest} is ready'.replace('"', '\\"')
+                msg = 'Open Settings to update.'.replace('"', '\\"')
+                subprocess.Popen(
+                    ['osascript', '-e', f'display notification "{msg}" with title "{title}"'],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+        except Exception:
+            pass
+
     def _install_script_command(self, fresh=False):
         script = UPDATE_INSTALL_URL
         if fresh:
@@ -2609,6 +2635,8 @@ fi
             now = int(time.time())
             update_available = version_gt(latest, CHINNA_VERSION)
             should_prompt = bool(update_available and (snoozed_until <= now))
+            if should_prompt:
+                self._notify_update_available(latest)
             return {
                 "current": CHINNA_VERSION,
                 "latest": latest,
