@@ -1,14 +1,15 @@
 {
   "name": "chinna-whatsapp-bridge",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "Local WhatsApp QR bridge for Chinna dashboard using Baileys.",
+  "type": "module",
+  "description": "Local WhatsApp QR bridge for Chinna dashboard using Baileys v7 (ESM + LID support). WARNING: v7 is still RC. Test thoroughly with multi-device setups before production use.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.22",
+    "@whiskeysockets/baileys": "^7.0.0-rc13",
     "pino": "^9.4.0"
   }
 }
