@@ -2,6 +2,8 @@
 
 Chinna is a local Mac sidekick for cleanup, system checks, disk exploration, AI chat, Telegram control, voice actions, and browser automation.
 
+> **License**: MIT — see [LICENSE](LICENSE) file.
+
 ## One-Touch Install
 
 Copy and paste this into Terminal on macOS to install or replace any older Chinna version with V6.5:
@@ -9,6 +11,14 @@ Copy and paste this into Terminal on macOS to install or replace any older Chinn
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
 ```
+
+**Security tip**: For extra verification of downloaded files (defense-in-depth), use:
+```bash
+CHINNA_VERIFY=1 curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
+# or
+curl -fsSL ... | bash -s -- --verify
+```
+(This checks SHA256SUMS for key files like the binary and server.)
 
 Alternative form (also supported):
 
@@ -177,3 +187,7 @@ zsh: command not found: chinna
 - Chinna is designed for macOS.
 - Background media customization and OLED settings are local preferences, not API keys.
 - Updates refresh the app code only; they do not overwrite your data or credentials.
+
+## WhatsApp Bridge
+
+Uses @whiskeysockets/baileys (currently pinned to patched v6.7.22 for stability & security). v7 migration involves significant changes (LIDs, ESM, auth state) — see https://whiskey.so/migrate-latest if planning upgrade.
