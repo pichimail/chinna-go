@@ -1,0 +1,11 @@
+# Chinna V6.5 SHA256 checksums for key distribution files
+# Update with: sha256sum bin/chinna lib/server.py install/install.sh dashboard/index.html extension/manifest.json whatsapp_bridge/package.json | tee -a SHA256SUMS
+# Verification in install.sh (optional, set CHINNA_VERIFY=1 or use --verify)
+
+# Example entries (replace with actual sha256sum output after changes):
+# <sha256>  bin/chinna
+# <sha256>  lib/server.py
+# <sha256>  install/install.sh
+
+# Note: bin/chinna is a prebuilt binary — verify carefully.
+# This file enables defense-in-depth for curl|bash installs.
