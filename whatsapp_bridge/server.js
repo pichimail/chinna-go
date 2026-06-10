@@ -7,6 +7,7 @@
  * - Updated to Baileys ^7.0.0-rc13
  * - Added LID/PN resolution helpers
  * - Prefers .id field from chats/contacts (v7 style)
+ * - Auto-enrichment of chats and messages with display JIDs
  * 
  * WARNING: Baileys v7 is still in Release Candidate.
  * Test thoroughly with multi-device WhatsApp setups before relying on it.
@@ -25,10 +26,8 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 
 import {
-  getLID,
-  getPN,
-  resolveJid,
-  getDisplayJid,
+  enrichChats,
+  enrichMessage,
   normalizeChat,
 } from './lid-helper.js';
 
@@ -95,8 +94,6 @@ function chatName(jid) {
 
 function upsertChat(jid, patch = {}) {
   if (!jid) return;
-  
-  // v7 style: prefer .id field
   const normalized = normalizeChat({ jid, ...patch });
   const prev = chats.get(jid) || { 
     id: jid, 
@@ -105,7 +102,6 @@ function upsertChat(jid, patch = {}) {
     unread: 0, 
     timestamp: 0 
   };
-  
   chats.set(jid, { ...prev, ...normalized, id: jid });
 }
 
@@ -124,13 +120,11 @@ function msgText(m) {
 function storeMessage(m) {
   const jid = m.key?.remoteJid;
   if (!jid || jid === 'status@broadcast') return;
-  
   upsertChat(jid, {
     name: m.pushName || chatName(jid),
     timestamp: Number(m.messageTimestamp || Math.floor(Date.now() / 1000)),
     last: msgText(m) || (m.message ? '[media]' : ''),
   });
-  
   const arr = messages.get(jid) || [];
   const id = m.key?.id || `${Date.now()}-${arr.length}`;
   if (!arr.some((x) => x.id === id)) {
@@ -193,7 +187,6 @@ async function startSocket(force = false) {
       }
     });
 
-    // v7-aware chat/contact handlers (prefer .id)
     sock.ev.on('chats.upsert', (items) => {
       for (const c of items || []) {
         const normalized = normalizeChat(c);
@@ -286,15 +279,17 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && url.pathname === '/chats') {
-      const out = [...chats.values()]
-        .map(normalizeChat)
-        .sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
-      return json(res, { ok: true, chats: out.slice(0, 100) });
+      const rawChats = [...chats.values()].map(normalizeChat);
+      const enriched = await enrichChats(sock, rawChats);
+      const sorted = enriched.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+      return json(res, { ok: true, chats: sorted.slice(0, 100) });
     }
 
     if (req.method === 'GET' && url.pathname === '/messages') {
       const jid = jidFrom(url.searchParams.get('chat') || '');
-      return json(res, { ok: true, jid, messages: messages.get(jid) || [] });
+      const rawMessages = messages.get(jid) || [];
+      const enriched = await Promise.all(rawMessages.map(m => enrichMessage(sock, m)));
+      return json(res, { ok: true, jid, messages: enriched });
     }
 
     if (req.method === 'POST' && url.pathname === '/send') {
@@ -364,5 +359,5 @@ const server = http.createServer(async (req, res) => {
 startSocket(false).catch((e) => { lastError = e.message; });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Chinna WhatsApp bridge (v7-ready) listening on http://${HOST}:${PORT}`);
+  console.log(`Chinna WhatsApp bridge (v7-ready + auto LID resolution) listening on http://${HOST}:${PORT}`);
 });
