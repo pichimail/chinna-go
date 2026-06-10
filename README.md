@@ -188,6 +188,46 @@ zsh: command not found: chinna
 - Background media customization and OLED settings are local preferences, not API keys.
 - Updates refresh the app code only; they do not overwrite your data or credentials.
 
-## WhatsApp Bridge
+## WhatsApp Bridge (v7 + LID Ready)
 
-Uses @whiskeysockets/baileys (currently pinned to patched v6.7.22 for stability & security). v7 migration involves significant changes (LIDs, ESM, auth state) — see https://whiskey.so/migrate-latest if planning upgrade.
+The WhatsApp bridge now supports **Baileys v7** with full **LID (Local Identifier) mapping**.
+
+### Key Features
+- Full ESM conversion
+- Automatic LID ↔ Phone Number resolution
+- `enrichChat()` and `enrichMessage()` helpers for clean display data
+- `/chats` and `/messages` endpoints now return resolved `displayJid` automatically
+- Batch resolution support
+
+### Files
+- `whatsapp_bridge/server.js` — Main bridge (ESM + v7)
+- `whatsapp_bridge/lid-helper.js` — Advanced resolution utilities
+- `whatsapp_bridge/MIGRATION_NOTES.md` — Migration guide & warnings
+
+**Note**: Baileys v7 is currently in Release Candidate. The bridge is production-ready for most use cases but test multi-device setups thoroughly.
+
+See `whatsapp_bridge/MIGRATION_NOTES.md` for upgrade guidance.
+
+## Browser Extension — Dynamic Automation + Accessibility
+
+The browser companion extension now includes **advanced dynamic automation** capabilities:
+
+- Full dynamic script injection and execution from the sidepanel
+- Accessibility tree inspection (live ARIA roles, labels, focus management)
+- One-click "Record & Replay" style automation (via dashboard integration)
+- Improved keyboard navigation and screen-reader friendly UI
+- Dynamic form filling and element highlighting with high contrast
+
+Load the extension from `~/.chinna/extension` (Developer Mode → Load unpacked).
+
+## CLI Improvements
+
+The `chinna` CLI now features **futuristic visual accessibility styling**:
+
+- High-contrast colored output with semantic colors (success/warning/error)
+- Better structured tables and progress indicators
+- Screen-reader friendly plain text fallbacks
+- Consistent emoji + symbol usage for quick scanning
+- Improved help and version output formatting
+
+Run `chinna help` or `chinna doctor` to see the new styling.
