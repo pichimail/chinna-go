@@ -14,11 +14,15 @@ STATE_FILE="${CHINNA}/.installstate"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 FRESH=0
+VERIFY=0
 
 for arg in "$@"; do
     case "$arg" in
         --fresh|--reinstall|--refresh|-f)
             FRESH=1
+            ;;
+        --verify|-v)
+            VERIFY=1
             ;;
     esac
 done
@@ -69,6 +73,44 @@ copy_or_fetch() {
     fi
 
     curl -fsSL "${RAW}/${rel}" -o "${dest}"
+}
+
+# ── Optional SHA256 verification (defense-in-depth for curl|bash) ──
+# Enable with: CHINNA_VERIFY=1 or --verify flag
+# Requires SHA256SUMS file in repo root (maintainer updates with sha256sum)
+verify_checksums() {
+    if [ "$VERIFY" -eq 0 ] && [ "${CHINNA_VERIFY:-0}" != "1" ]; then
+        return 0
+    fi
+    echo "  → Verifying key files with SHA256 (CHINNA_VERIFY)..."
+    local sums_url="${RAW}/SHA256SUMS"
+    local sums_file="${CHINNA}/SHA256SUMS.tmp"
+    if ! curl -fsSL "$sums_url" -o "$sums_file" 2>/dev/null; then
+        echo "    ⚠ Could not fetch SHA256SUMS — skipping verification"
+        return 0
+    fi
+    # Verify a few critical files if present in sums
+    for f in bin/chinna lib/server.py install/install.sh; do
+        if [ -f "${CHINNA}/$f" ] || [ "$f" = "install/install.sh" ]; then
+            local target="$f"
+            if [ "$f" = "install/install.sh" ]; then target="${SCRIPT_DIR}/install.sh"; fi
+            if grep -q "  $f$" "$sums_file" 2>/dev/null; then
+                expected=$(grep "  $f$" "$sums_file" | awk '{print $1}')
+                actual=$(shasum -a 256 "$target" 2>/dev/null | awk '{print $1}' || true)
+                if [ -n "$expected" ] && [ "$actual" != "$expected" ]; then
+                    echo "    ✗ SHA256 mismatch for $f — possible tampering! Aborting."
+                    echo "    Expected: $expected"
+                    echo "    Got:      $actual"
+                    rm -f "$sums_file"
+                    exit 1
+                else
+                    echo "    ✓ Verified: $f"
+                fi
+            fi
+        fi
+    done
+    rm -f "$sums_file"
+    echo "  ✓ Checksum verification complete (or skipped for missing entries)"
 }
 
 # ── One-time-setup resumable step system ─────────────────────
@@ -297,6 +339,9 @@ step_write_libs
 step_write_bin
 step_write_defaults
 
+# ── Optional verification after downloads ──
+verify_checksums
+
 # ──────────────────────────────────────────────────────────────
 # RESTART SERVER
 # ──────────────────────────────────────────────────────────────
@@ -313,7 +358,7 @@ echo "  ════════════════════════
 echo ""
 echo "  🌐  Dashboard   →  http://localhost:${PORT}"
 echo "  📦  Install     →  curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash"
-echo "  ♻️  Fresh reinstall (preserve keys) → curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash -s -- --fresh"
+echo "  ♻️  Fresh reinstall (preserve keys) → curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash -s -- --fresh --verify (optional)"
 echo ""
 echo "  Quick commands (in a new terminal tab):"
 echo "    chinna doctor         → full system health check"
