@@ -188,6 +188,38 @@ zsh: command not found: chinna
 - Background media customization and OLED settings are local preferences, not API keys.
 - Updates refresh the app code only; they do not overwrite your data or credentials.
 
+## Testing (Full Playwright E2E)
+
+**Chinna uses Playwright exclusively** for all End-to-End testing.
+
+We have removed all other E2E frameworks (no Cypress).
+
+### Quick Start
+
+```bash
+# Install Playwright
+npm install -D @playwright/test
+npx playwright install
+
+# Run all E2E tests
+npx playwright test
+
+# Run with UI mode (great for debugging)
+npx playwright test --ui
+
+# View beautiful HTML report
+npx playwright show-report
+```
+
+### Test Location
+Tests live in `tests/e2e/`. The `playwright.config.ts` automatically starts the Chinna dashboard when running tests.
+
+### Example Tests
+- Dashboard loading and navigation
+- WhatsApp Bridge status handling
+- Network mocking for offline scenarios
+- Cross-browser testing (Chromium, Firefox, WebKit)
+
 ## WhatsApp Bridge (v7 + LID Ready)
 
 The WhatsApp bridge now supports **Baileys v7** with full **LID (Local Identifier) mapping**.
