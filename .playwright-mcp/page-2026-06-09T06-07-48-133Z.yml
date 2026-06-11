@@ -1,0 +1,187 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]: C
+        - generic [ref=e7]: CHINNA V6.5
+        - button "Switch to dark mode" [ref=e158] [cursor=pointer]: ◐
+        - button "Toggle sidebar" [ref=e159] [cursor=pointer]: ⇐
+      - generic [ref=e11] [cursor=pointer]:
+        - generic [ref=e13]: loading…
+        - generic [ref=e14]: ▾
+      - navigation "Primary" [ref=e160]:
+        - generic [ref=e16] [cursor=pointer]: Monitor
+        - button "◉Overview" [ref=e161] [cursor=pointer]:
+          - generic [ref=e18]: ◉
+          - generic [ref=e19]: Overview
+        - button "⚡Processes" [ref=e162] [cursor=pointer]:
+          - generic [ref=e21]: ⚡
+          - generic [ref=e22]: Processes
+        - button "⌘Network" [ref=e163] [cursor=pointer]:
+          - generic [ref=e24]: ⌘
+          - generic [ref=e25]: Network
+        - generic [ref=e26] [cursor=pointer]: Storage
+        - button "▤File Manager" [ref=e164] [cursor=pointer]:
+          - generic [ref=e28]: ▤
+          - generic [ref=e29]: File Manager
+        - button "⧉Duplicates" [ref=e165] [cursor=pointer]:
+          - generic [ref=e31]: ⧉
+          - generic [ref=e32]: Duplicates
+        - button "▦Disk Explorer" [ref=e166] [cursor=pointer]:
+          - generic [ref=e34]: ▦
+          - generic [ref=e35]: Disk Explorer
+        - generic [ref=e36] [cursor=pointer]: System
+        - button "⊟App Uninstaller" [ref=e167] [cursor=pointer]:
+          - generic [ref=e38]: ⊟
+          - generic [ref=e39]: App Uninstaller
+        - button "⬡Battery Health" [ref=e168] [cursor=pointer]:
+          - generic [ref=e41]: ⬡
+          - generic [ref=e42]: Battery Health
+        - button "✦Doctor" [ref=e169] [cursor=pointer]:
+          - generic [ref=e44]: ✦
+          - generic [ref=e45]: Doctor
+        - generic [ref=e46] [cursor=pointer]: AI & Tools
+        - button "⬡AgentNEW" [ref=e170] [cursor=pointer]:
+          - generic [ref=e48]: ⬡
+          - generic [ref=e49]: Agent
+          - generic [ref=e50]: NEW
+        - button "◈Chinna AI" [ref=e171] [cursor=pointer]:
+          - generic [ref=e52]: ◈
+          - generic [ref=e53]: Chinna AI
+        - button "◫Secure Chat" [ref=e172] [cursor=pointer]:
+          - generic [ref=e55]: ◫
+          - generic [ref=e56]: Secure Chat
+        - button "◎WhatsApp" [ref=e173] [cursor=pointer]:
+          - generic [ref=e58]: ◎
+          - generic [ref=e59]: WhatsApp
+        - button "◐Plugins" [ref=e174] [cursor=pointer]:
+          - generic [ref=e61]: ◐
+          - generic [ref=e62]: Plugins
+        - button "◇macOS Tools" [ref=e175] [cursor=pointer]:
+          - generic [ref=e64]: ◇
+          - generic [ref=e65]: macOS Tools
+        - button "⊕Models & AI" [ref=e176] [cursor=pointer]:
+          - generic [ref=e67]: ⊕
+          - generic [ref=e68]: Models & AI
+        - generic [ref=e69] [cursor=pointer]: Workspace
+        - button "◧Projects" [ref=e177] [cursor=pointer]:
+          - generic [ref=e71]: ◧
+          - generic [ref=e72]: Projects
+        - button "✦Get Started" [ref=e178] [cursor=pointer]:
+          - generic [ref=e74]: ✦
+          - generic [ref=e75]: Get Started
+        - button "⚙Settings" [ref=e179] [cursor=pointer]:
+          - generic [ref=e77]: ⚙
+          - generic [ref=e78]: Settings
+      - generic [ref=e79]:
+        - generic [ref=e80]:
+          - generic [ref=e81]: CPU
+          - generic [ref=e82]: 29%
+        - generic [ref=e83]:
+          - generic [ref=e84]: RAM
+          - generic [ref=e85]: 79%
+        - generic [ref=e86]:
+          - generic [ref=e87]: DISK
+          - generic [ref=e88]: 86%
+        - generic [ref=e89]:
+          - generic [ref=e90]: BATT
+          - generic [ref=e91]: 92%
+    - main "Main content" [ref=e180]:
+      - region "Welcome to Chinna on Mac" [ref=e181]:
+        - heading "Welcome to Chinna on Mac" [level=2] [ref=e183]
+        - generic [ref=e185]:
+          - generic [ref=e186]:
+            - generic [ref=e187]:
+              - img "Chinna" [ref=e188]
+              - generic [ref=e189]:
+                - generic [ref=e190]: Connect Chinna AI first
+                - generic [ref=e191]: Add OpenRouter or OpenAI once. The dashboard, agent, artifacts, voice fallback, and browser companion all read the same saved keys dynamically.
+            - generic [ref=e192]:
+              - generic [ref=e193]:
+                - generic [ref=e194]: OpenRouter API key
+                - textbox "OpenRouter API key" [ref=e195]:
+                  - /placeholder: sk-or-v1-...
+              - generic [ref=e196]:
+                - generic [ref=e197]: OpenAI API key
+                - textbox "OpenAI API key" [ref=e198]:
+                  - /placeholder: sk-...
+              - generic [ref=e199]: OpenRouter is saved. Chinna AI, Agent, and extension are ready.
+            - generic [ref=e200]:
+              - button "Save AI keys" [ref=e201] [cursor=pointer]
+              - button "Install browser companion" [ref=e202] [cursor=pointer]
+              - button "Install Chinna.app" [ref=e203] [cursor=pointer]
+              - button "Install SwiftBar quick actions" [ref=e204] [cursor=pointer]
+              - button "Skip to dashboard" [ref=e205] [cursor=pointer]
+          - generic [ref=e206]:
+            - generic [ref=e207]: Setup path
+            - generic [ref=e208]:
+              - generic [ref=e209]:
+                - generic [ref=e210]: "1"
+                - text: Save an AI key
+              - generic [ref=e211]:
+                - generic [ref=e212]: "2"
+                - text: Install the Chrome companion
+              - generic [ref=e213]:
+                - generic [ref=e214]: "3"
+                - text: Install the Mac app wrapper
+              - generic [ref=e215]:
+                - generic [ref=e216]: "4"
+                - text: Start building artifacts in Agent
+            - generic [ref=e217]: "Chrome requires one manual confirmation: enable Developer Mode, click Load unpacked, then select the Chinna extension folder that opens."
+    - complementary "System rail" [ref=e218]:
+      - generic [ref=e100]:
+        - generic [ref=e101]: Panel
+        - button "✕" [ref=e102] [cursor=pointer]
+  - status "Notifications"
+  - generic [ref=e118]:
+    - generic [ref=e119]: Preview
+    - button "-" [ref=e120] [cursor=pointer]
+    - button "+" [ref=e121] [cursor=pointer]
+    - button "Open Tab" [ref=e122] [cursor=pointer]
+    - button "Download" [ref=e123] [cursor=pointer]
+    - button "Close" [ref=e124] [cursor=pointer]
+  - toolbar "Quick actions dock" [ref=e219]:
+    - button "Overview" [ref=e220] [cursor=pointer]:
+      - generic [ref=e127]: ◉
+      - generic: Overview
+    - button "Agent" [ref=e221] [cursor=pointer]:
+      - generic [ref=e129]: ⬡
+      - generic: Agent
+    - button "Chinna AI" [ref=e222] [cursor=pointer]:
+      - generic [ref=e131]: ✦
+      - generic: Chinna AI
+    - button "Files" [ref=e223] [cursor=pointer]:
+      - generic [ref=e134]: 📁
+      - generic: Files
+    - button "Duplicates" [ref=e224] [cursor=pointer]:
+      - generic [ref=e136]: ⧉
+      - generic: Duplicates
+    - button "Disk" [ref=e225] [cursor=pointer]:
+      - generic [ref=e138]: ▦
+      - generic: Disk
+    - button "Apps" [ref=e226] [cursor=pointer]:
+      - generic [ref=e140]: 🗑
+      - generic: Apps
+    - button "WhatsApp" [ref=e227] [cursor=pointer]:
+      - generic [ref=e143]: 💬
+      - generic: WhatsApp
+    - button "Secure Chat" [ref=e228] [cursor=pointer]:
+      - generic [ref=e145]: ◫
+      - generic: Secure Chat
+    - button "Plugins" [ref=e229] [cursor=pointer]:
+      - generic [ref=e147]: 🧩
+      - generic: Plugins
+    - button "macOS" [ref=e230] [cursor=pointer]:
+      - generic [ref=e149]: 🍎
+      - generic: macOS
+    - button "Purge RAM" [ref=e231] [cursor=pointer]:
+      - generic [ref=e152]: ⚡
+      - generic: Purge RAM
+    - button "Clean" [ref=e232] [cursor=pointer]:
+      - generic [ref=e154]: 🧹
+      - generic: Clean
+    - button "Settings" [ref=e233] [cursor=pointer]:
+      - generic [ref=e156]: ⚙
+      - generic: Settings
+  - generic [ref=e234]: Chinna dashboard ready. Press Command or Control K for the command palette.
+  - button "Toggle audio-reactive background visualizer" [ref=e157] [cursor=pointer]: 🎵
