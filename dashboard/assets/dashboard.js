@@ -26,6 +26,7 @@ const DEFAULT_OPENROUTER_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
 let HOME_PATH = '~';
 let allFiles=[], curTab='large', allApps=[], dupeSel=new Set(), allDupes=[];
 let storStack=[], storState={path:'~', items:[], offset:0, hasMore:false, limit:40};
+let railProjectsCache = { at: 0, data: null };
 let chatHistory = [];   // full conversation memory for Chinna AI (sent to backend)
 let aiAttachments = []; // current files staged for next message {name, mime, size, data_b64}
 let deepCleanItems = [];
@@ -809,7 +810,7 @@ function go(v){
   $('view-'+v).classList.add('on');
   document.querySelectorAll('.navitem').forEach(x=>x.classList.toggle('on',x.dataset.v===v));
   if(v==='files')loadFiles();
-  if(v==='dupes'&&!allDupes.length){}
+  if(v==='dupes'&&!allDupes.length)loadDupes();
   if(v==='apps')loadApps();
   if(v==='battery')loadBattery();
   if(v==='doctor')loadDoctor();
@@ -823,6 +824,22 @@ function go(v){
   if(v==='onboarding'){ loadKeySettings(); }
   if(v==='projects') loadProjectsView();
   if(location.hash !== '#'+v) history.replaceState(null,'','#'+v);
+}
+
+function warmDashboardCaches(){
+  api('files?tab=large&sort=size').catch(()=>null);
+  api('files?tab=downloads&sort=date').catch(()=>null);
+  api('projects').then(res => {
+    railProjectsCache = { at: Date.now(), data: res.projects || [] };
+    return res;
+  }).catch(()=>null);
+  api('apps').catch(()=>null);
+  const warmDupes = () => api('files?tab=dupes').catch(()=>null);
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(warmDupes, { timeout: 2500 });
+  } else {
+    setTimeout(warmDupes, 1500);
+  }
 }
 
 /* themes */
@@ -912,8 +929,21 @@ function renderRailDisk(s){
 
 async function renderRailProjects(){
   try {
+    const now = Date.now();
+    if (railProjectsCache.data && now - railProjectsCache.at < 10000) {
+      renderRailProjectsFromCache(railProjectsCache.data);
+      return;
+    }
     const res = await api('projects');
     const projects = res.projects || [];
+    railProjectsCache = { at: now, data: projects };
+    renderRailProjectsFromCache(projects);
+  } catch(e) {
+    console.warn('Failed to load projects for rail');
+  }
+}
+
+function renderRailProjectsFromCache(projects) {
     const el = $('rail-projects');
     if (!el) return;
 
@@ -947,9 +977,6 @@ async function renderRailProjects(){
 
     // Also update the mini overview projects section
     renderOverviewProjects(projects);
-  } catch(e) {
-    console.warn('Failed to load projects for rail');
-  }
 }
 
 function renderOverviewProjects(projects) {
@@ -1469,7 +1496,7 @@ async function loadDupes(){
   const L=$('dupe-list'); 
   showProgressMessage(L, 'Finding duplicates…', 'Scanning by size then hashing content — this can take a while');
   dupeSel.clear();
-  const d=await api('files?tab=dupes');allDupes=d.files||[];
+  const d=await api('files?tab=dupes&refresh=1');allDupes=d.files||[];
   $('dupe-count').textContent=`${allDupes.length} duplicate files`;
   clearProgressMessage(L);
   if(!allDupes.length){L.innerHTML='<div class="empty"><div class="big">✓</div>No duplicates found</div>';$('dupe-del').style.display='none';return;}
@@ -4402,6 +4429,7 @@ initV6();
   function init(){
     setLandmarks(); setupViews(); setupNav(); setupDock(); backfillAria(); setupWidgets();
     resize(); startFX();
+    warmDashboardCaches();
     W.addEventListener('resize', ()=>{ resize(); });
     D.addEventListener('visibilitychange', ()=>{ if(D.hidden) stopFX(); else startFX(); });
     if(reduced()) D.body.classList.add('cx-reduce-fx');

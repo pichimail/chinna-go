@@ -47,6 +47,8 @@ os.makedirs(DASHBOARD_DIR, exist_ok=True)
 
 stats_cache = {}
 cache_lock = threading.Lock()
+files_cache = {}
+files_cache_lock = threading.Lock()
 jobs = {}
 jobs_lock = threading.Lock()
 chat_lock = threading.Lock()
@@ -395,12 +397,15 @@ def collect_stats():
         secs = int(time.time())-int(bt); d,r = divmod(secs,86400); h,r = divmod(r,3600); mn = r//60
         s['uptime'] = f"{d}d {h}h" if d else (f"{h}h {mn}m" if h else f"{mn}m")
     except: s['uptime'] = '—'
-    ps = sh("ps aux"); procs = []
-    for line in ps.split('\n')[1:]:
-        c = line.split(None,10)
-        if len(c)>=11:
-            try: procs.append({'pid': int(c[1]), 'cpu': float(c[2]), 'mem': float(c[3]), 'name': c[10][:80]})
-            except: pass
+    ps = sh("ps -axo pid=,pcpu=,pmem=,comm=")
+    procs = []
+    for line in ps.split('\n'):
+        c = line.strip().split(None, 3)
+        if len(c) >= 4:
+            try:
+                procs.append({'pid': int(c[0]), 'cpu': float(c[1]), 'mem': float(c[2]), 'name': c[3][:80]})
+            except:
+                pass
     procs.sort(key=lambda x:x['mem'], reverse=True)
     s['processes'] = procs[:40]
     try:
@@ -714,6 +719,74 @@ def storage_breakdown(path, limit=60, offset=0):
         'has_more': (offset + len(slice_children)) < len(children),
         'next_offset': offset + len(slice_children)
     }
+
+def _scan_files(tab, sort):
+    files = []
+    if tab == 'large':
+        # Use Spotlight (mdfind) — fast on macOS, with a narrower fallback scan.
+        out = sh("mdfind -onlyin ~ 'kMDItemFSSize > 10485760' 2>/dev/null | grep -v '/.Trash/' | grep -v '/node_modules/' | grep -v '/.git/' | head -200", 12)
+        if not out.strip():
+            out = sh(f"find '{HOME}/Downloads' '{HOME}/Desktop' '{HOME}/Documents' '{HOME}/Movies' '{HOME}/Music' '{HOME}/Pictures' -maxdepth 5 -type f -size +10M -not -path '*/.Trash/*' 2>/dev/null | head -120", 25)
+        for f in [x for x in out.split('\n') if x.strip()]:
+            e = entry(f)
+            if e:
+                files.append(e)
+    elif tab == 'downloads':
+        dl = os.path.expanduser('~/Downloads')
+        try:
+            with os.scandir(dl) as it:
+                for ent in it:
+                    if ent.name.startswith('.Trash'):
+                        continue
+                    e = entry(ent.path)
+                    if e:
+                        files.append(e)
+        except:
+            pass
+    elif tab == 'dupes':
+        out = sh("find ~/Downloads ~/Desktop ~/Documents ~/Movies -maxdepth 5 -type f -size +1M 2>/dev/null | head -400", 40)
+        by_size = {}
+        for f in [x for x in out.split('\n') if x.strip()]:
+            try:
+                by_size.setdefault(os.path.getsize(f), []).append(f)
+            except:
+                pass
+        for sz, paths in by_size.items():
+            if len(paths) < 2:
+                continue
+            by_hash = {}
+            for fp in paths:
+                h = md5_quick(fp)
+                if h:
+                    by_hash.setdefault(h, []).append(fp)
+            for h, group in by_hash.items():
+                if len(group) > 1:
+                    for fp in group:
+                        e = entry(fp)
+                        if e:
+                            e['dupe_group'] = h
+                            files.append(e)
+    key = {'size':'size_bytes','date':'mtime','name':'name'}.get(sort,'size_bytes')
+    if key == 'name':
+        files.sort(key=lambda x: x.get('name','').lower())
+    else:
+        files.sort(key=lambda x: x.get(key, 0), reverse=True)
+    return {'files': files[:150], 'count': len(files), 'tab': tab, 'sort': sort}
+
+def get_cached_files(tab, sort, refresh=False):
+    tab = tab or 'large'
+    sort = sort or 'size'
+    key = (tab, sort)
+    ttl = 300 if tab == 'dupes' else 45 if tab == 'downloads' else 30
+    now = time.time()
+    with files_cache_lock:
+        cached = files_cache.get(key)
+        if cached and not refresh and (now - cached.get('ts', 0) < ttl):
+            return cached['data']
+    data = _scan_files(tab, sort)
+    with files_cache_lock:
+        files_cache[key] = {'ts': now, 'data': data}
+    return data
 
 def file_snippet(path, max_lines=24):
     try:
@@ -1552,7 +1625,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             with jobs_lock:
                 self._json(jobs.get(q.get('id',''), {'lines':['job not found'],'done':True,'ok':False}))
         elif p == '/api/files':
-            self._json(self.get_files(q.get('tab','large'), q.get('sort','size')))
+            refresh = q.get('refresh', '0') in ('1', 'true', 'yes', 'on')
+            self._json(self.get_files(q.get('tab','large'), q.get('sort','size'), refresh=refresh))
         elif p == '/api/apps':
             self._json({'apps': self.list_apps()})
         elif p == '/api/loginitems':
@@ -1804,47 +1878,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         else:
             self._json({'error': f'unknown {p}'}, 404)
 
-    def get_files(self, tab, sort):
-        files = []
-        if tab == 'large':
-            # Use Spotlight (mdfind) — instant on macOS, no TCC permission issues
-            out = sh("mdfind -onlyin ~ 'kMDItemFSSize > 10485760' 2>/dev/null | grep -v '/.Trash/' | grep -v '/node_modules/' | grep -v '/.git/' | head -200", 12)
-            if not out.strip():
-                # Fallback: targeted find on common user directories
-                out = sh(f"find '{HOME}/Downloads' '{HOME}/Desktop' '{HOME}/Documents' '{HOME}/Movies' '{HOME}/Music' '{HOME}/Pictures' -maxdepth 5 -type f -size +10M -not -path '*/.Trash/*' 2>/dev/null | head -120", 25)
-            for f in [x for x in out.split('\n') if x.strip()]:
-                e = entry(f)
-                if e: files.append(e)
-        elif tab == 'downloads':
-            dl = os.path.expanduser('~/Downloads')
-            try:
-                for n in os.listdir(dl):
-                    e = entry(os.path.join(dl,n))
-                    if e: files.append(e)
-            except: pass
-        elif tab == 'dupes':
-            out = sh("find ~/Downloads ~/Desktop ~/Documents ~/Movies -maxdepth 5 -type f -size +1M 2>/dev/null | head -400", 40)
-            by_size = {}
-            for f in [x for x in out.split('\n') if x.strip()]:
-                try: by_size.setdefault(os.path.getsize(f), []).append(f)
-                except: pass
-            for sz, paths in by_size.items():
-                if len(paths) < 2: continue
-                by_hash = {}
-                for fp in paths:
-                    h = md5_quick(fp)
-                    if h: by_hash.setdefault(h, []).append(fp)
-                for h, group in by_hash.items():
-                    if len(group) > 1:
-                        for fp in group:
-                            e = entry(fp)
-                            if e: e['dupe_group'] = h; files.append(e)
-        key = {'size':'size_bytes','date':'mtime','name':'name'}.get(sort,'size_bytes')
-        if key == 'name':
-            files.sort(key=lambda x: x.get('name','').lower())
-        else:
-            files.sort(key=lambda x: x.get(key, 0), reverse=True)
-        return {'files': files[:150], 'count': len(files), 'tab': tab, 'sort': sort}
+    def get_files(self, tab, sort, refresh=False):
+        return get_cached_files(tab, sort, refresh=refresh)
 
     def list_apps(self):
         return list_installed_apps(limit=400)
