@@ -6,4 +6,4 @@ install/chinna_v5.py
 __pycache__/
 *.pyc
 .DS_Store
-node_modules/
+node_modules/.playwright-mcp/
