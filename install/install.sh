@@ -260,7 +260,7 @@ run_step "zshrc_block"        step_zshrc_block
 # ALWAYS FORCE-REFRESHED  (new + existing users get latest code)
 # ──────────────────────────────────────────────────────────────
 echo ""
-echo "  ↻ Pulling latest V6 app files from GitHub..."
+echo "  ↻ Pulling latest V6.7 app files from GitHub..."
 step_write_server
 step_write_dashboard
 step_write_whatsapp_bridge
@@ -279,7 +279,7 @@ osascript -e 'display notification "Models, Music, WhatsApp & 15 Godspeed featur
 
 echo ""
 echo "  ══════════════════════════════════════════════════════"
-echo "  ✅  CHINNA V6 READY!"
+echo "  ✅  CHINNA V6.7 READY!"
 echo "  ══════════════════════════════════════════════════════"
 echo ""
 echo "  🌐  Dashboard   →  http://localhost:${PORT}"

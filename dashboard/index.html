@@ -406,6 +406,115 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 #ov-history{width:100%;height:160px}
 .ov-donut-wrap{display:flex;align-items:center;justify-content:center;height:160px}
 
+/* Hallmark redesign · operational console · P5 H5 E4 S5 R5 V4 */
+.ux-page{height:100%;min-height:0;display:flex;flex-direction:column;background:var(--bg)}
+.ux-band{border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--s0)}
+.ux-band .title{font-size:13px;font-weight:800;color:var(--t1)}
+.ux-band .meta{font-size:11px;color:var(--t3)}
+.ux-iconbar{display:flex;align-items:center;gap:6px;margin-left:auto}
+.ux-iconbtn{width:34px;height:34px;border:1px solid var(--line2);border-radius:8px;background:var(--s1);color:var(--t1);display:grid;place-items:center;font-size:15px;cursor:pointer;transition:border-color .12s,background .12s,transform .12s;position:relative}
+.ux-iconbtn:hover{background:var(--s2);border-color:var(--line3);transform:translateY(-1px)}
+.ux-iconbtn.primary{background:var(--acc);border-color:var(--acc);color:#06120a;font-weight:900}
+.ux-iconbtn.danger{color:var(--red);border-color:rgba(248,113,113,.28)}
+.ux-iconbtn::after,.dapp::before{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(3px);padding:5px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--s0);color:var(--t1);font-size:10.5px;font-weight:700;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s,transform .12s;z-index:800;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.ux-iconbtn:hover::after,.ux-iconbtn:focus-visible::after,.dapp:hover::before,.dapp:focus-visible::before{opacity:1;transform:translateX(-50%) translateY(0)}
+.ux-field{background:var(--s1);border:1px solid var(--line2);border-radius:8px;color:var(--t1);padding:9px 11px;min-width:0}
+.ux-panel{border:1px solid var(--line);background:var(--s0);border-radius:8px;min-width:0}
+.ux-panel-head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.ux-panel-title{font-size:12px;font-weight:800;color:var(--t1)}
+.ux-panel-sub{font-size:10.5px;color:var(--t3);margin-top:1px}
+.ux-resizer{width:6px;min-width:6px;cursor:col-resize;background:linear-gradient(90deg,transparent 0 2px,var(--line2) 2px 4px,transparent 4px);opacity:.7}
+.ux-resizer:hover,.ux-resizer.dragging{background:linear-gradient(90deg,transparent 0 1px,var(--acc) 1px 5px,transparent 5px);opacity:1}
+
+#view-ai .vbody.ai-stage{padding:0!important;overflow:hidden!important}
+.ai-shell{height:100%;min-height:0;display:flex;flex-direction:column;padding-bottom:86px;background:var(--bg)}
+.ai-console{flex:1;min-height:0;display:flex;justify-content:center;overflow:hidden}
+#ai-msgs.ai-thread{width:min(920px,100%);flex:1;overflow-y:auto;padding:18px 18px 22px;display:flex;flex-direction:column;gap:10px;scrollbar-gutter:stable}
+.ai-empty-state{margin:auto;max-width:560px;text-align:center;color:var(--t3);border:1px solid var(--line);border-radius:8px;padding:28px;background:var(--s0)}
+.ai-empty-state strong{display:block;color:var(--t1);font-size:17px;margin-bottom:6px}
+.ai-message{display:flex;gap:10px;align-items:flex-start;max-width:82%}
+.ai-message.user{align-self:flex-end;justify-content:flex-end}
+.ai-message.assistant{align-self:flex-start}
+.ai-message .fic{width:28px;height:28px;border-radius:8px;border:1px solid var(--line2);background:var(--s1);display:grid;place-items:center;flex-shrink:0}
+.ai-message .info{min-width:0;max-width:100%}
+.ai-message .nm{white-space:pre-wrap!important;overflow:visible!important;text-overflow:clip!important;line-height:1.55;font-weight:500}
+.ai-message.user .info{background:var(--s1);border:1px solid var(--line2);border-radius:14px 14px 4px 14px;padding:10px 12px;text-align:left!important}
+.ai-message.assistant .info{background:transparent;border-left:1px solid var(--line2);padding:2px 0 2px 12px}
+.ai-composer-wrap{border-top:1px solid var(--line);background:var(--s0);padding:10px 16px 12px;display:flex;justify-content:center}
+.ai-composer{width:min(860px,100%);position:relative}
+.ai-composer-box{border:1px solid var(--line2);border-radius:12px;background:var(--s1);display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:8px;padding:8px;box-shadow:none}
+#ai-in.ai-input{min-height:42px;max-height:120px;resize:none;border:none!important;background:transparent!important;box-shadow:none!important;padding:10px 4px!important;line-height:1.45;font-size:13px}
+#ai-in.ai-input:focus{box-shadow:none!important}
+.ai-send-stack{display:flex;gap:6px;align-items:center}
+.ai-attachments-row{min-height:0;margin-top:7px;display:flex;gap:6px;flex-wrap:wrap}
+.attachment-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;background:var(--s0);padding:4px 8px;font-size:11px;color:var(--t2)}
+.attachment-chip .name{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attachment-chip .remove{cursor:pointer;color:var(--red);font-weight:800}
+.ai-options-menu{position:absolute;left:0;bottom:calc(100% + 8px);width:min(360px,calc(100vw - 40px));border:1px solid var(--line2);border-radius:10px;background:var(--s0);box-shadow:0 16px 44px rgba(0,0,0,.38);padding:8px;display:none;z-index:420}
+.ai-options-menu.open{display:block}
+.ai-option{width:100%;border:none;background:transparent;color:var(--t1);display:grid;grid-template-columns:30px 1fr;gap:8px;text-align:left;padding:9px;border-radius:8px;cursor:pointer}
+.ai-option:hover{background:var(--s1)}
+.ai-option span:first-child{width:28px;height:28px;border:1px solid var(--line);border-radius:7px;display:grid;place-items:center}
+.ai-option strong{display:block;font-size:12px}
+.ai-option small{display:block;font-size:10.5px;color:var(--t3);margin-top:1px}
+
+.secure-shell{height:100%;min-height:0;display:flex;overflow:hidden;padding:0!important}
+.chatx-sidebar{width:310px;min-width:240px;max-width:480px;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:var(--s0)}
+.chatx-main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
+.chatx-identity{padding:12px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center}
+.chatx-actions{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;gap:6px;flex-wrap:wrap}
+.chatx-invite-card{display:grid;grid-template-columns:58px 1fr;gap:10px;margin:10px 12px;padding:10px;border:1px solid var(--line);border-radius:8px;background:transparent}
+.chatx-invite-card img{width:58px;height:58px;border-radius:6px;background:var(--s1)}
+.chatx-add-row{display:flex;gap:6px;padding:0 12px 10px}
+#chatx-contacts{flex:1!important;min-height:120px!important;overflow:auto!important;border:none!important;border-top:1px solid var(--line)!important;border-radius:0!important;padding:8px!important}
+.chatx-call-log{max-height:110px;overflow:auto;border-top:1px solid var(--line);padding:8px}
+.chatx-topbar{border-bottom:1px solid var(--line);padding:10px 12px;display:flex;align-items:center;gap:10px;background:var(--s0)}
+.chatx-titleblock{min-width:0;flex:1}
+.chatx-call{border-bottom:1px solid var(--line);background:var(--s0)}
+.chatx-call-stage{border-top:1px solid var(--line);border-bottom:1px solid var(--line);min-height:200px;background:var(--bg)}
+#chatx-thread{flex:1!important;min-height:0;overflow:auto!important;padding:14px!important}
+.chatx-compose{border-top:1px solid var(--line);background:var(--s0);padding:10px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+
+.plugin-console{height:100%;min-height:0;display:grid;grid-template-rows:auto 1fr minmax(88px,22%);overflow:hidden}
+.plugin-toolbar{display:flex;gap:8px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--s0)}
+.plugin-search{max-width:280px}
+.plugin-grid.pro{overflow:auto;padding:14px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.plugin-grid.pro .plugin-card{border-radius:8px;background:var(--s0);box-shadow:none}
+.plugin-log.pro{margin:0;border-width:1px 0 0 0;border-radius:0;background:var(--bg);padding:12px 16px}
+
+.launchpad{height:100%;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:0;padding:0!important;overflow:hidden}
+.launch-main{padding:20px;overflow:auto;border-right:1px solid var(--line)}
+.launch-main h3{font-size:22px;letter-spacing:0;margin-bottom:8px}
+.launch-main p{color:var(--t2);line-height:1.6;max-width:640px}
+.launch-actions{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 18px}
+.launch-checklist{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.launch-step{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--s0)}
+.launch-step b{display:block;margin-bottom:4px;font-size:12px}
+.launch-step span{font-size:11px;color:var(--t3);line-height:1.5}
+.launch-side{padding:16px;overflow:auto;background:var(--s0)}
+.launch-side .rail-item{border-bottom:1px solid var(--line);padding:11px 0}
+.launch-side .rail-item b{display:block;font-size:12px}
+.launch-side .rail-item span{display:block;font-size:11px;color:var(--t3);margin-top:2px}
+
+.settings-shell.pro-settings{grid-template-columns:minmax(0,1fr) 330px;height:100%;min-height:0;overflow:hidden}
+.pro-settings .settings-hero,.pro-settings .settings-card{border-radius:8px;background:var(--s0);box-shadow:none}
+.settings-scroll{overflow:auto;padding:16px;display:grid;gap:12px}
+.settings-rail{border-left:1px solid var(--line);background:var(--s0);padding:16px;overflow:auto}
+@media(max-width:980px){
+  .launchpad,.settings-shell.pro-settings{grid-template-columns:1fr}
+  .launch-side,.settings-rail{border-left:none;border-top:1px solid var(--line)}
+  .secure-shell{display:flex}
+  .chatx-sidebar{width:280px}
+}
+@media(max-width:720px){
+  .ai-shell{padding-bottom:78px}
+  .ai-message{max-width:94%}
+  .secure-shell{flex-direction:column}
+  .chatx-sidebar{width:auto;max-width:none;min-height:260px;border-right:none;border-bottom:1px solid var(--line)}
+  .ux-resizer{display:none}
+  .chatx-main{min-height:420px}
+}
+
 </style>
 </head>
 <body>
@@ -776,62 +885,107 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 <div class="view" id="view-ai"><div class="vhead">
           <h2>Chinna AI</h2>
           <span class="sub" id="ai-status">—</span>
-          <button type="button" class="bigbtn" onclick="clearAIHistory()" style="margin-left:auto;padding:6px 11px;font-size:11px">🧹 Clear memory</button>
-          <button type="button" class="bigbtn" style="padding:8px 12px" id="voice-btn" onclick="toggleVoiceMode()">🎙 Voice Off</button>
+          <div class="ux-iconbar">
+            <button type="button" class="ux-iconbtn" aria-label="Clear memory" onclick="clearAIHistory()">⌫</button>
+            <button type="button" class="ux-iconbtn" aria-label="Voice mode" id="voice-btn" onclick="toggleVoiceMode()">◉</button>
+          </div>
         </div>
-        <div class="vbody" style="display:flex;flex-direction:column">
-          <div class="list" id="ai-msgs" style="flex:1;min-height:120px"></div>
+        <div class="vbody ai-stage">
+          <div class="ai-shell">
+            <div class="ux-band">
+              <div>
+                <div class="title">Conversation</div>
+                <div class="meta">Files, voice, and local actions are available from the composer menu.</div>
+              </div>
+              <div class="ux-iconbar">
+                <button type="button" class="ux-iconbtn" aria-label="Attach file" id="ai-attach-btn">＋</button>
+                <button type="button" class="ux-iconbtn" aria-label="Previous uploads" onclick="showPreviousUploads()">▤</button>
+                <button type="button" class="ux-iconbtn primary" aria-label="Send message" onclick="sendAI()">↑</button>
+              </div>
+            </div>
+            <div class="ai-console">
+              <div class="list ai-thread" id="ai-msgs">
+                <div class="ai-empty-state" id="ai-empty-state">
+                  <strong>Ask, attach, or run a local task.</strong>
+                  <span>Keep the prompt focused; use the options button for files and previous uploads.</span>
+                </div>
+              </div>
+            </div>
+            <div class="ai-composer-wrap">
+              <div class="ai-composer">
+                <div class="ai-options-menu" id="ai-options-menu" aria-label="Chat options">
+                  <button type="button" class="ai-option" onclick="triggerAttachmentFromBanner();toggleAiOptions(false)">
+                    <span>＋</span><div><strong>Add files</strong><small>Images, PDFs, text, logs, code</small></div>
+                  </button>
+                  <button type="button" class="ai-option" onclick="showPreviousUploads();toggleAiOptions(false)">
+                    <span>▤</span><div><strong>Previous uploads</strong><small>Attach files already seen by Chinna</small></div>
+                  </button>
+                  <button type="button" class="ai-option" onclick="toggleVoiceMode();toggleAiOptions(false)">
+                    <span>◉</span><div><strong>Voice input</strong><small>Dictate or continue hands-free</small></div>
+                  </button>
+                  <button type="button" class="ai-option" onclick="clearAIHistory();toggleAiOptions(false)">
+                    <span>⌫</span><div><strong>Clear memory</strong><small>Reset this local conversation</small></div>
+                  </button>
+                </div>
+                <div class="ai-composer-box">
+                  <button type="button" class="ux-iconbtn" aria-label="Open chat options" onclick="toggleAiOptions()">⌘</button>
+                  <textarea id="ai-in" class="ai-input" autocomplete="off" spellcheck="false" rows="1" placeholder="Message Chinna…" oninput="resizeAiInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI()}"></textarea>
+                  <div class="ai-send-stack">
+                    <button type="button" class="ux-iconbtn" aria-label="Attach file" onclick="$('ai-file-input').click()">＋</button>
+                    <button type="button" class="ux-iconbtn primary" aria-label="Send message" onclick="sendAI()">↑</button>
+                  </div>
+                </div>
+                <input type="file" id="ai-file-input" multiple style="display:none" />
+                <div class="attachment-chips ai-attachments-row" id="ai-attachments"></div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="toolbar" style="position:relative">
-          <button type="button" class="bigbtn" id="ai-attach-btn" title="Attach file (text, code, image, PDF, log...)">📎</button>
-          <button type="button" class="bigbtn" onclick="showPreviousUploads()" title="Browse files you uploaded before" style="padding:6px 9px">🗂</button>
-          <input type="file" id="ai-file-input" multiple style="display:none" />
-          <div class="search" style="flex:1"><input id="ai-in" autocomplete="off" spellcheck="false" placeholder="Ask Chinna anything… or attach files" onkeydown="if(event.key==='Enter')sendAI()"></div>
-          <button type="button" class="bigbtn solid" onclick="sendAI()">Send</button>
-        </div>
-        <div class="attachment-chips" id="ai-attachments"></div>
       
 
       <!-- SECURE CHAT --></div>
-<div class="view" id="view-chatx"><div class="vhead"><h2>Secure Chat</h2><span class="sub">End-to-end encrypted messaging, files, forward & export</span></div>
-        <div class="vbody chatx-grid">
-          <div class="chatx-col left" style="padding:10px;gap:8px">
-            <div style="display:flex;gap:8px;align-items:center">
+<div class="view" id="view-chatx"><div class="vhead"><h2>Secure Chat</h2><span class="sub">Encrypted contacts, calls, files, and exports</span></div>
+        <div class="vbody secure-shell">
+          <aside class="chatx-sidebar" id="chatx-sidebar">
+            <div class="chatx-identity">
               <canvas id="chatx-avatar" width="44" height="44" style="width:44px;height:44px;border-radius:10px;border:1px solid var(--line)"></canvas>
               <div style="min-width:0">
-                <div id="chatx-name" style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">User</div>
+                <div id="chatx-name" style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">User</div>
                 <div id="chatx-id" style="font-size:10px;color:var(--t3)">—</div>
               </div>
             </div>
-            <div style="display:flex;gap:6px">
-              <button type="button" class="bigbtn ghost smallbtn" onclick="chatxCopyId()">Copy ID</button>
-              <button type="button" class="bigbtn ghost smallbtn" onclick="chatxCopyInvite()">Copy Invite</button>
-              <button type="button" class="bigbtn ghost smallbtn" onclick="chatxExportCurrent()">Export</button>
+            <div class="chatx-actions">
+              <button type="button" class="ux-iconbtn" aria-label="Copy ID" onclick="chatxCopyId()">#</button>
+              <button type="button" class="ux-iconbtn" aria-label="Copy invite" onclick="chatxCopyInvite()">⧉</button>
+              <button type="button" class="ux-iconbtn" aria-label="Export chat" onclick="chatxExportCurrent()">⇩</button>
+              <button type="button" class="ux-iconbtn" aria-label="Refresh contacts" onclick="chatxRefresh()">↻</button>
             </div>
             <div class="chatx-invite-card">
               <img id="chatx-invite-qr" alt="Secure Chat invite QR">
               <div>
-                <div style="font-size:11px;font-weight:700;color:var(--t1)">Private Invite</div>
+                <div style="font-size:11px;font-weight:800;color:var(--t1)">Private invite</div>
                 <div class="chatx-relay-line" id="chatx-relay-label">Relay: this Mac</div>
                 <div class="chatx-fingerprint" id="chatx-fingerprint">fingerprint pending</div>
               </div>
             </div>
-            <div style="display:flex;gap:6px">
-              <input id="chatx-add-id" class="field" placeholder="Paste invite link / JSON / Friend ID" style="margin:0;font-size:12px;min-width:0">
-              <button type="button" class="bigbtn smallbtn" onclick="chatxAddContact()">Add</button>
+            <div class="chatx-add-row">
+              <input id="chatx-add-id" class="field" placeholder="Invite link / JSON / Friend ID" style="margin:0;font-size:12px;min-width:0">
+              <button type="button" class="ux-iconbtn primary" aria-label="Add contact" onclick="chatxAddContact()">＋</button>
             </div>
-            <div style="font-size:10px;color:var(--t3)">Share the invite QR or link. Bare IDs only work for legacy local users.</div>
-            <div id="chatx-contacts" style="overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px;min-height:150px"></div>
-            <div style="font-size:10px;color:var(--t3);margin-top:2px">Call log</div>
+            <div id="chatx-contacts"><div style="font-size:11px;color:var(--t3);padding:4px">No contacts loaded.</div></div>
             <div id="chatx-call-log" class="chatx-call-log"><div style="font-size:10px;color:var(--t3);padding:4px">No call events yet.</div></div>
-          </div>
-          <div class="chatx-col right">
-            <div style="padding:10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
-              <div id="chatx-peer-title" style="font-size:12px;color:var(--t2)">Select a contact</div>
-              <div style="display:flex;gap:6px;align-items:center">
-                <button type="button" class="bigbtn ghost smallbtn" id="chatx-call-voice" onclick="chatxStartVoiceCall()">Call</button>
-                <button type="button" class="bigbtn ghost smallbtn" id="chatx-call-video" onclick="chatxStartVideoCall()">Video</button>
-                <button type="button" class="bigbtn ghost smallbtn" onclick="chatxRefresh()">Refresh</button>
+          </aside>
+          <div class="ux-resizer" id="chatx-splitter" role="separator" aria-label="Resize chat contacts"></div>
+          <section class="chatx-main">
+            <div class="chatx-topbar">
+              <div class="chatx-titleblock">
+                <div id="chatx-peer-title" style="font-size:12px;color:var(--t1);font-weight:800">Select a contact</div>
+                <div style="font-size:10.5px;color:var(--t3)">Messages and files stay in the encrypted thread.</div>
+              </div>
+              <div class="ux-iconbar">
+                <button type="button" class="ux-iconbtn" aria-label="Start voice call" id="chatx-call-voice" onclick="chatxStartVoiceCall()">☎</button>
+                <button type="button" class="ux-iconbtn" aria-label="Start video call" id="chatx-call-video" onclick="chatxStartVideoCall()">▣</button>
+                <button type="button" class="ux-iconbtn" aria-label="Refresh thread" onclick="chatxRefresh()">↻</button>
               </div>
             </div>
             <div class="chatx-incoming" id="chatx-incoming">
@@ -867,13 +1021,13 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
               </div>
             </div>
             <div id="chatx-thread" style="flex:1;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px"></div>
-            <div style="padding:10px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center">
+            <div class="chatx-compose">
               <input type="file" id="chatx-file" style="display:none">
-              <button type="button" class="bigbtn" onclick="$('chatx-file').click()">📎</button>
+              <button type="button" class="ux-iconbtn" aria-label="Attach encrypted file" onclick="$('chatx-file').click()">＋</button>
               <input id="chatx-input" class="field" placeholder="Encrypted message..." style="flex:1;margin:0" onkeydown="if(event.key==='Enter')chatxSend()">
-              <button type="button" class="bigbtn solid" onclick="chatxSend()">Send</button>
+              <button type="button" class="ux-iconbtn primary" aria-label="Send encrypted message" onclick="chatxSend()">↑</button>
             </div>
-          </div>
+          </section>
         </div>
       
 
@@ -921,15 +1075,22 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
         </div>
       
       <!-- MACOS TOOLS --></div>
-<div class="view" id="view-plugins"><div class="vhead"><h2>Plugins</h2><span class="sub">Local Chinna extensions · dashboard and SwiftBar actions</span></div>
-        <div class="toolbar">
-          <button type="button" class="bigbtn solid" onclick="loadPlugins()">Refresh Plugins</button>
-          <button type="button" class="bigbtn" onclick="installSwiftBarQuickActions()">Install SwiftBar Actions</button>
-          <span class="count" id="plugin-count">—</span>
-        </div>
-        <div class="vbody">
-          <div class="plugin-grid" id="plugin-grid"></div>
-          <div class="outbox plugin-log" id="plugin-log">Select a plugin action to run it.</div>
+<div class="view" id="view-plugins"><div class="vhead"><h2>Plugins</h2><span class="sub">Extensions, actions, and execution log</span></div>
+        <div class="vbody plugin-console">
+          <div class="plugin-toolbar">
+            <div>
+              <div class="ux-panel-title">Plugin Console</div>
+              <div class="ux-panel-sub">Run local actions without leaving the dashboard.</div>
+            </div>
+            <input class="field plugin-search" id="plugin-filter" placeholder="Filter plugins..." oninput="renderPlugins()">
+            <span class="count" id="plugin-count">—</span>
+            <div class="ux-iconbar">
+              <button type="button" class="ux-iconbtn primary" aria-label="Refresh plugins" onclick="loadPlugins()">↻</button>
+              <button type="button" class="ux-iconbtn" aria-label="Install SwiftBar actions" onclick="installSwiftBarQuickActions()">▥</button>
+            </div>
+          </div>
+          <div class="plugin-grid pro" id="plugin-grid"></div>
+          <div class="outbox plugin-log pro" id="plugin-log">Select a plugin action to run it.</div>
         </div>
       
 
@@ -1031,199 +1192,127 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
       
 
       <!-- SETTINGS --></div>
-<div class="view" id="view-onboarding"><div class="vhead"><h2>Welcome to Chinna on Mac</h2><span class="sub">A dedicated quick start for first-time users</span></div>
-        <div class="vbody">
-          <div class="onboard-shell">
-            <div class="onboard-hero glass">
-              <div class="onboard-top">
-                <img class="launch-mark" src="/assets/chinna-icon.svg" alt="Chinna">
-                <div>
-                  <div class="onboard-title">A Mac app feel from the first launch</div>
-                  <div class="onboard-sub">Pick the macOS theme, install the native app wrapper, and add SwiftBar quick actions in one pass.</div>
-                </div>
-              </div>
-
-              <div class="onboard-grid">
-                <div class="onboard-step">
-                  <div class="onboard-step-num">1</div>
-                  <div class="onboard-step-title">Install Chinna.app</div>
-                  <div class="onboard-step-copy">Create the branded app bundle in Applications for Dock, Spotlight, and native-style launching.</div>
-                </div>
-                <div class="onboard-step">
-                  <div class="onboard-step-num">2</div>
-                  <div class="onboard-step-title">Add SwiftBar actions</div>
-                  <div class="onboard-step-copy">Put Purge, Clean, Update, and dashboard actions in the menu bar near the notch.</div>
-                </div>
-                <div class="onboard-step">
-                  <div class="onboard-step-num">3</div>
-                  <div class="onboard-step-title">Use the macOS theme</div>
-                  <div class="onboard-step-copy">Switch to the glassy macOS look for the dashboard, built for a lighter and more native feel.</div>
-                </div>
-                <div class="onboard-step">
-                  <div class="onboard-step-num">4</div>
-                  <div class="onboard-step-title">Continue to tools</div>
-                  <div class="onboard-step-copy">Open macOS Tools, then move into the rest of the dashboard once setup is complete.</div>
-                </div>
-              </div>
-
-              <div class="onboard-actions">
-                <button type="button" class="bigbtn solid" onclick="installMacApp()">Install Chinna.app</button>
-                <button type="button" class="bigbtn" onclick="installSwiftBarQuickActions()">Install SwiftBar quick actions</button>
-                <button type="button" class="bigbtn ghost" onclick="applyTheme('macos')">Use macOS theme</button>
-                <button type="button" class="bigbtn ghost" onclick="completeMacOnboarding()">Skip to dashboard</button>
-              </div>
+<div class="view" id="view-onboarding"><div class="vhead"><h2>Get Started</h2><span class="sub">Install, menu actions, theme, and first run</span></div>
+        <div class="vbody launchpad">
+          <section class="launch-main">
+            <div class="settings-kicker">First run</div>
+            <h3>Set up the Mac wrapper and menu actions.</h3>
+            <p>Use this launchpad to install the local app shell, add menu bar actions, and choose the dashboard theme before moving into the system tools.</p>
+            <div class="launch-actions">
+              <button type="button" class="bigbtn solid" onclick="installMacApp()">Install Chinna.app</button>
+              <button type="button" class="bigbtn" onclick="installSwiftBarQuickActions()">Install SwiftBar actions</button>
+              <button type="button" class="bigbtn ghost" onclick="applyTheme('macos')">Use macOS theme</button>
+              <button type="button" class="bigbtn ghost" onclick="completeMacOnboarding()">Open macOS tools</button>
             </div>
-
-            <div class="onboard-side glass">
-              <div class="side-title">What you get</div>
-              <div class="side-list">
-                <div>• Real Chinna.app wrapper with branded icon</div>
-                <div>• Menu-bar quick actions for the notch / SwiftBar</div>
-                <div>• macOS theme that stays selected for this device</div>
-                <div>• One-click launch path for new users</div>
-              </div>
-              <div class="side-callout">
-                First-time users should start here. Existing users can skip directly into the tools.
-              </div>
+            <div class="launch-checklist">
+              <div class="launch-step"><b>1. App wrapper</b><span>Creates the local Chinna.app launcher in Applications.</span></div>
+              <div class="launch-step"><b>2. Menu actions</b><span>Adds dashboard, update, clean, and plugin actions to SwiftBar.</span></div>
+              <div class="launch-step"><b>3. Theme</b><span>Stores the selected dashboard theme on this Mac.</span></div>
+              <div class="launch-step"><b>4. Continue</b><span>Moves into the operational tools once setup is complete.</span></div>
             </div>
-          </div>
+            <div class="settings-note" style="margin-top:14px">Install status appears in Settings after the action finishes.</div>
+          </section>
+          <aside class="launch-side">
+            <div class="ux-panel-title">Setup status</div>
+            <div class="rail-item"><b>Version</b><span>v6.7.0</span></div>
+            <div class="rail-item"><b>App home</b><span>~/.chinna</span></div>
+            <div class="rail-item"><b>Dashboard</b><span>http://localhost:7777</span></div>
+            <div class="rail-item"><b>Update command</b><span>chinna update</span></div>
+          </aside>
         </div></div>
 <div class="view" id="view-settings"><div class="vhead"><h2>Settings</h2><span class="sub">Local keys, installs, and version updates</span></div>
         <div class="vbody">
-          <div class="settings-shell">
-            <section class="settings-hero glass">
-              <div class="settings-hero-top">
-                <div>
-                  <div class="settings-kicker">System configuration</div>
-                  <h3>Keep Chinna aligned with the rest of the dashboard.</h3>
-                  <p>Manage API keys, relay settings, installs, and update prompts from one consistent surface instead of scattering them across different pages.</p>
+          <div class="settings-shell pro-settings">
+            <main class="settings-scroll">
+              <section class="settings-card settings-main">
+                <div class="settings-card-head">
+                  <div>
+                    <div class="settings-label">Core keys</div>
+                    <div class="settings-card-title">AI and relay configuration</div>
+                  </div>
+                  <button type="button" class="ux-iconbtn primary" aria-label="Save settings" onclick="saveKeys()">✓</button>
                 </div>
-                <div class="settings-version">
-                  <span class="label">Installed</span>
-                  <strong id="settings-current-version">v6.7.0</strong>
-                  <span id="settings-update-summary">Checking update status…</span>
+                <div class="settings-field-grid">
+                  <div class="full">
+                    <div class="navlabel" style="margin-left:0">OpenRouter key — Chinna AI</div>
+                    <input class="field" id="set-or" type="password" autocomplete="new-password" placeholder="sk-or-v1-...">
+                  </div>
+                  <div class="full">
+                    <div class="navlabel" style="margin-left:0">OpenAI key — optional (Whisper/GPT)</div>
+                    <input class="field" id="set-oa" type="password" autocomplete="new-password" placeholder="sk-...">
+                  </div>
+                  <div class="full settings-switch">
+                    <input id="set-turn-enabled" type="checkbox" style="accent-color:var(--acc)">
+                    <label for="set-turn-enabled">Enable TURN fallback for stricter networks.</label>
+                  </div>
+                  <input class="field" id="set-turn-urls" placeholder="TURN URLs">
+                  <input class="field" id="set-turn-user" placeholder="TURN username">
+                  <input class="field full" id="set-turn-cred" type="password" autocomplete="new-password" placeholder="TURN credential">
+                  <input class="field full" id="set-chat-relay" placeholder="Secure Chat relay URL">
                 </div>
-              </div>
-              <div class="settings-badges">
-                <span class="chip">Local only</span>
-                <span class="chip">~/.chinna</span>
-                <span class="chip">App install</span>
-                <span class="chip">Telegram pair</span>
-              </div>
-              <div class="settings-banner" id="settings-update-banner">
-                <div class="banner-icon">↻</div>
-                <div class="settings-banner-copy">
-                  <strong>Checking for the latest build…</strong>
-                  <span>Chinna will compare the installed version with the remote release and surface the update path here.</span>
+                <div class="settings-inline">
+                  <button type="button" class="bigbtn ghost smallbtn" id="turn-gen-btn" onclick="generateTurnCredentials()">Generate TURN Credentials</button>
+                  <button type="button" class="bigbtn ghost smallbtn" id="turn-test-btn" onclick="testTurnConnectivity()">Test TURN Relay</button>
+                  <div id="turn-test-status" class="settings-help">No TURN test yet.</div>
                 </div>
-              </div>
-            </section>
+              </section>
 
-            <section class="settings-card settings-main">
-              <div class="settings-card-head">
-                <div>
-                  <div class="settings-label">Core keys</div>
-                  <div class="settings-card-title">API and relay settings</div>
-                </div>
-                <div class="settings-card-copy">These values stay local on this Mac and are not synced with your account.</div>
-              </div>
-              <div class="settings-field-grid">
-                <div class="full">
-                  <div class="navlabel" style="margin-left:0">OpenRouter key — Chinna AI</div>
-                  <input class="field" id="set-or" type="password" autocomplete="new-password" placeholder="sk-or-v1-…">
-                </div>
-                <div class="full">
-                  <div class="navlabel" style="margin-left:0">OpenAI key — optional (Whisper/GPT)</div>
-                  <input class="field" id="set-oa" type="password" autocomplete="new-password" placeholder="sk-…">
-                </div>
-                <div class="full settings-switch">
-                  <input id="set-turn-enabled" type="checkbox" style="accent-color:var(--acc)">
-                  <label for="set-turn-enabled">Enable TURN fallback for stricter networks. This helps calls connect when direct WebRTC is blocked.</label>
-                </div>
-                <div>
-                  <input class="field" id="set-turn-urls" placeholder="turn:turn.example.com:3478?transport=udp, turns:turn.example.com:5349?transport=tcp">
-                </div>
-                <div>
-                  <input class="field" id="set-turn-user" placeholder="TURN username (optional)">
-                </div>
-                <div class="full">
-                  <input class="field" id="set-turn-cred" type="password" autocomplete="new-password" placeholder="TURN credential (optional)">
-                </div>
-                <div class="full">
-                  <div class="navlabel" style="margin-left:0">Secure Chat relay URL (optional)</div>
-                  <input class="field" id="set-chat-relay" placeholder="http://localhost:7777 or https://your-public-relay.example">
-                </div>
-              </div>
-              <div class="settings-inline">
-                <button type="button" class="bigbtn ghost smallbtn" id="turn-gen-btn" onclick="generateTurnCredentials()">Generate TURN Credentials</button>
-                <button type="button" class="bigbtn ghost smallbtn" id="turn-test-btn" onclick="testTurnConnectivity()">Test TURN Relay</button>
-                <div id="turn-test-status" class="settings-help">No TURN test yet.</div>
-              </div>
-              <div class="settings-footer-actions">
-                <button type="button" class="bigbtn solid" onclick="saveKeys()">Save Keys</button>
-                <button type="button" class="bigbtn ghost smallbtn" onclick="window.open(location.origin,'_blank')">Open in Browser</button>
-              </div>
-            </section>
-
-            <section class="settings-stack">
-              <div class="settings-card settings-install">
+              <section class="settings-card settings-install">
                 <div class="settings-card-head">
                   <div>
                     <div class="settings-label">Desktop app</div>
-                    <div class="settings-card-title">Install Chinna.app</div>
+                    <div class="settings-card-title">Local launcher and menu actions</div>
                   </div>
-                  <div class="settings-card-copy">Dock, Spotlight, and the native Mac wrapper.</div>
+                  <div class="settings-card-copy">Install the app wrapper and SwiftBar controls.</div>
                 </div>
-                <div class="installappcard">
-                  <div class="installapphead">
-                    <img class="installappicon" src="/assets/chinna-icon.svg" alt="Chinna icon">
-                    <div>
-                      <div class="installapptitle">Make it feel like a proper Mac app</div>
-                      <div class="installappsub">Create a real Chinna.app in Applications with the icon, Dock presence, Spotlight launch, and a clean one-click entry point for first-time users.</div>
-                    </div>
-                  </div>
-                  <div class="installappmeta">
-                    <span class="chip">One click</span>
-                    <span class="chip">Applications</span>
-                    <span class="chip">Dock + Spotlight</span>
-                    <span class="chip">SwiftBar-ready</span>
-                  </div>
-                  <div class="installappactions">
-                    <button type="button" class="bigbtn solid" id="install-app-btn" onclick="installMacApp()">Install Chinna.app</button>
-                    <button type="button" class="bigbtn" id="install-swiftbar-btn" onclick="installSwiftBarQuickActions()">Install SwiftBar quick actions</button>
-                  </div>
-                  <div class="installappfine" id="install-app-note">Best for users who want Chinna to behave like a regular Mac app from day one.</div>
+                <div class="settings-inline">
+                  <button type="button" class="bigbtn solid" id="install-app-btn" onclick="installMacApp()">Install Chinna.app</button>
+                  <button type="button" class="bigbtn" id="install-swiftbar-btn" onclick="installSwiftBarQuickActions()">Install SwiftBar actions</button>
+                  <button type="button" class="bigbtn ghost smallbtn" onclick="window.open(location.origin,'_blank')">Open dashboard</button>
                 </div>
-              </div>
+                <div class="installappfine" id="install-app-note">Status will appear here after install actions run.</div>
+              </section>
 
-              <div class="settings-card settings-install">
+              <section class="settings-card settings-install">
                 <div class="settings-card-head">
                   <div>
-                    <div class="settings-label">Messaging</div>
-                    <div class="settings-card-title">Telegram pairing</div>
+                    <div class="settings-label">Telegram</div>
+                    <div class="settings-card-title">Remote control pairing</div>
                   </div>
-                  <div class="settings-card-copy">Pair the dashboard to Telegram for remote control.</div>
                 </div>
-                <div class="paircard">
-                  <div class="stack">
-                    <input class="field" id="tg-token" type="password" autocomplete="off" placeholder="Telegram bot token">
-                    <button type="button" class="bigbtn" onclick="saveTelegramToken()">Save Telegram Token</button>
-                    <button type="button" class="bigbtn solid" onclick="createTelegramPair()">Generate Pair Code</button>
-                  </div>
-                  <div class="chiprow">
-                    <span class="chip" id="tg-bot">Bot: —</span>
-                    <span class="chip" id="tg-state">State: —</span>
-                  </div>
-                  <div class="pairhint" id="tg-link">Pairing link will appear here after generating a code.</div>
+                <div class="settings-field-grid">
+                  <input class="field full" id="tg-token" type="password" autocomplete="off" placeholder="Telegram bot token">
+                  <button type="button" class="bigbtn" onclick="saveTelegramToken()">Save Telegram Token</button>
+                  <button type="button" class="bigbtn solid" onclick="createTelegramPair()">Generate Pair Code</button>
                 </div>
-                <div class="statuscard">
-                  <h4>Pair Card</h4>
-                  <div class="pairqr"><img id="tg-qr" alt="Telegram pair QR"></div>
-                  <div class="pairhint">Scan the QR or open the link on your phone, then tap Start in Telegram. The dashboard will bind that chat automatically.</div>
-                  <button type="button" class="bigbtn ghost smallbtn" style="margin-top:10px" onclick="testTelegram()">Send test</button>
+                <div class="chiprow">
+                  <span class="chip" id="tg-bot">Bot: —</span>
+                  <span class="chip" id="tg-state">State: —</span>
+                </div>
+                <div class="pairhint" id="tg-link">Pairing link will appear here after generating a code.</div>
+              </section>
+            </main>
+
+            <aside class="settings-rail">
+              <div class="settings-version">
+                <span class="label">Installed</span>
+                <strong id="settings-current-version">v6.7.0</strong>
+                <span id="settings-update-summary">Checking update status...</span>
+              </div>
+              <div class="settings-banner" id="settings-update-banner" style="margin-top:12px">
+                <div class="banner-icon">↻</div>
+                <div class="settings-banner-copy">
+                  <strong>Checking for the latest build...</strong>
+                  <span>Update status appears here.</span>
                 </div>
               </div>
-            </section>
+              <div class="settings-card settings-install" style="margin-top:12px">
+                <div class="settings-card-title">Pair card</div>
+                <div class="pairqr"><img id="tg-qr" alt="Telegram pair QR"></div>
+                <div class="pairhint">Scan the QR or open the generated link on your phone.</div>
+                <button type="button" class="bigbtn ghost smallbtn" onclick="testTelegram()">Send test</button>
+              </div>
+            </aside>
           </div>
         </div>
       
@@ -1259,7 +1348,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
       </div>
     </div>
     <div class="v6-body">
-      <b>What's new in V6:</b>
+      <b>What's new in V6.7:</b>
       🤖 Model switcher — change AI model from the dashboard<br>
       🍎 macOS Tools — Apple Music, lock screen, screen share, kill ports<br>
       🔍 Project Audit — full project report saved to Desktop<br>
@@ -1399,14 +1488,16 @@ function setVoiceButton(){
   const btn=$('voice-btn'); if(!btn) return;
   const oled = document.documentElement.dataset.theme==='oled';
   if(!voiceEnabled){
-    btn.textContent='🎙 Voice Off';
+    btn.textContent='◉';
+    btn.setAttribute('aria-label','Voice mode off');
     btn.classList.remove('on'); btn.style.cssText='';
     destroyVoiceUI();
     return;
   }
-  btn.textContent = voiceState==='listening' ? '🎙 Listening' : 
-                    voiceState==='speaking'  ? '🗣 Speaking' : 
-                    voiceState==='thinking'  ? '🧠 Thinking' : '🎙 Voice On';
+  btn.textContent = voiceState==='listening' ? '●' :
+                    voiceState==='speaking'  ? '◍' :
+                    voiceState==='thinking'  ? '◌' : '◉';
+  btn.setAttribute('aria-label', voiceState==='idle' ? 'Voice mode on' : `Voice ${voiceState}`);
   btn.classList.add('on');
   if (oled){
     btn.style.background='transparent';
@@ -1685,7 +1776,7 @@ function blobToBase64(blob){
 }
 function appendChat(role,text){
   const row=document.createElement('div');
-  row.className='row';
+  row.className=`ai-message ${role==='user'?'user':'assistant'}`;
   row.style.gap = '10px';
   if(role==='user'){
     row.style.justifyContent='flex-end';
@@ -1718,7 +1809,7 @@ function appendChat(role,text){
 
 async function clearAIHistory(){
   chatHistory = [];
-  $('ai-msgs').innerHTML = '';
+  $('ai-msgs').innerHTML = '<div class="ai-empty-state" id="ai-empty-state"><strong>Ask, attach, or run a local task.</strong><span>Keep the prompt focused; use the options button for files and previous uploads.</span></div>';
   try{ await api('chat/clear'); }catch(e){}
   toast('Conversation memory cleared');
 }
@@ -1796,6 +1887,51 @@ function setupAttachmentUI(){
     };
   }
 }
+function resizeAiInput(el){
+  if(!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(120, Math.max(42, el.scrollHeight)) + 'px';
+}
+function toggleAiOptions(force){
+  const menu=$('ai-options-menu');
+  if(!menu) return;
+  const open = force === undefined ? !menu.classList.contains('open') : !!force;
+  menu.classList.toggle('open', open);
+}
+document.addEventListener('click', e=>{
+  const menu=$('ai-options-menu');
+  if(!menu || !menu.classList.contains('open')) return;
+  if(e.target.closest?.('.ai-composer')) return;
+  toggleAiOptions(false);
+});
+function setupChatxSplitter(){
+  const splitter=$('chatx-splitter');
+  const sidebar=$('chatx-sidebar');
+  if(!splitter || !sidebar || splitter.dataset.ready) return;
+  splitter.dataset.ready='1';
+  let dragging=false;
+  const stop=()=>{
+    dragging=false;
+    splitter.classList.remove('dragging');
+    document.body.style.cursor='';
+    document.body.style.userSelect='';
+  };
+  splitter.addEventListener('pointerdown', e=>{
+    dragging=true;
+    splitter.classList.add('dragging');
+    splitter.setPointerCapture?.(e.pointerId);
+    document.body.style.cursor='col-resize';
+    document.body.style.userSelect='none';
+  });
+  window.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    const rect=splitter.parentElement.getBoundingClientRect();
+    const next=Math.max(240, Math.min(480, e.clientX - rect.left));
+    sidebar.style.width=next+'px';
+  });
+  window.addEventListener('pointerup', stop);
+  window.addEventListener('pointercancel', stop);
+}
 document.addEventListener('keydown',e=>{
   if(e.code==='Escape' && voiceEnabled){
     toggleVoiceMode(false);
@@ -1838,8 +1974,8 @@ function go(v){
   if(v==='doctor')loadDoctor();
   if(v==='network')loadNet();
   if(v==='storage')loadStorage(HOME_PATH,false);
-  if(v==='ai'){ loadAIStatus(); if(voiceEnabled) ensureVoiceUI(); setupAttachmentUI(); }
-  if(v==='chatx'){ chatxInit(); }
+  if(v==='ai'){ loadAIStatus(); if(voiceEnabled) ensureVoiceUI(); setupAttachmentUI(); resizeAiInput($('ai-in')); }
+  if(v==='chatx'){ chatxInit(); setupChatxSplitter(); }
   if(v==='whatsapp'){ waInit(); }
   if(v==='plugins'){ loadPlugins(); }
   if(v==='settings'){ loadSettingsUpdateStatus(); loadTelegramStatus(); loadKeySettings(); }
@@ -3988,11 +4124,13 @@ async function loadPlugins(){
 function renderPlugins(){
   const grid=$('plugin-grid');
   if(!grid) return;
-  if(!chinnaPlugins.length){
+  const q=($('plugin-filter')?.value||'').trim().toLowerCase();
+  const plugins=q?chinnaPlugins.filter(p=>[p.name,p.id,p.category,p.description].some(v=>String(v||'').toLowerCase().includes(q))):chinnaPlugins;
+  if(!plugins.length){
     grid.innerHTML='<div class="empty"><div class="big">🧩</div>No plugins found</div>';
     return;
   }
-  grid.innerHTML=chinnaPlugins.map(p=>{
+  grid.innerHTML=plugins.map(p=>{
     const actions=(p.actions||[]).map(a=>renderPluginAction(p,a)).join('');
     return `<div class="plugin-card">
       <div class="plugin-head">
@@ -4099,6 +4237,9 @@ function showSources(row,sources){
 }
 async function sendAI(forcedMsg,fromVoice=false){
   const inp=$('ai-in'),msg=(forcedMsg!==undefined?forcedMsg:inp.value).trim();if(!msg)return;inp.value='';
+  resizeAiInput(inp);
+  $('ai-empty-state')?.remove();
+  toggleAiOptions(false);
   const M=$('ai-msgs');
 
   // Add user message visually + to history
@@ -5178,11 +5319,13 @@ initV6();
   function backfillAria(){
     // icon-only buttons → derive label from .tip / title / text
     qsa('button,.iconbtn,.dapp,[role="button"]').forEach(b=>{
-      if(b.getAttribute('aria-label')) return;
       const tip=b.querySelector && b.querySelector('.tip');
-      let lbl = (tip&&tip.textContent.trim()) || b.getAttribute('title') || '';
+      let lbl = b.getAttribute('aria-label') || (tip&&tip.textContent.trim()) || b.getAttribute('title') || '';
       if(!lbl){ const txt=(b.textContent||'').replace(/\s+/g,' ').trim(); if(txt && txt.length<=24) lbl=txt; }
-      if(lbl) b.setAttribute('aria-label', lbl);
+      if(lbl && !b.getAttribute('aria-label')) b.setAttribute('aria-label', lbl);
+      if(lbl && (b.classList.contains('ux-iconbtn') || b.classList.contains('dapp')) && !b.getAttribute('data-tip')) {
+        b.setAttribute('data-tip', lbl);
+      }
     });
     // theme switcher semantics
     const themes=qs('#themes');
