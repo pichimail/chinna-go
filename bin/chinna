@@ -165,6 +165,14 @@ banner() {
     echo ""
 }
 
+# ─── Grok CLI Exact Style version (strict clean) ──────────────────────────────
+cmd_version() {
+    echo ""
+    echo -e "  ${BOLD}${WHITE}chinna${RESET}  ${ACCENT}v${CHINNA_VERSION}${RESET}"
+    echo -e "  ${DIM}local mac sidekick — Grok-style CLI${RESET}"
+    echo ""
+}
+
 # ─── Ensure dep ───────────────────────────────────────────────
 ensure_dep() {
     local cmd="$1" pkg="${2:-$1}"
