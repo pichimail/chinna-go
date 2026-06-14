@@ -537,7 +537,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
   <aside id="sidebar">
     <div class="sidebar-logo">
       <div class="logo-mark">C</div>
-      <div><div class="logo-text">CHINNA <span class="logo-ver">V6.7</span></div></div>
+      <div><div class="logo-text">CHINNA <span class="logo-ver">V6.8</span></div></div>
       <button id="sidebarToggle" class="sidebar-toggle" title="Toggle sidebar">⇐</button>
     </div>
     <div id="sidebarResize"></div>
@@ -565,6 +565,9 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
   <div class="navitem" data-v="plugins" onclick="go('plugins')"><span class="nv-ic">◐</span><span class="nv-label">Plugins</span></div>
   <div class="navitem" data-v="macos" onclick="go('macos')"><span class="nv-ic">◇</span><span class="nv-label">macOS Tools</span></div>
   <div class="navitem" data-v="models" onclick="go('models')"><span class="nv-ic">⊕</span><span class="nv-label">Models &amp; AI</span></div>
+  <div class="nav-section" id="web-nav-section">Web</div>
+  <div class="navitem" data-v="web" onclick="go('web')"><span class="nv-ic">🌐</span><span class="nv-label">Web Views</span><span class="nv-badge" style="background:rgba(96,165,250,.15);color:#60a5fa">NEW</span></div>
+  <div id="web-subnav" style="margin-left:8px;display:none"></div>
   <div class="nav-section">Workspace</div>
   <div class="navitem" data-v="projects" onclick="go('projects')"><span class="nv-ic">◧</span><span class="nv-label">Projects</span></div>
   <div class="navitem" data-v="onboarding" onclick="go('onboarding')"><span class="nv-ic">✦</span><span class="nv-label">Get Started</span></div>
@@ -880,6 +883,41 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
   .av0-resizer { display: none; }
 }
 </style>
+<div class="view" id="view-web">
+  <div class="web-header">
+    <div class="web-title">
+      <span class="wh-ic">🌐</span>
+      <span id="web-current-name">Web View</span>
+    </div>
+    <div class="web-controls">
+      <select id="web-switcher" onchange="switchWebViewFromSelect(this.value)" style="background:var(--s1);border:1px solid var(--line2);color:var(--t1);font-size:11px;padding:4px 8px;border-radius:6px;max-width:180px"></select>
+      <button class="av0-mini" onclick="editCurrentWebView()">Edit</button>
+      <button class="av0-mini" onclick="webFullscreen()">Fullscreen</button>
+      <button class="av0-mini" onclick="webNormal()">Dock</button>
+      <button class="av0-mini" onclick="addQuickWebView()">+ Add</button>
+      <button class="av0-mini danger" onclick="deleteCurrentWebView()">Delete</button>
+    </div>
+  </div>
+  <div id="web-frame-container" style="flex:1;position:relative;background:#000;overflow:hidden">
+    <iframe id="webFrame" style="position:absolute;inset:0;width:100%;height:100%;border:none;background:#fff" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+    <div id="web-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#666;font-size:13px;text-align:center;line-height:1.5">
+      No web view selected.<br>
+      Use the + in the header or manage in Settings.
+    </div>
+  </div>
+  <div class="web-foot">
+    <span>Embeds run inside Chinna. Auth cookies usually persist per-site for the lifetime of your browser session. Mark "auth done" in Settings for your reference.</span>
+  </div>
+</div>
+
+<style>
+.web-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--s1);flex-shrink:0;gap:12px}
+.web-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+.web-title .wh-ic{font-size:16px}
+.web-controls{display:flex;align-items:center;gap:5px}
+.web-foot{padding:5px 12px;font-size:10px;color:var(--t4);border-top:1px solid var(--line);background:var(--bg);flex-shrink:0}
+</style>
+
 <div class="view" id="view-forge"><div class="vhead">
   <h2>⚒ Chinna Forge</h2>
   <span class="sub">Full-stack dev shell — detect, scaffold, install, scan, build, deploy</span>
@@ -1418,6 +1456,28 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
                 </div>
               </section>
 
+              <!-- v6.8: Dynamic full-window web embeds / iframes manager (minimal + powerful) -->
+              <section class="settings-card" id="web-embeds-card">
+                <div class="settings-card-head">
+                  <div>
+                    <div class="settings-label">Embeds</div>
+                    <div class="settings-card-title">Custom Web Views (iframes)</div>
+                  </div>
+                </div>
+                <div class="settings-help" style="margin-bottom:6px">Add any external site or SaaS tool as a first-class full-window view inside Chinna. Persisted locally. Auth sessions often carry over inside the iframe.</div>
+
+                <!-- Minimal + add form -->
+                <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center">
+                  <input id="web-embed-name" class="field" placeholder="Name (Vercel, Notion, Linear...)" style="max-width:160px">
+                  <input id="web-embed-url" class="field" placeholder="https://example.com/app" style="flex:1">
+                  <button onclick="addCustomWebViewFromSettings()" class="av0-send" style="width:34px;height:34px;border-radius:8px;font-size:18px;line-height:1;padding:0">+</button>
+                </div>
+
+                <div id="web-embeds-list" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px;background:var(--s0)"></div>
+
+                <div class="settings-note">Tip: After adding, use the Web Views sidebar entry (or sub menu) to open. Fullscreen and Dock controls are in the view header.</div>
+              </section>
+
               <section class="settings-card settings-install">
                 <div class="settings-card-head">
                   <div>
@@ -1457,7 +1517,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
             <aside class="settings-rail">
               <div class="settings-version">
                 <span class="label">Installed</span>
-                <strong id="settings-current-version">v6.7.0</strong>
+                <strong id="settings-current-version">v6.8.0</strong>
                 <span id="settings-update-summary">Checking update status...</span>
               </div>
               <div class="settings-banner" id="settings-update-banner" style="margin-top:12px">
@@ -6753,5 +6813,239 @@ window.toast = function(msg, type, dur){
     };
   }
 })();</script>
+
+<!-- v6.8 Web Embeds / Iframes feature JS (dynamic sidebar subs, full window views, settings manager, backend sync) -->
+<script>
+/* Custom Web Views (named iframes) */
+let customViews = [];
+let currentWebViewId = null;
+
+async function loadCustomViews() {
+  try {
+    const r = await fetch('/api/custom-views');
+    const j = await r.json();
+    customViews = Array.isArray(j.views) ? j.views : [];
+  } catch(e) {
+    customViews = JSON.parse(localStorage.getItem('chinna_custom_views') || '[]');
+  }
+  renderWebSubNav();
+  renderWebSwitcher();
+  if (document.getElementById('web-embeds-list')) renderWebEmbedsInSettings();
+}
+
+async function saveCustomViews() {
+  try {
+    await fetch('/api/custom-views', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({views: customViews})
+    });
+  } catch(e) {}
+  localStorage.setItem('chinna_custom_views', JSON.stringify(customViews));
+  renderWebSubNav();
+  renderWebSwitcher();
+  if (document.getElementById('web-embeds-list')) renderWebEmbedsInSettings();
+}
+
+function renderWebSubNav() {
+  const container = document.getElementById('web-subnav');
+  if (!container) return;
+  container.innerHTML = '';
+  container.style.display = customViews.length ? 'block' : 'none';
+
+  customViews.slice(0, 6).forEach(v => {
+    const el = document.createElement('div');
+    el.className = 'navitem';
+    el.style.padding = '5px 10px 5px 22px';
+    el.style.fontSize = '11.5px';
+    el.innerHTML = `<span class="nv-ic" style="font-size:11px">↳</span><span class="nv-label">${escHtml(v.name || v.url)}</span>`;
+    el.onclick = (e) => { e.stopPropagation(); go('web'); loadWebView(v.id); };
+    container.appendChild(el);
+  });
+  if (customViews.length > 6) {
+    const more = document.createElement('div');
+    more.style.cssText = 'padding:3px 10px 3px 22px;font-size:10px;color:var(--t4);cursor:pointer';
+    more.textContent = `+${customViews.length-6} more…`;
+    more.onclick = () => go('settings');
+    container.appendChild(more);
+  }
+}
+
+function renderWebSwitcher() {
+  const sel = document.getElementById('web-switcher');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— switch view —</option>';
+  customViews.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v.id;
+    o.textContent = v.name || v.url.slice(0,32);
+    if (v.id === currentWebViewId) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function switchWebViewFromSelect(id) {
+  if (id) loadWebView(id);
+}
+
+function addQuickWebView() {
+  const name = prompt('Name for this web view (optional):') || 'Untitled';
+  const url = prompt('Full URL (https://...):');
+  if (!url) return;
+  const id = 'wv_' + Date.now().toString(36);
+  customViews.push({id, name: name.trim() || 'Untitled', url: url.trim(), auth: false});
+  saveCustomViews();
+  go('web');
+  loadWebView(id);
+}
+
+function addCustomWebViewFromSettings() {
+  const nameEl = document.getElementById('web-embed-name');
+  const urlEl = document.getElementById('web-embed-url');
+  const name = (nameEl.value || 'Untitled').trim();
+  const url = (urlEl.value || '').trim();
+  if (!url) { alert('URL required'); return; }
+  const id = 'wv_' + Date.now().toString(36);
+  customViews.push({id, name, url, auth: false});
+  saveCustomViews();
+  nameEl.value = ''; urlEl.value = '';
+  toast('Web view added');
+}
+
+function renderWebEmbedsInSettings() {
+  const list = document.getElementById('web-embeds-list');
+  if (!list) return;
+  if (!customViews.length) {
+    list.innerHTML = '<div style="padding:8px 10px;color:var(--t3);font-size:11px">No custom views yet. Use the + above or the header in Web Views.</div>';
+    return;
+  }
+  list.innerHTML = customViews.map(v => `
+    <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;background:var(--s1)">
+      <input value="${escHtml(v.name)}" onchange="updateWebViewField('${v.id}','name',this.value)" style="flex:0 0 120px;background:transparent;border:1px solid var(--line);font-size:11px;padding:2px 5px;border-radius:4px;color:var(--t1)">
+      <input value="${escHtml(v.url)}" onchange="updateWebViewField('${v.id}','url',this.value)" style="flex:1;background:transparent;border:1px solid var(--line);font-size:11px;padding:2px 5px;border-radius:4px;color:var(--t1);font-family:var(--font-mono)">
+      <label style="font-size:10px;white-space:nowrap;display:flex;align-items:center;gap:3px"><input type="checkbox" ${v.auth?'checked':''} onchange="updateWebViewField('${v.id}','auth',this.checked)"> <span style="opacity:.7">auth ok</span></label>
+      <button class="av0-mini" onclick="go('web');loadWebView('${v.id}')">Open</button>
+      <button class="av0-mini danger" onclick="deleteWebView('${v.id}')">×</button>
+    </div>`).join('');
+}
+
+function updateWebViewField(id, field, val) {
+  const v = customViews.find(x => x.id === id);
+  if (!v) return;
+  v[field] = val;
+  saveCustomViews();
+}
+
+function deleteWebView(id) {
+  if (!confirm('Delete this web view?')) return;
+  customViews = customViews.filter(x => x.id !== id);
+  if (currentWebViewId === id) currentWebViewId = null;
+  saveCustomViews();
+  // If currently viewing it, clear frame
+  const f = document.getElementById('webFrame');
+  const e = document.getElementById('web-empty');
+  if (f && currentWebViewId === null) { f.src = 'about:blank'; if(e) e.style.display='flex'; }
+  const nameEl = document.getElementById('web-current-name');
+  if (nameEl && currentWebViewId === null) nameEl.textContent = 'Web View';
+}
+
+function deleteCurrentWebView() {
+  if (currentWebViewId) deleteWebView(currentWebViewId);
+}
+
+function editCurrentWebView() {
+  if (!currentWebViewId) { go('settings'); return; }
+  go('settings');
+  // scroll to the card
+  setTimeout(() => {
+    const c = document.getElementById('web-embeds-card');
+    if (c) c.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 120);
+}
+
+function loadWebView(id) {
+  const v = customViews.find(x => x.id === id);
+  if (!v) return;
+  currentWebViewId = id;
+
+  const frame = document.getElementById('webFrame');
+  const empty = document.getElementById('web-empty');
+  const nameEl = document.getElementById('web-current-name');
+
+  if (nameEl) nameEl.textContent = v.name || (v.url || '').replace(/^https?:\/\//,'').slice(0,28);
+  if (frame) {
+    frame.src = v.url;
+    if (empty) empty.style.display = 'none';
+  }
+  renderWebSwitcher();
+}
+
+function webFullscreen() {
+  const cont = document.getElementById('web-frame-container') || document.getElementById('view-web');
+  if (cont && cont.requestFullscreen) cont.requestFullscreen();
+  else if (currentWebViewId) {
+    const v = customViews.find(x=>x.id===currentWebViewId);
+    if (v) window.open(v.url, '_blank');
+  }
+}
+
+function webNormal() {
+  // exit fullscreen if active, or just remind
+  if (document.fullscreenElement) document.exitFullscreen();
+  // "dock" just means stay in the pane — perhaps switch back to overview or do nothing visible
+  toast('Docked (normal view inside Chinna)');
+}
+
+function updateWebVersionInSettings() {
+  const el = document.getElementById('settings-current-version');
+  if (el) el.textContent = 'v6.8.0';
+}
+
+// Hook into existing go() and init
+const _oldGoForWeb = window.go;
+window.go = function(v) {
+  if (typeof _oldGoForWeb === 'function') _oldGoForWeb(v);
+  if (v === 'web') {
+    setTimeout(() => {
+      if (!currentWebViewId && customViews.length) {
+        loadWebView(customViews[0].id);
+      } else if (currentWebViewId) {
+        const v = customViews.find(x => x.id === currentWebViewId);
+        if (v) loadWebView(currentWebViewId);
+      }
+      renderWebSwitcher();
+    }, 60);
+  }
+  // re-render subnav on any nav
+  setTimeout(renderWebSubNav, 120);
+};
+
+async function initWebEmbeds() {
+  await loadCustomViews();
+  updateWebVersionInSettings();
+  // If there is a last used, remember in local but we default to first on open
+  const last = localStorage.getItem('chinna_last_web_id');
+  if (last) currentWebViewId = last;
+
+  // When leaving web view store last
+  const orig = window.go;
+  // (already hooked above)
+
+  // On settings open also render list
+  const origGo2 = window.go;
+  // already covered
+}
+
+// Kick off
+setTimeout(initWebEmbeds, 280);
+
+// Also expose a couple for console/debug
+window.chinnaAddWebView = (name, url) => {
+  const id = 'wv_' + Date.now().toString(36);
+  customViews.push({id, name: name||'New', url, auth:false});
+  saveCustomViews();
+  return id;
+};
+</script>
 </body>
 </html>

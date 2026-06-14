@@ -21,6 +21,7 @@ HOME = os.path.expanduser('~')
 API_KEYS_FILE = os.path.join(CHINNA_HOME, 'api_keys.json')
 PAIR_STATE_FILE = os.path.join(CHINNA_HOME, 'telegram_pair.json')
 CHAT_DB_FILE = os.path.join(CHINNA_HOME, 'state/chat_db.json')
+CUSTOM_VIEWS_FILE = os.path.join(CHINNA_HOME, 'custom_views.json')
 WHATSAPP_DIR = os.path.join(CHINNA_HOME, 'whatsapp')
 WHATSAPP_BRIDGE_DIR = os.path.join(CHINNA_HOME, 'whatsapp_bridge')
 WHATSAPP_BRIDGE_PORT = int(os.environ.get('CHINNA_WHATSAPP_BRIDGE_PORT', str(PORT + 81)))
@@ -83,6 +84,17 @@ def write_json(path, payload):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w') as f:
         json.dump(payload, f, indent=2, ensure_ascii=True)
+
+def load_custom_views():
+    data = read_json(CUSTOM_VIEWS_FILE, [])
+    if not isinstance(data, list):
+        return []
+    return data
+
+def save_custom_views(views):
+    if not isinstance(views, list):
+        views = []
+    write_json(CUSTOM_VIEWS_FILE, views)
 
 def _chat_default():
     return {'users': {}, 'messages': [], 'last_id': 0}
@@ -1661,6 +1673,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6.7'})
         elif p == '/api/ai/status':
             self._json(ai_key_status())
+        elif p == '/api/custom-views':
+            self._json({'views': load_custom_views()})
         elif p == '/api/forge/detect':
             path = q.get('path', '.') if isinstance(q, dict) else '.'
             self._json(_forge.detect(path) if _forge else {'error': 'forge unavailable'})
@@ -1746,6 +1760,13 @@ class H(http.server.SimpleHTTPRequestHandler):
             save_keys(d)
             status = ai_key_status()
             self._json({'result':'✅ Settings saved', 'ai_ready': status['ready'], 'ai_status': status['label']})
+        elif p == '/api/custom-views':
+            views = b.get('views') if isinstance(b, dict) else []
+            if isinstance(views, list):
+                save_custom_views(views)
+                self._json({'ok': True, 'count': len(views)})
+            else:
+                self._json({'error': 'invalid payload'}, 400)
         elif p == '/api/turn/generate':
             uname, cred = generate_turn_credentials()
             d = {

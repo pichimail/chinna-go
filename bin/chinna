@@ -6,7 +6,7 @@
 # ╚══════════════════════════════════════════════════════════════╝
 set -uo pipefail
 
-CHINNA_VERSION="6.7.0"
+CHINNA_VERSION="6.8.0"
 CHINNA_REPO="pichimail/chinna-go"
 CHINNA_HOME="${CHINNA_HOME:-$HOME/.chinna}"
 CHINNA_CONFIG="$CHINNA_HOME/config"
@@ -47,32 +47,45 @@ done
 chinna_load_env 2>/dev/null || true
 chinna_write_defaults 2>/dev/null || true
 
-# ─── Colors ───────────────────────────────────────────────────
+# ─── Grok CLI Exact Style Colors (strict 100% clean Grok terminal aesthetic) ───
 if [ -t 1 ]; then
-    R=$'\033[0;31m'; G=$'\033[0;32m'; Y=$'\033[0;33m'; B=$'\033[0;34m'
-    M=$'\033[0;35m'; C=$'\033[0;36m'; W=$'\033[1;37m'; D=$'\033[2m'
-    BOLD=$'\033[1m'; RESET=$'\033[0m'
-    ORANGE=$'\033[38;5;208m'; PINK=$'\033[38;5;205m'; TEAL=$'\033[38;5;51m'
-    GREEN=$'\033[38;5;46m'
-    ACID=$'\033[38;5;154m'; ACID2=$'\033[38;5;112m'; GLOW=$'\033[1;38;5;154m'
-    GRAY=$'\033[38;5;240m'; BLUE2=$'\033[38;5;75m'; PURP=$'\033[38;5;141m'
+    # Grok-inspired restrained premium palette + chinna accent
+    RESET=$'\033[0m'
+    BOLD=$'\033[1m'
+    DIM=$'\033[2m'
+    GRAY=$'\033[38;5;245m'
+    DARK=$'\033[38;5;238m'
+    WHITE=$'\033[38;5;255m'
+    ACCENT=$'\033[38;5;75m'     # electric / grok blue-cyan
+    ACCENT2=$'\033[38;5;141m'   # subtle purple
+    CHINNA=$'\033[38;5;154m'    # keep signature lime for brand
+    OKGREEN=$'\033[38;5;46m'
+    WARN=$'\033[38;5;208m'
+    ERR=$'\033[38;5;196m'
+    PROMPT=$'\033[38;5;75m'     # grok prompt color
 else
-    R='' G='' Y='' B='' M='' C='' W='' D='' BOLD='' RESET=''
-    ORANGE='' PINK='' TEAL='' GREEN=''
-    ACID='' ACID2='' GLOW='' GRAY='' BLUE2='' PURP=''
+    RESET='' BOLD='' DIM='' GRAY='' DARK='' WHITE='' ACCENT='' ACCENT2='' CHINNA='' OKGREEN='' WARN='' ERR='' PROMPT=''
 fi
 
-# ─── UI helpers ───────────────────────────────────────────────
-ok()    { echo -e "  ${ACID}✓${RESET} $*"; }
-warn()  { echo -e "  ${Y}!${RESET} $*"; }
-fail()  { echo -e "  ${R}✗${RESET} $*"; }
-info()  { echo -e "  ${C}ℹ${RESET} $*"; }
-sep()   { echo -e "  ${D}──────────────────────────────────────${RESET}"; }
+# ─── Grok CLI Exact Style UI helpers (strictly clean, minimal, premium) ─────────
+ok()    { echo -e "  ${OKGREEN}✓${RESET} ${WHITE}$*${RESET}"; }
+warn()  { echo -e "  ${WARN}!${RESET} ${GRAY}$*${RESET}"; }
+fail()  { echo -e "  ${ERR}✗${RESET} ${WHITE}$*${RESET}"; }
+info()  { echo -e "  ${ACCENT}→${RESET} ${GRAY}$*${RESET}"; }
+sep()   { echo -e "  ${DARK}────────────────────────────────────────────────${RESET}"; }
 
 section() {
     echo ""
-    echo -e "  ${GLOW}▸${RESET} ${BOLD}$*${RESET}"
+    echo -e "  ${BOLD}${ACCENT}$*${RESET}"
     sep
+}
+
+grok_prompt() {
+    printf "  ${PROMPT}chinna ❯ ${RESET}"
+}
+
+grok_line() {
+    echo -e "  ${DIM}▸${RESET} ${GRAY}$*${RESET}"
 }
 
 progress_bar() {
@@ -134,22 +147,20 @@ SARCASM=(
     "Even your trash had trash inside it. Deep."
 )
 
-taunt() { echo -e "  ${D}${SARCASM[$RANDOM % ${#SARCASM[@]}]}${RESET}"; }
+taunt() { 
+    # Grok-style: direct, slightly wry observation — no heavy spam
+    local line="${SARCASM[$RANDOM % ${#SARCASM[@]}]}"
+    echo -e "  ${DIM}▸${RESET} ${GRAY}${line}${RESET}"
+}
 
-# ─── ASCII Art ────────────────────────────────────────────────
+# ─── Grok CLI Exact Style Banner (100% clean Grok terminal aesthetic) ─────────
 banner() {
     clear
     echo ""
-    echo -e "   ${ACID2}▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄${RESET}"
-    echo -e "   ${GLOW} ██████ ██   ██ ██ ███    ██ ███    ██  █████  ${RESET}"
-    echo -e "   ${ACID} ██     ██   ██ ██ ████   ██ ████   ██ ██   ██ ${RESET}"
-    echo -e "   ${ACID} ██     ███████ ██ ██ ██  ██ ██ ██  ██ ███████ ${RESET}"
-    echo -e "   ${ACID2} ██     ██   ██ ██ ██  ██ ██ ██  ██ ██ ██   ██ ${RESET}"
-    echo -e "   ${ACID2} ██████ ██   ██ ██ ██   ████ ██   ████ ██   ██ ${RESET}"
-    echo -e "   ${GRAY}▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀${RESET}"
-    echo -e "   ${GLOW}▸${RESET} ${BOLD}Mac Sidekick${RESET} ${GRAY}·${RESET} ${ACID}v${CHINNA_VERSION}${RESET}   ${GRAY}telugu · hindi · english · tinglish${RESET}"
-    echo ""
-    echo -ne "   ${GRAY}Disk ${RESET}"
+    echo -e "  ${BOLD}${WHITE}chinna${RESET}  ${DIM}v${CHINNA_VERSION}${RESET}"
+    echo -e "  ${ACCENT}local mac sidekick${RESET} ${DARK}·${RESET} ${GRAY}private · native · powerful${RESET}"
+    echo -e "  ${DARK}────────────────────────────────────────────────${RESET}"
+    echo -ne "  ${GRAY}disk ${RESET}"
     disk_bar
     echo ""
 }
@@ -346,7 +357,7 @@ cmd_clean() {
     sudo purge 2>/dev/null; ok " Snapshots deleted, trash emptied, RAM purged"
 
     echo ""; sep
-    echo -e "   ${G}✓ DONE.${RESET} $(disk_usage)"
+    echo -e "  ${OKGREEN}✓ DONE.${RESET} $(disk_usage)"
     echo -e "   ${Y}⚠ REBOOT${RESET} for System Data to recalculate"
     chinna_ok_toast "Deep Clean Done" "$(disk_usage) — Reboot for full effect" 2>/dev/null || true
     echo ""
@@ -1599,7 +1610,7 @@ main() {
         notch|quickbar|menubar)     cmd_notch ;;
         uninstall|remove)           shift; cmd_uninstall "$@" ;;
         help|-h|--help)             show_help ;;
-        version|-v|--version)       echo "Chinna v$CHINNA_VERSION" ;;
+        version|-v|--version)       cmd_version ;;
         *)
             # Natural language fallback — run intent engine
             local intent
