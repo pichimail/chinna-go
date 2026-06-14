@@ -13,7 +13,7 @@ except Exception:
     _forge = None
 
 
-CHINNA_VERSION = "6.0.0"
+CHINNA_VERSION = "6.7.0"
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 7777
 CHINNA_HOME = os.environ.get('CHINNA_HOME', os.path.expanduser('~/.chinna'))
 DASHBOARD_DIR = os.path.join(CHINNA_HOME, 'dashboard')
@@ -1549,7 +1549,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 'chat_default_relay_url': dashboard_origin(),
             })
         elif p == '/api/version':
-            self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6'})
+            self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6.7'})
         elif p == '/api/forge/detect':
             path = q.get('path', '.') if isinstance(q, dict) else '.'
             self._json(_forge.detect(path) if _forge else {'error': 'forge unavailable'})
@@ -3335,7 +3335,7 @@ H.delete_artifact = delete_artifact
 H.exec_shell_direct = exec_shell_direct
 
 if __name__ == '__main__':
-    print(f"Chinna V6 -> http://localhost:{PORT}")
+    print(f"Chinna V6.7 -> http://localhost:{PORT}")
     print(f"serving {DASHBOARD_DIR}")
     threading.Thread(target=stats_loop, daemon=True).start()
     try:

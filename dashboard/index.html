@@ -324,6 +324,71 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 /* Fluid glass polish for cards */
 .card,.infocard,.plugin-card,.forge-card{backdrop-filter:blur(8px)}
 
+/* ═══ SETTINGS — aligned with dashboard language ═══ */
+.settings-shell{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(290px,.9fr);gap:14px}
+.settings-hero,.settings-card{border:1px solid var(--line2);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));box-shadow:0 14px 40px rgba(0,0,0,.22)}
+.settings-hero{padding:18px;display:flex;flex-direction:column;gap:14px;overflow:hidden;position:relative}
+.settings-hero::after{content:'';position:absolute;inset:auto -20% -35% auto;width:240px;height:240px;background:radial-gradient(circle,rgba(186,255,41,.12),transparent 68%);pointer-events:none}
+.settings-hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.settings-kicker{font-size:9.5px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--acc);margin-bottom:10px}
+.settings-hero h3{font-size:22px;line-height:1.1;font-weight:800;letter-spacing:-.4px;margin-bottom:8px;max-width:22ch}
+.settings-hero p{font-size:12.5px;line-height:1.6;color:var(--t2);max-width:56ch}
+.settings-version{min-width:160px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.18);display:flex;flex-direction:column;gap:4px}
+.settings-version .label{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3)}
+.settings-version strong{font-size:20px;font-weight:800;letter-spacing:-.3px}
+.settings-version span{font-size:11px;color:var(--t3);line-height:1.45}
+.settings-badges{display:flex;flex-wrap:wrap;gap:8px}
+.settings-banner{padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03);display:flex;gap:12px;align-items:flex-start}
+.settings-banner.warn{border-color:rgba(251,191,36,.32);background:rgba(251,191,36,.08)}
+.settings-banner .banner-icon{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:rgba(186,255,41,.14);color:var(--acc);font-size:16px;flex-shrink:0}
+.settings-banner.warn .banner-icon{background:rgba(251,191,36,.14);color:var(--amber)}
+.settings-banner-copy{min-width:0;display:flex;flex-direction:column;gap:2px}
+.settings-banner-copy strong{font-size:13px}
+.settings-banner-copy span{font-size:11.5px;color:var(--t2);line-height:1.5}
+.settings-grid{display:grid;gap:12px}
+.settings-main{padding:16px;display:flex;flex-direction:column;gap:14px}
+.settings-main .navlabel{margin:0}
+.settings-label{font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--t3)}
+.settings-help{font-size:11px;color:var(--t3);line-height:1.5}
+.settings-stack{display:grid;gap:12px;align-content:start}
+.settings-card{padding:16px;display:flex;flex-direction:column;gap:12px}
+.settings-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.settings-card-title{font-size:14px;font-weight:800;letter-spacing:-.2px}
+.settings-card-copy{font-size:11.5px;line-height:1.55;color:var(--t2);max-width:38ch}
+.settings-inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.settings-field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.settings-field-grid .full{grid-column:1 / -1}
+.settings-note{font-size:11px;color:var(--t3);line-height:1.55}
+.settings-chiprow{display:flex;flex-wrap:wrap;gap:8px}
+.settings-switch{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.02)}
+.settings-switch input{margin-top:2px}
+.settings-switch label{font-size:11.5px;color:var(--t2);line-height:1.45}
+.settings-footer-actions{display:flex;flex-wrap:wrap;gap:8px}
+.settings-install{gap:14px}
+.settings-install .installappcard{display:flex;flex-direction:column;gap:12px;padding:0;border:none;background:none;box-shadow:none}
+.settings-install .installapphead{display:flex;gap:12px;align-items:flex-start}
+.settings-install .installappicon{width:52px;height:52px;border-radius:14px;flex-shrink:0;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.settings-install .installapptitle{font-size:14px;font-weight:800;margin-bottom:4px}
+.settings-install .installappsub{font-size:11.5px;line-height:1.55;color:var(--t2)}
+.settings-install .installappmeta,.settings-install .installappactions{display:flex;flex-wrap:wrap;gap:8px}
+.settings-install .installappfine{font-size:11px;color:var(--t3);line-height:1.5}
+.settings-install .chip,.settings-hero .chip{display:inline-flex;align-items:center;padding:4px 9px;border-radius:99px;background:var(--acc-bg);color:var(--acc);border:1px solid var(--acc-bd);font-size:10.5px;font-weight:700;letter-spacing:.2px}
+.settings-install .paircard,.settings-install .statuscard{padding:14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.02);display:flex;flex-direction:column;gap:10px}
+.settings-install .paircard h4,.settings-install .statuscard h4{font-size:13px;font-weight:800}
+.settings-install .stack{display:flex;flex-direction:column;gap:8px}
+.settings-install .chiprow{display:flex;flex-wrap:wrap;gap:8px}
+.settings-install .pairhint{font-size:11px;color:var(--t3);line-height:1.5}
+.settings-install .pairqr{display:grid;place-items:center;padding:12px;border-radius:12px;background:rgba(0,0,0,.16);border:1px solid var(--line)}
+.settings-install .pairqr img{width:176px;height:176px;object-fit:contain}
+@media(max-width:980px){
+  .settings-shell{grid-template-columns:1fr}
+  .settings-hero-top{flex-direction:column}
+}
+@media(max-width:720px){
+  .settings-field-grid{grid-template-columns:1fr}
+  .settings-version{width:100%}
+}
+
 /* Hide legacy widget tab system (replaced by hero cards) */
 .cx-customize-bar{display:none!important}
 #cx-w-quick,#cx-w-clock,#cx-w-projects-wrap{display:none!important}
@@ -1023,69 +1088,142 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
             </div>
           </div>
         </div></div>
-<div class="view" id="view-settings"><div class="vhead"><h2>Settings</h2><span class="sub">API keys (stored locally in ~/.chinna)</span></div>
-        <div class="vbody" style="max-width:520px">
-          <div class="navlabel" style="margin-left:0">OpenRouter key — Chinna AI</div>
-          <input class="field" id="set-or" type="password" autocomplete="new-password" placeholder="sk-or-v1-…">
-          <div class="navlabel" style="margin-left:0">OpenAI key — optional (Whisper/GPT)</div>
-          <input class="field" id="set-oa" type="password" autocomplete="new-password" placeholder="sk-…">
-          <div class="navlabel" style="margin-left:0">WebRTC TURN fallback (optional)</div>
-          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);margin-top:6px">
-            <input id="set-turn-enabled" type="checkbox" style="accent-color:var(--acc)">
-            Enable TURN fallback for stricter networks
-          </label>
-          <input class="field" id="set-turn-urls" placeholder="turn:turn.example.com:3478?transport=udp, turns:turn.example.com:5349?transport=tcp">
-          <input class="field" id="set-turn-user" placeholder="TURN username (optional)">
-          <input class="field" id="set-turn-cred" type="password" autocomplete="new-password" placeholder="TURN credential (optional)">
-          <div class="navlabel" style="margin-left:0">Secure Chat relay URL (optional)</div>
-          <input class="field" id="set-chat-relay" placeholder="http://localhost:7777 or https://your-public-relay.example">
-          <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-            <button type="button" class="bigbtn ghost smallbtn" id="turn-gen-btn" onclick="generateTurnCredentials()">Generate TURN Credentials</button>
-            <button type="button" class="bigbtn ghost smallbtn" id="turn-test-btn" onclick="testTurnConnectivity()">Test TURN Relay</button>
-            <div id="turn-test-status" style="font-size:11px;color:var(--t3)">No TURN test yet.</div>
-          </div>
-          <button type="button" class="bigbtn solid" style="margin-top:16px" onclick="saveKeys()">Save Keys</button>
-          <div class="installappcard">
-            <div class="installapphead">
-              <img class="installappicon" src="/assets/chinna-icon.svg" alt="Chinna icon">
-              <div>
-                <div class="installapptitle">Install Chinna.app</div>
-                <div class="installappsub">Create a proper Mac app in your Applications folder with the Chinna icon, Dock presence, Spotlight launch, and a clean one-click entry point for first-time users.</div>
+<div class="view" id="view-settings"><div class="vhead"><h2>Settings</h2><span class="sub">Local keys, installs, and version updates</span></div>
+        <div class="vbody">
+          <div class="settings-shell">
+            <section class="settings-hero glass">
+              <div class="settings-hero-top">
+                <div>
+                  <div class="settings-kicker">System configuration</div>
+                  <h3>Keep Chinna aligned with the rest of the dashboard.</h3>
+                  <p>Manage API keys, relay settings, installs, and update prompts from one consistent surface instead of scattering them across different pages.</p>
+                </div>
+                <div class="settings-version">
+                  <span class="label">Installed</span>
+                  <strong id="settings-current-version">v6.7.0</strong>
+                  <span id="settings-update-summary">Checking update status…</span>
+                </div>
               </div>
-            </div>
-            <div class="installappmeta">
-              <span class="chip">One click</span>
-              <span class="chip">Applications</span>
-              <span class="chip">Dock + Spotlight</span>
-              <span class="chip">SwiftBar-ready</span>
-            </div>
-            <div class="installappactions">
-              <button type="button" class="bigbtn solid" id="install-app-btn" onclick="installMacApp()">Install Chinna.app</button>
-              <button type="button" class="bigbtn" id="install-swiftbar-btn" onclick="installSwiftBarQuickActions()">Install SwiftBar quick actions</button>
-              <button type="button" class="bigbtn ghost smallbtn" onclick="window.open(location.origin,'_blank')">Open in Browser</button>
-            </div>
-            <div class="installappfine" id="install-app-note">Best for initial users who want Chinna to behave like a regular Mac app from day one.</div>
-          </div>
-          <div class="panelgrid">
-            <div class="paircard">
-              <h4>Telegram Pairing</h4>
-              <div class="stack">
-                <input class="field" id="tg-token" type="password" autocomplete="off" placeholder="Telegram bot token">
-                <button type="button" class="bigbtn" onclick="saveTelegramToken()">Save Telegram Token</button>
-                <button type="button" class="bigbtn solid" onclick="createTelegramPair()">Generate Pair Code</button>
+              <div class="settings-badges">
+                <span class="chip">Local only</span>
+                <span class="chip">~/.chinna</span>
+                <span class="chip">App install</span>
+                <span class="chip">Telegram pair</span>
               </div>
-              <div class="chiprow">
-                <span class="chip" id="tg-bot">Bot: —</span>
-                <span class="chip" id="tg-state">State: —</span>
+              <div class="settings-banner" id="settings-update-banner">
+                <div class="banner-icon">↻</div>
+                <div class="settings-banner-copy">
+                  <strong>Checking for the latest build…</strong>
+                  <span>Chinna will compare the installed version with the remote release and surface the update path here.</span>
+                </div>
               </div>
-              <div class="pairhint" id="tg-link">Pairing link will appear here after generating a code.</div>
-            </div>
-            <div class="statuscard">
-              <h4>Pair Card</h4>
-              <div class="pairqr"><img id="tg-qr" alt="Telegram pair QR"></div>
-              <div class="pairhint">Scan the QR or open the link on your phone, then tap Start in Telegram. The dashboard will bind that chat automatically.</div>
-              <button type="button" class="bigbtn ghost smallbtn" style="margin-top:10px" onclick="testTelegram()">Send test</button>
-            </div>
+            </section>
+
+            <section class="settings-card settings-main">
+              <div class="settings-card-head">
+                <div>
+                  <div class="settings-label">Core keys</div>
+                  <div class="settings-card-title">API and relay settings</div>
+                </div>
+                <div class="settings-card-copy">These values stay local on this Mac and are not synced with your account.</div>
+              </div>
+              <div class="settings-field-grid">
+                <div class="full">
+                  <div class="navlabel" style="margin-left:0">OpenRouter key — Chinna AI</div>
+                  <input class="field" id="set-or" type="password" autocomplete="new-password" placeholder="sk-or-v1-…">
+                </div>
+                <div class="full">
+                  <div class="navlabel" style="margin-left:0">OpenAI key — optional (Whisper/GPT)</div>
+                  <input class="field" id="set-oa" type="password" autocomplete="new-password" placeholder="sk-…">
+                </div>
+                <div class="full settings-switch">
+                  <input id="set-turn-enabled" type="checkbox" style="accent-color:var(--acc)">
+                  <label for="set-turn-enabled">Enable TURN fallback for stricter networks. This helps calls connect when direct WebRTC is blocked.</label>
+                </div>
+                <div>
+                  <input class="field" id="set-turn-urls" placeholder="turn:turn.example.com:3478?transport=udp, turns:turn.example.com:5349?transport=tcp">
+                </div>
+                <div>
+                  <input class="field" id="set-turn-user" placeholder="TURN username (optional)">
+                </div>
+                <div class="full">
+                  <input class="field" id="set-turn-cred" type="password" autocomplete="new-password" placeholder="TURN credential (optional)">
+                </div>
+                <div class="full">
+                  <div class="navlabel" style="margin-left:0">Secure Chat relay URL (optional)</div>
+                  <input class="field" id="set-chat-relay" placeholder="http://localhost:7777 or https://your-public-relay.example">
+                </div>
+              </div>
+              <div class="settings-inline">
+                <button type="button" class="bigbtn ghost smallbtn" id="turn-gen-btn" onclick="generateTurnCredentials()">Generate TURN Credentials</button>
+                <button type="button" class="bigbtn ghost smallbtn" id="turn-test-btn" onclick="testTurnConnectivity()">Test TURN Relay</button>
+                <div id="turn-test-status" class="settings-help">No TURN test yet.</div>
+              </div>
+              <div class="settings-footer-actions">
+                <button type="button" class="bigbtn solid" onclick="saveKeys()">Save Keys</button>
+                <button type="button" class="bigbtn ghost smallbtn" onclick="window.open(location.origin,'_blank')">Open in Browser</button>
+              </div>
+            </section>
+
+            <section class="settings-stack">
+              <div class="settings-card settings-install">
+                <div class="settings-card-head">
+                  <div>
+                    <div class="settings-label">Desktop app</div>
+                    <div class="settings-card-title">Install Chinna.app</div>
+                  </div>
+                  <div class="settings-card-copy">Dock, Spotlight, and the native Mac wrapper.</div>
+                </div>
+                <div class="installappcard">
+                  <div class="installapphead">
+                    <img class="installappicon" src="/assets/chinna-icon.svg" alt="Chinna icon">
+                    <div>
+                      <div class="installapptitle">Make it feel like a proper Mac app</div>
+                      <div class="installappsub">Create a real Chinna.app in Applications with the icon, Dock presence, Spotlight launch, and a clean one-click entry point for first-time users.</div>
+                    </div>
+                  </div>
+                  <div class="installappmeta">
+                    <span class="chip">One click</span>
+                    <span class="chip">Applications</span>
+                    <span class="chip">Dock + Spotlight</span>
+                    <span class="chip">SwiftBar-ready</span>
+                  </div>
+                  <div class="installappactions">
+                    <button type="button" class="bigbtn solid" id="install-app-btn" onclick="installMacApp()">Install Chinna.app</button>
+                    <button type="button" class="bigbtn" id="install-swiftbar-btn" onclick="installSwiftBarQuickActions()">Install SwiftBar quick actions</button>
+                  </div>
+                  <div class="installappfine" id="install-app-note">Best for users who want Chinna to behave like a regular Mac app from day one.</div>
+                </div>
+              </div>
+
+              <div class="settings-card settings-install">
+                <div class="settings-card-head">
+                  <div>
+                    <div class="settings-label">Messaging</div>
+                    <div class="settings-card-title">Telegram pairing</div>
+                  </div>
+                  <div class="settings-card-copy">Pair the dashboard to Telegram for remote control.</div>
+                </div>
+                <div class="paircard">
+                  <div class="stack">
+                    <input class="field" id="tg-token" type="password" autocomplete="off" placeholder="Telegram bot token">
+                    <button type="button" class="bigbtn" onclick="saveTelegramToken()">Save Telegram Token</button>
+                    <button type="button" class="bigbtn solid" onclick="createTelegramPair()">Generate Pair Code</button>
+                  </div>
+                  <div class="chiprow">
+                    <span class="chip" id="tg-bot">Bot: —</span>
+                    <span class="chip" id="tg-state">State: —</span>
+                  </div>
+                  <div class="pairhint" id="tg-link">Pairing link will appear here after generating a code.</div>
+                </div>
+                <div class="statuscard">
+                  <h4>Pair Card</h4>
+                  <div class="pairqr"><img id="tg-qr" alt="Telegram pair QR"></div>
+                  <div class="pairhint">Scan the QR or open the link on your phone, then tap Start in Telegram. The dashboard will bind that chat automatically.</div>
+                  <button type="button" class="bigbtn ghost smallbtn" style="margin-top:10px" onclick="testTelegram()">Send test</button>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       
@@ -1117,7 +1255,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
     <div class="v6-head">
       <div class="v6-title-row">
         <span class="v6-rocket">🚀</span>
-        <div><div class="v6-title">Chinna V6 is here!</div><div class="v6-subtitle">A major upgrade from V5</div></div>
+        <div><div class="v6-title">Chinna V6.7 is here!</div><div class="v6-subtitle">A major upgrade from V6</div></div>
       </div>
     </div>
     <div class="v6-body">
@@ -1704,7 +1842,7 @@ function go(v){
   if(v==='chatx'){ chatxInit(); }
   if(v==='whatsapp'){ waInit(); }
   if(v==='plugins'){ loadPlugins(); }
-  if(v==='settings'){ loadTelegramStatus(); loadKeySettings(); }
+  if(v==='settings'){ loadSettingsUpdateStatus(); loadTelegramStatus(); loadKeySettings(); }
   if(v==='projects') loadProjectsView();
   if(location.hash !== '#'+v) history.replaceState(null,'','#'+v);
 }
@@ -2415,6 +2553,51 @@ async function loadKeySettings(){
   if($('set-chat-relay')) $('set-chat-relay').value = k.chat_relay_url || '';
   chatxRelayConfig = { url: k.chat_relay_url || '', defaultUrl: k.chat_default_relay_url || location.origin };
   if($('turn-test-status')) $('turn-test-status').textContent = (k.turn_enabled && (k.turn_urls||'').trim()) ? 'TURN configured. Run test to verify relay.' : 'No TURN test yet.';
+}
+async function loadSettingsUpdateStatus(){
+  const banner = $('settings-update-banner');
+  const version = $('settings-current-version');
+  const summary = $('settings-update-summary');
+  if(!banner || !version || !summary) return;
+  version.textContent = 'v6.7.0';
+  summary.textContent = 'Checking update status…';
+  try{
+    const d = await api('check-update');
+    const current = d?.current ? `v${d.current}` : 'v6.7.0';
+    const latest = d?.latest ? `v${d.latest}` : 'v6.7.0';
+    version.textContent = current;
+    if(d?.update_available){
+      banner.className = 'settings-banner warn';
+      banner.innerHTML = `
+        <div class="banner-icon">⬆</div>
+        <div class="settings-banner-copy">
+          <strong>Update ready: ${latest}</strong>
+          <span>Install the latest build to keep the dashboard, daemon, and launcher aligned. Use <code>chinna update</code> or the one-touch installer.</span>
+        </div>
+      `;
+      summary.textContent = `Update available to ${latest}`;
+    }else{
+      banner.className = 'settings-banner';
+      banner.innerHTML = `
+        <div class="banner-icon">✓</div>
+        <div class="settings-banner-copy">
+          <strong>You are on the latest build.</strong>
+          <span>Remote version matches the installed dashboard. Nothing else needs to be done.</span>
+        </div>
+      `;
+      summary.textContent = `Latest release: ${latest}`;
+    }
+  }catch(e){
+    banner.className = 'settings-banner';
+    banner.innerHTML = `
+      <div class="banner-icon">!</div>
+      <div class="settings-banner-copy">
+        <strong>Unable to verify updates right now.</strong>
+        <span>Open the terminal install URL below or run <code>chinna update</code> later when the network is available.</span>
+      </div>
+    `;
+    summary.textContent = 'Update check unavailable';
+  }
 }
 async function loadTelegramStatus(){
   const d=await api('telegram/status');

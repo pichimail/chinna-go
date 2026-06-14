@@ -1,10 +1,10 @@
-# Chinna V6
+# Chinna V6.7
 
 Chinna is a local Mac sidekick for cleanup, system checks, disk exploration, AI chat, Telegram control, and voice actions.
 
 ## One-Touch Install
 
-Copy and paste this into Terminal on macOS to install or replace any older Chinna version with V5:
+Copy and paste this into Terminal on macOS to install or replace any older Chinna version with Chinna V6.7:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
@@ -17,8 +17,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/ins
 ```
 
 What it does:
-- Installs the latest Chinna V6 app files
-- Replaces older installed Chinna code with V5
+- Installs the latest Chinna V6.7 app files
+- Replaces older installed Chinna code with V6.7
 - Sets up the local command in your shell path
 - Keeps your user data and API keys separate from app code
 
@@ -31,7 +31,7 @@ curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/in
 ```
 
 This will:
-- Replace the old app code with V5
+- Replace the old app code with V6.7
 - Preserve your local data, config, and API keys
 - Refresh the command so `chinna` points to the new version
 
