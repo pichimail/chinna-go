@@ -258,17 +258,20 @@ def list_dashboard_plugins():
 
 def read_shell_config():
     cfg = {}
-    path = os.path.join(CHINNA_HOME, 'config')
-    if not os.path.exists(path):
-        return cfg
-    try:
-        with open(path) as f:
-            for line in f:
-                m = re.match(r"export\s+([A-Z0-9_]+)=['\"]?(.*?)['\"]?$", line.strip())
-                if m:
-                    cfg[m.group(1)] = m.group(2)
-    except Exception:
-        pass
+    for path in (os.path.join(CHINNA_HOME, 'env'), os.path.join(CHINNA_HOME, 'config'), os.path.join(CHINNA_HOME, 'models')):
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path) as f:
+                for raw in f:
+                    line = raw.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    m = re.match(r"(?:export\s+)?([A-Z0-9_]+)=['\"]?(.*?)['\"]?$", line)
+                    if m:
+                        cfg[m.group(1)] = m.group(2)
+        except Exception:
+            pass
     return cfg
 
 def load_keys():
@@ -284,6 +287,7 @@ def load_keys():
         'TURN_USERNAME',
         'TURN_CREDENTIAL',
         'CHAT_RELAY_URL',
+        'ACTIVE_MODEL',
     ):
         if not keys.get(name) and shell_cfg.get(name):
             keys[name] = shell_cfg[name]
@@ -304,6 +308,91 @@ def load_keys():
 def save_keys(d):
     cur = load_keys(); cur.update(d)
     write_json(API_KEYS_FILE, cur)
+
+def is_openrouter_key(value):
+    return safe_text(value).startswith('sk-or-')
+
+def is_openai_key(value):
+    value = safe_text(value)
+    return bool(value) and not is_openrouter_key(value)
+
+def normalize_openai_model(model, fallback='gpt-4o-mini'):
+    model = safe_text(model)
+    if not model:
+        return fallback
+    if model.startswith('openai/'):
+        return model.split('/', 1)[1] or fallback
+    # OpenAI's endpoint cannot run OpenRouter provider-qualified model IDs.
+    if '/' in model or ':' in model:
+        return fallback
+    return model
+
+def ai_key_status(keys=None):
+    keys = keys or load_keys()
+    has_openrouter = bool(keys.get('OPENROUTER_API_KEY'))
+    has_openai = is_openai_key(keys.get('OPENAI_API_KEY'))
+    openai_wrong_provider = bool(keys.get('OPENAI_API_KEY')) and not has_openai
+    if has_openrouter and has_openai:
+        return {'ready': True, 'provider': 'openrouter', 'label': 'OpenRouter + OpenAI ready'}
+    if has_openrouter:
+        label = 'OpenRouter ready'
+        if openai_wrong_provider:
+            label += ' · OpenAI field has an OpenRouter key, add a real OpenAI key for fallback'
+        return {'ready': True, 'provider': 'openrouter', 'label': label}
+    if has_openai:
+        return {'ready': True, 'provider': 'openai', 'label': 'OpenAI ready'}
+    return {
+        'ready': False,
+        'provider': '',
+        'label': 'Add an OpenAI or OpenRouter API key in Settings to enable AI features.'
+    }
+
+def provider_chat(messages, model='', tools=None, prefer_openrouter=True):
+    keys = load_keys()
+    has_openrouter = bool(keys.get('OPENROUTER_API_KEY'))
+    has_openai = is_openai_key(keys.get('OPENAI_API_KEY'))
+    if not has_openrouter and not has_openai:
+        return None, 'no_key'
+    errors = []
+    if prefer_openrouter and has_openrouter:
+        base_model = model or keys.get('ACTIVE_MODEL') or 'meta-llama/llama-3.3-70b-instruct:free'
+        candidates = [
+            base_model,
+            keys.get('ACTIVE_MODEL', ''),
+            'openrouter/free',
+            'openai/gpt-oss-120b:free',
+            'qwen/qwen3-next-80b-a3b-instruct:free',
+        ]
+        seen = set()
+        for candidate in [c for c in candidates if c]:
+            if candidate in seen:
+                continue
+            seen.add(candidate)
+            msg, used = openrouter_chat(messages, model=candidate, tools=tools)
+            if msg:
+                return msg, used
+            errors.append(used)
+    if has_openai:
+        msg, used = openai_chat(messages, model=normalize_openai_model(model or keys.get('ACTIVE_MODEL')), tools=tools)
+        if msg:
+            return msg, used
+        errors.append(used)
+    if not prefer_openrouter and has_openrouter:
+        return openrouter_chat(messages, model=model or keys.get('ACTIVE_MODEL') or 'meta-llama/llama-3.3-70b-instruct:free', tools=tools)
+    return None, '; '.join(errors[-3:]) or 'provider_failed'
+
+def forge_ai_fn(prompt):
+    msg = safe_text(prompt, keep_newlines=True)
+    if not msg:
+        return ''
+    messages = [
+        {"role": "system", "content": "You are Chinna Forge Copilot. Give concise, practical development guidance."},
+        {"role": "user", "content": msg},
+    ]
+    reply, _ = provider_chat(messages, model=load_keys().get('ACTIVE_MODEL', ''))
+    if not reply:
+        return 'AI is not configured. Add an OpenAI or OpenRouter API key in Settings.'
+    return reply.get('content') or ''
 
 def generate_turn_credentials():
     uname = 'chinna-' + secrets.token_hex(4)
@@ -812,15 +901,23 @@ def openrouter_chat(messages, model='meta-llama/llama-3.3-70b-instruct:free', to
         if proc.returncode != 0 or not proc.stdout:
             return None, f'curl_failed:{proc.returncode}'
         data = json.loads(proc.stdout.decode('utf-8', errors='replace'))
+        if data.get('error'):
+            err = data.get('error') or {}
+            msg = err.get('message') if isinstance(err, dict) else str(err)
+            code = err.get('code') if isinstance(err, dict) else ''
+            return None, safe_text(f'openrouter:{model}:{code}:{msg}')[:220]
         msg = data.get('choices', [{}])[0].get('message', {})
+        if not msg:
+            return None, safe_text(f'openrouter:{model}:empty_response')[:220]
         return msg, model
     except Exception as e:
         return None, f'error:{e}'
 
 def openai_chat(messages, model='gpt-4o-mini', tools=None):
     key = load_keys().get('OPENAI_API_KEY', '')
-    if not key:
+    if not is_openai_key(key):
         return None, 'no_key'
+    model = normalize_openai_model(model)
     payload = {"model": model, "max_tokens": 900, "messages": messages}
     if tools:
         payload["tools"] = tools
@@ -836,7 +933,14 @@ def openai_chat(messages, model='gpt-4o-mini', tools=None):
         if proc.returncode != 0 or not proc.stdout:
             return None, f'curl_failed:{proc.returncode}'
         data = json.loads(proc.stdout.decode('utf-8', errors='replace'))
+        if data.get('error'):
+            err = data.get('error') or {}
+            msg = err.get('message') if isinstance(err, dict) else str(err)
+            code = err.get('code') if isinstance(err, dict) else ''
+            return None, safe_text(f'openai:{model}:{code}:{msg}')[:220]
         msg = data.get('choices', [{}])[0].get('message', {})
+        if not msg:
+            return None, safe_text(f'openai:{model}:empty_response')[:220]
         return msg, model
     except Exception as e:
         return None, f'error:{e}'
@@ -1533,9 +1637,14 @@ class H(http.server.SimpleHTTPRequestHandler):
         elif p == '/api/get_keys':
             k = load_keys()
             turn_enabled = str(k.get('TURN_ENABLED', '')).strip().lower() in ('1', 'true', 'yes', 'on')
+            ai_status = ai_key_status(k)
             self._json({
                 'chinna_ai_set': bool(k.get('OPENROUTER_API_KEY')),
-                'openai_set': bool(k.get('OPENAI_API_KEY')),
+                'openai_set': is_openai_key(k.get('OPENAI_API_KEY')),
+                'openai_key_invalid': bool(k.get('OPENAI_API_KEY')) and not is_openai_key(k.get('OPENAI_API_KEY')),
+                'ai_ready': ai_status['ready'],
+                'ai_provider': ai_status['provider'],
+                'ai_status': ai_status['label'],
                 'telegram_set': bool(k.get('TELEGRAM_BOT_TOKEN')),
                 'telegram_paired': bool(k.get('TELEGRAM_CHAT_ID')),
                 'telegram_bot': telegram_status().get('bot_username', ''),
@@ -1621,8 +1730,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         b = self._bd()
         if p == '/api/save_keys':
             d = {}
-            if b.get('chinna_ai_key'): d['OPENROUTER_API_KEY'] = b['chinna_ai_key']
-            if b.get('openai_key'): d['OPENAI_API_KEY'] = b['openai_key']
+            if b.get('chinna_ai_key'): d['OPENROUTER_API_KEY'] = safe_text(b['chinna_ai_key'])[:500]
+            if b.get('openai_key'): d['OPENAI_API_KEY'] = safe_text(b['openai_key'])[:500]
             if b.get('telegram_token'): d['TELEGRAM_BOT_TOKEN'] = b['telegram_token']
             if b.get('telegram_chat'): d['TELEGRAM_CHAT_ID'] = b['telegram_chat']
             if 'turn_enabled' in b: d['TURN_ENABLED'] = '1' if bool(b.get('turn_enabled')) else '0'
@@ -1630,7 +1739,9 @@ class H(http.server.SimpleHTTPRequestHandler):
             if b.get('turn_username') is not None: d['TURN_USERNAME'] = safe_text(b.get('turn_username', ''))[:120]
             if b.get('turn_credential') is not None: d['TURN_CREDENTIAL'] = safe_text(b.get('turn_credential', ''))[:200]
             if b.get('chat_relay_url') is not None: d['CHAT_RELAY_URL'] = normalize_relay_url(b.get('chat_relay_url', ''))[:300]
-            save_keys(d); self._json({'result':'✅ Keys saved'})
+            save_keys(d)
+            status = ai_key_status()
+            self._json({'result':'✅ Settings saved', 'ai_ready': status['ready'], 'ai_status': status['label']})
         elif p == '/api/turn/generate':
             uname, cred = generate_turn_credentials()
             d = {
@@ -1744,7 +1855,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         elif p == '/api/forge/plugin-new':
             self._json(_forge.plugin_new(b.get('name', 'plugin'), b.get('path', '.')) if _forge else {'error': 'forge unavailable'})
         elif p == '/api/forge/copilot':
-            ai = getattr(self, 'forge_ai_fn', None)
+            ai = getattr(self, 'forge_ai_fn', forge_ai_fn)
             self._json(_forge.ai_prompt(b.get('prompt', ''), ai) if _forge else {'error': 'forge unavailable'})
         elif p == '/api/ext/music':
             self.ext_music(b)
@@ -2179,8 +2290,8 @@ fi
             for a in raw_attachments
         )
 
-        if not load_keys().get('OPENROUTER_API_KEY') and not load_keys().get('OPENAI_API_KEY'):
-            self._json({'error': 'No API key configured. Add OpenRouter key in Settings.'}, 400)
+        if not ai_key_status().get('ready'):
+            self._json({'error': 'No AI API key configured. Add an OpenAI or OpenRouter key in Settings to enable AI features.'}, 400)
             return
 
         # Process any attached files (text, code, images, pdf, etc.)
@@ -2259,13 +2370,10 @@ fi
         try:
             # === Dynamic Tool Calling Loop (up to 5 rounds) ===
             for round_num in range(5):
-                # Try OpenRouter first (usually better tool calling)
-                msg, used_model = openrouter_chat(messages, model=model, tools=TOOLS)
-                if not msg and load_keys().get('OPENAI_API_KEY'):
-                    msg, used_model = openai_chat(messages, model='gpt-4o-mini', tools=TOOLS)
+                msg, used_model = provider_chat(messages, model=model, tools=TOOLS)
 
                 if not msg:
-                    final_reply = "AI request failed. Check your API key or try again."
+                    final_reply = f"AI request failed: {used_model}. Check your OpenAI/OpenRouter API key in Settings, then try again."
                     break
 
                 # If the model wants to call tools
@@ -3034,9 +3142,28 @@ async def _run_agent_loop(message: str, history: list, mode: str, model: str, ke
     import asyncio
     import urllib.request, urllib.error
     
-    api_key = keys.get("OPENROUTER_API_KEY") or keys.get("OPENAI_API_KEY","")
-    if not api_key:
-        yield _sse_event({"type":"error","content":"No API key. Set OpenRouter key in Settings."})
+    if keys.get("OPENROUTER_API_KEY"):
+        api_url = "https://openrouter.ai/api/v1/chat/completions"
+        api_key = keys.get("OPENROUTER_API_KEY")
+        request_model = model or keys.get("ACTIVE_MODEL") or "meta-llama/llama-3.3-70b-instruct:free"
+        provider_label = "OpenRouter"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": "http://localhost:7777",
+            "X-Title": "Chinna Agent",
+        }
+    elif is_openai_key(keys.get("OPENAI_API_KEY")):
+        api_url = "https://api.openai.com/v1/chat/completions"
+        api_key = keys.get("OPENAI_API_KEY")
+        request_model = normalize_openai_model(model or keys.get("ACTIVE_MODEL"))
+        provider_label = "OpenAI"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+    else:
+        yield _sse_event({"type":"error","content":"No AI API key. Add an OpenAI or OpenRouter key in Settings."})
         return
     
     sys_prompt = _agent_system_prompt(mode, model)
@@ -3054,25 +3181,19 @@ async def _run_agent_loop(message: str, history: list, mode: str, model: str, ke
         
         # Call AI
         payload = json.dumps({
-            "model": model,
+            "model": request_model,
             "messages": messages,
             "max_tokens": 4000,
             "stream": False,
         }).encode()
         
         try:
-            req = urllib.request.Request(
-                "https://openrouter.ai/api/v1/chat/completions",
-                data=payload,
-                headers={"Content-Type":"application/json",
-                         "Authorization":f"Bearer {api_key}",
-                         "HTTP-Referer":"http://localhost:7777"}
-            )
+            req = urllib.request.Request(api_url, data=payload, headers=headers)
             resp = urllib.request.urlopen(req, timeout=90)
             d = json.loads(resp.read())
             ai_text = d.get("choices",[{}])[0].get("message",{}).get("content","")
         except Exception as e:
-            yield _sse_event({"type":"error","content":f"AI call failed: {e}"})
+            yield _sse_event({"type":"error","content":f"{provider_label} AI call failed: {e}. Check the API key in Settings."})
             return
         
         # Sanitize text
@@ -3135,8 +3256,8 @@ def serve_agent(self, b):
     message = safe_text(b.get("message",""))
     mode = b.get("mode","build").lower()
     history = b.get("history", [])
-    model = b.get("model","") or load_keys().get("ACTIVE_MODEL","meta-llama/llama-3.3-70b-instruct:free")
     keys = load_keys()
+    model = b.get("model","") or keys.get("ACTIVE_MODEL","meta-llama/llama-3.3-70b-instruct:free")
     
     if mode not in ("ask","plan","build"):
         mode = "build"
@@ -3328,6 +3449,7 @@ H.ext_music = ext_music
 H.ext_generate_music = ext_generate_music
 H.ext_shell = ext_shell
 H.serve_agent = serve_agent
+H.forge_ai_fn = staticmethod(forge_ai_fn)
 H.serve_artifacts_list = serve_artifacts_list
 H.serve_artifact_content = serve_artifact_content
 H.serve_artifact_preview = serve_artifact_preview

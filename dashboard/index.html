@@ -1233,12 +1233,15 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
                   <button type="button" class="ux-iconbtn primary" aria-label="Save settings" onclick="saveKeys()">✓</button>
                 </div>
                 <div class="settings-field-grid">
+                  <div class="full settings-help" id="ai-key-status" role="status">
+                    Add at least one AI key below. OpenRouter enables OpenRouter model IDs; OpenAI enables GPT and voice transcription. Adding both gives fallback coverage across the app.
+                  </div>
                   <div class="full">
-                    <div class="navlabel" style="margin-left:0">OpenRouter key — Chinna AI</div>
+                    <div class="navlabel" style="margin-left:0">OpenRouter key — optional AI provider</div>
                     <input class="field" id="set-or" type="password" autocomplete="new-password" placeholder="sk-or-v1-...">
                   </div>
                   <div class="full">
-                    <div class="navlabel" style="margin-left:0">OpenAI key — optional (Whisper/GPT)</div>
+                    <div class="navlabel" style="margin-left:0">OpenAI key — optional AI provider</div>
                     <input class="field" id="set-oa" type="password" autocomplete="new-password" placeholder="sk-...">
                   </div>
                   <div class="full settings-switch">
@@ -2676,12 +2679,20 @@ function storUp(){if(storStack.length>1){storStack.pop();loadStorage(storStack[s
 /* AI */
 async function loadAIStatus(){
   const k=await api('get_keys');
-  $('ai-status').textContent=k.chinna_ai_set?'Connected · ready':'No API key — add one in Settings';
+  const status = k.ai_status || (k.ai_ready ? 'AI ready' : 'Add OpenAI or OpenRouter key in Settings');
+  $('ai-status').textContent = k.ai_ready ? `${status} · ready` : status;
   setVoiceButton();
 }
 async function loadKeySettings(){
   const k = await api('get_keys').catch(()=>null);
   if(!k) return;
+  if($('ai-key-status')) {
+    $('ai-key-status').textContent = k.openai_key_invalid
+      ? `${k.ai_status}. The OpenAI field currently contains an OpenRouter key; paste a real OpenAI key there or leave it blank.`
+      : k.ai_ready
+      ? `${k.ai_status}. AI chat, Agent, Forge Copilot, and app AI features can use the configured provider.`
+      : 'Add an OpenAI key, an OpenRouter key, or both to activate AI chat, Agent, Forge Copilot, and all AI-powered features.';
+  }
   if($('set-turn-enabled')) $('set-turn-enabled').checked = !!k.turn_enabled;
   if($('set-turn-urls')) $('set-turn-urls').value = k.turn_urls || '';
   if($('set-turn-user')) $('set-turn-user').value = k.turn_username || '';
@@ -4524,11 +4535,12 @@ async function saveKeys(){
   b.turn_credential = $('set-turn-cred')?.value || '';
   b.chat_relay_url = $('set-chat-relay')?.value?.trim?.() || '';
   const d=await api('save_keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
-  toast(d.result||'Saved');
+  toast(d.ai_status || d.result || 'Saved');
   $('set-or').value='';
   $('set-oa').value='';
   if($('turn-test-status')) $('turn-test-status').textContent = 'Settings saved. Run TURN test.';
   await loadKeySettings().catch(()=>{});
+  await loadAIStatus().catch(()=>{});
   await chatxLoadRtcConfig().catch(()=>{});
   if(chatxIdentity) await chatxPublishInvite().catch(()=>{});
 }

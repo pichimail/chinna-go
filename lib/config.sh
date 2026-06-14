@@ -144,6 +144,20 @@ chinna_setup_openrouter() {
     ok "OpenRouter key saved securely to $CHINNA_ENV_FILE"
 }
 
+chinna_setup_openai() {
+    echo -n "Paste your OpenAI API key (sk-...): "
+    read -rs key
+    echo ""
+
+    if [ -z "$key" ]; then
+        fail "No key provided"
+        return 1
+    fi
+
+    chinna_setenv "$CHINNA_ENV_FILE" "OPENAI_API_KEY" "$key"
+    ok "OpenAI key saved securely to $CHINNA_ENV_FILE"
+}
+
 chinna_setup_anthropic() {
     echo -n "Paste your Anthropic API key (sk-ant-...): "
     read -rs key

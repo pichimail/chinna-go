@@ -629,15 +629,29 @@ _or_chat() {
     local prompt="$*"
     ensure_dep jq jq || return 1
     local api_key="${OPENROUTER_API_KEY:-}"
-    [ -z "$api_key" ] && { fail "OPENROUTER_API_KEY not set. Run: chinna config"; return 1; }
+    local endpoint="https://openrouter.ai/api/v1/chat/completions"
+    local provider="OpenRouter"
+    local extra_headers=(-H "X-Title: Chinna CLI")
+    if [ -z "$api_key" ] && [ -n "${OPENAI_API_KEY:-}" ]; then
+        api_key="$OPENAI_API_KEY"
+        endpoint="https://api.openai.com/v1/chat/completions"
+        provider="OpenAI"
+        extra_headers=()
+        case "$model" in
+            openai/*) model="${model#openai/}" ;;
+            */*|*:*) model="gpt-4o-mini" ;;
+            "") model="gpt-4o-mini" ;;
+        esac
+    fi
+    [ -z "$api_key" ] && { fail "No AI API key set. Run: chinna config openrouter or chinna config openai"; return 1; }
     [ -z "$prompt" ] && { echo -ne "  ${C}You:${RESET} "; read -r prompt; }
     echo ""
-    echo -e "  ${D}$model${RESET}"
+    echo -e "  ${D}$provider · $model${RESET}"
     echo -ne "  ${ORANGE}Chinna:${RESET} "
-    curl -s -N "https://openrouter.ai/api/v1/chat/completions" \
+    curl -s -N "$endpoint" \
         -H "Authorization: Bearer $api_key" \
         -H "Content-Type: application/json" \
-        -H "X-Title: Chinna CLI" \
+        "${extra_headers[@]}" \
         -d "$(jq -n --arg m "$model" --arg p "$prompt" \
             '{model:$m,stream:true,max_tokens:1000,messages:[{role:"user",content:$p}]}')" | \
     while IFS= read -r line; do
@@ -721,6 +735,9 @@ cmd_config() {
         openrouter|or)
             chinna_setup_openrouter
             ;;
+        openai|oa)
+            chinna_setup_openai
+            ;;
         anthropic|claude)
             chinna_setup_anthropic
             ;;
@@ -735,6 +752,7 @@ cmd_config() {
             echo ""
             info "Usage:"
             echo "  chinna config openrouter     # Set OpenRouter key (secure)"
+            echo "  chinna config openai         # Set OpenAI key (secure)"
             echo "  chinna config anthropic      # Set Anthropic key"
             echo "  chinna config models         # List / switch AI model preset"
             echo "  chinna model-set sonnet4     # Quick switch"
@@ -1555,7 +1573,7 @@ main() {
         run|start_project)          shift; run_project "${1:-.}" ;;
         deploy)                     shift; deploy_project "${1:-.}" ;;
         git|commit)                 cmd_git ;;
-        free)                       shift; cmd_free "$@" ;;
+        ai|free)                    shift; cmd_free "$@" ;;
         pro)                        shift; cmd_pro "$@" ;;
         listen|voice)               cmd_listen ;;
         bot|telegram)               cmd_bot ;;
@@ -1567,6 +1585,7 @@ main() {
         config|setup)               shift; cmd_config "$@" ;;
         model-set|model)            shift; chinna_model_set "$@" ;;
         setup-openrouter)           chinna_setup_openrouter ;;
+        setup-openai)               chinna_setup_openai ;;
         setup-anthropic)            chinna_setup_anthropic ;;
         publish)                    cmd_publish ;;
         doctor|health)              cmd_doctor ;;
