@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
-"""Chinna V6.5 — Dashboard Server (Python stdlib only, zero deps)."""
+"""Chinna V6 — Dashboard Server (Python stdlib only, zero deps)."""
 import base64, hashlib, http.server, json, os, plistlib, re, secrets, shutil, subprocess, sys, tempfile, threading, time, traceback, unicodedata, urllib.error, urllib.parse, urllib.request
 from datetime import datetime, timezone
 
-CHINNA_VERSION = "6.5.0"
+# Chinna Forge dev-shell
+import sys as _sys, os as _os
+_sys.path.insert(0, _os.path.expanduser("~/.chinna"))
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+try:
+    import forge as _forge
+except Exception:
+    _forge = None
+
+
+CHINNA_VERSION = "6.0.0"
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 7777
 CHINNA_HOME = os.environ.get('CHINNA_HOME', os.path.expanduser('~/.chinna'))
 DASHBOARD_DIR = os.path.join(CHINNA_HOME, 'dashboard')
 HOME = os.path.expanduser('~')
 API_KEYS_FILE = os.path.join(CHINNA_HOME, 'api_keys.json')
-UPDATE_PROMPT_FILE = os.path.join(CHINNA_HOME, 'update_prompted_version')
-UPDATE_SNOOZE_FILE = os.path.join(CHINNA_HOME, 'update_snooze_until')
-UPDATE_INSTALL_URL = 'https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh'
 PAIR_STATE_FILE = os.path.join(CHINNA_HOME, 'telegram_pair.json')
 CHAT_DB_FILE = os.path.join(CHINNA_HOME, 'state/chat_db.json')
 WHATSAPP_DIR = os.path.join(CHINNA_HOME, 'whatsapp')
@@ -21,20 +28,6 @@ WHATSAPP_BRIDGE_PID_FILE = os.path.join(WHATSAPP_DIR, 'bridge.pid')
 WHATSAPP_BRIDGE_LOG = os.path.join(WHATSAPP_DIR, 'bridge.log')
 SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(SERVER_DIR, '..'))
-
-
-def version_tuple(value):
-    parts = [int(p) for p in re.findall(r'\d+', str(value or ''))]
-    return tuple(parts or [0])
-
-
-def version_gt(a, b):
-    pa = version_tuple(a)
-    pb = version_tuple(b)
-    width = max(len(pa), len(pb))
-    pa = pa + (0,) * (width - len(pa))
-    pb = pb + (0,) * (width - len(pb))
-    return pa > pb
 
 # Shared TURN fallback for first-run users. Override via env if needed.
 DEFAULT_TURN_URLS = os.environ.get(
@@ -47,8 +40,6 @@ os.makedirs(DASHBOARD_DIR, exist_ok=True)
 
 stats_cache = {}
 cache_lock = threading.Lock()
-files_cache = {}
-files_cache_lock = threading.Lock()
 jobs = {}
 jobs_lock = threading.Lock()
 chat_lock = threading.Lock()
@@ -397,15 +388,12 @@ def collect_stats():
         secs = int(time.time())-int(bt); d,r = divmod(secs,86400); h,r = divmod(r,3600); mn = r//60
         s['uptime'] = f"{d}d {h}h" if d else (f"{h}h {mn}m" if h else f"{mn}m")
     except: s['uptime'] = '—'
-    ps = sh("ps -axo pid=,pcpu=,pmem=,comm=")
-    procs = []
-    for line in ps.split('\n'):
-        c = line.strip().split(None, 3)
-        if len(c) >= 4:
-            try:
-                procs.append({'pid': int(c[0]), 'cpu': float(c[1]), 'mem': float(c[2]), 'name': c[3][:80]})
-            except:
-                pass
+    ps = sh("ps aux"); procs = []
+    for line in ps.split('\n')[1:]:
+        c = line.split(None,10)
+        if len(c)>=11:
+            try: procs.append({'pid': int(c[1]), 'cpu': float(c[2]), 'mem': float(c[3]), 'name': c[10][:80]})
+            except: pass
     procs.sort(key=lambda x:x['mem'], reverse=True)
     s['processes'] = procs[:40]
     try:
@@ -719,74 +707,6 @@ def storage_breakdown(path, limit=60, offset=0):
         'has_more': (offset + len(slice_children)) < len(children),
         'next_offset': offset + len(slice_children)
     }
-
-def _scan_files(tab, sort):
-    files = []
-    if tab == 'large':
-        # Use Spotlight (mdfind) — fast on macOS, with a narrower fallback scan.
-        out = sh("mdfind -onlyin ~ 'kMDItemFSSize > 10485760' 2>/dev/null | grep -v '/.Trash/' | grep -v '/node_modules/' | grep -v '/.git/' | head -200", 12)
-        if not out.strip():
-            out = sh(f"find '{HOME}/Downloads' '{HOME}/Desktop' '{HOME}/Documents' '{HOME}/Movies' '{HOME}/Music' '{HOME}/Pictures' -maxdepth 5 -type f -size +10M -not -path '*/.Trash/*' 2>/dev/null | head -120", 25)
-        for f in [x for x in out.split('\n') if x.strip()]:
-            e = entry(f)
-            if e:
-                files.append(e)
-    elif tab == 'downloads':
-        dl = os.path.expanduser('~/Downloads')
-        try:
-            with os.scandir(dl) as it:
-                for ent in it:
-                    if ent.name.startswith('.Trash'):
-                        continue
-                    e = entry(ent.path)
-                    if e:
-                        files.append(e)
-        except:
-            pass
-    elif tab == 'dupes':
-        out = sh("find ~/Downloads ~/Desktop ~/Documents ~/Movies -maxdepth 5 -type f -size +1M 2>/dev/null | head -400", 40)
-        by_size = {}
-        for f in [x for x in out.split('\n') if x.strip()]:
-            try:
-                by_size.setdefault(os.path.getsize(f), []).append(f)
-            except:
-                pass
-        for sz, paths in by_size.items():
-            if len(paths) < 2:
-                continue
-            by_hash = {}
-            for fp in paths:
-                h = md5_quick(fp)
-                if h:
-                    by_hash.setdefault(h, []).append(fp)
-            for h, group in by_hash.items():
-                if len(group) > 1:
-                    for fp in group:
-                        e = entry(fp)
-                        if e:
-                            e['dupe_group'] = h
-                            files.append(e)
-    key = {'size':'size_bytes','date':'mtime','name':'name'}.get(sort,'size_bytes')
-    if key == 'name':
-        files.sort(key=lambda x: x.get('name','').lower())
-    else:
-        files.sort(key=lambda x: x.get(key, 0), reverse=True)
-    return {'files': files[:150], 'count': len(files), 'tab': tab, 'sort': sort}
-
-def get_cached_files(tab, sort, refresh=False):
-    tab = tab or 'large'
-    sort = sort or 'size'
-    key = (tab, sort)
-    ttl = 300 if tab == 'dupes' else 45 if tab == 'downloads' else 30
-    now = time.time()
-    with files_cache_lock:
-        cached = files_cache.get(key)
-        if cached and not refresh and (now - cached.get('ts', 0) < ttl):
-            return cached['data']
-    data = _scan_files(tab, sort)
-    with files_cache_lock:
-        files_cache[key] = {'ts': now, 'data': data}
-    return data
 
 def file_snippet(path, max_lines=24):
     try:
@@ -1418,12 +1338,9 @@ TOOLS.append({
     }
 })
 
-def execute_tool(name, args, session_state=None):
+def execute_tool(name, args):
     """Execute a tool safely. Returns (result_text, is_long_job)."""
-    session_state = session_state or {}
     try:
-        if session_state.get("sandbox") and name in {"kill_process", "trash_path", "reveal_in_finder", "purge_ram", "deep_clean", "mac_control"}:
-            return "Blocked in sandbox build mode. Switch out of Build for system actions.", False
         if name == "get_system_status":
             with cache_lock:
                 s = dict(stats_cache)
@@ -1452,10 +1369,7 @@ def execute_tool(name, args, session_state=None):
             q = args.get("query", "").strip()
             lim = int(args.get("limit", 12))
             if not q: return "[]", False
-            search_root = HOME
-            if session_state.get("sandbox"):
-                search_root = ensure_agent_sandbox(session_state)["repo"]
-            out = sh(f"find {shq(search_root)} -maxdepth 7 -iname '*{q}*' -not -path '*/.Trash/*' -not -path '*/node_modules/*' 2>/dev/null | head -{lim}", 8)
+            out = sh(f"find ~ -maxdepth 7 -iname '*{q}*' -not -path '*/.Trash/*' -not -path '*/node_modules/*' 2>/dev/null | head -{lim}", 8)
             hits = [x for x in out.splitlines() if x.strip()]
             return json.dumps(hits), False
 
@@ -1484,24 +1398,12 @@ def execute_tool(name, args, session_state=None):
             return json.dumps({"job_id": jid, "status": "started"}), False
 
         elif name == "get_disk_usage":
-            target = args.get("path") or (ensure_agent_sandbox(session_state)["repo"] if session_state.get("sandbox") else HOME)
-            if session_state.get("sandbox"):
-                target, err = _sandbox_resolve_path(session_state, target, must_exist=False)
-                if not target:
-                    return err, False
-            else:
-                target = os.path.expanduser(target)
+            target = os.path.expanduser(args.get("path") or HOME)
             data = storage_breakdown(target, limit=10, offset=0)
             return json.dumps(data), False
 
         elif name == "read_file_snippet":
-            p = args.get("path", "")
-            if session_state.get("sandbox"):
-                p, err = _sandbox_resolve_path(session_state, p, must_exist=True)
-                if not p:
-                    return err, False
-            else:
-                p = os.path.expanduser(p)
+            p = os.path.expanduser(args.get("path", ""))
             maxl = int(args.get("max_lines", 30))
             if not os.path.exists(p): return "File not found", False
             return file_snippet(p, max_lines=maxl) or "(empty or binary)", False
@@ -1512,19 +1414,7 @@ def execute_tool(name, args, session_state=None):
                 return "No command provided", False
             if not is_safe_terminal_command(cmd):
                 return "Command blocked for safety. Only read-only / informational commands are allowed.", False
-            if session_state.get("sandbox") and not _sandbox_command_is_local(cmd):
-                return "Blocked in sandbox build mode. Use relative paths inside the sandbox workspace.", False
-            if session_state.get("sandbox"):
-                script = os.path.join(ensure_agent_sandbox(session_state)["tmp"], "terminal.sh")
-                with open(script, "w", encoding="utf-8") as f:
-                    f.write(cmd + "\n")
-                try:
-                    os.chmod(script, 0o755)
-                except Exception:
-                    pass
-                out = _run_in_sandbox(session_state, ["/bin/bash", script], timeout=18)
-            else:
-                out = sh(cmd, timeout=18)
+            out = sh(cmd, timeout=18)
             return out[:1800] or "(no output)", False
 
         elif name == "save_to_memory":
@@ -1625,8 +1515,7 @@ class H(http.server.SimpleHTTPRequestHandler):
             with jobs_lock:
                 self._json(jobs.get(q.get('id',''), {'lines':['job not found'],'done':True,'ok':False}))
         elif p == '/api/files':
-            refresh = q.get('refresh', '0') in ('1', 'true', 'yes', 'on')
-            self._json(self.get_files(q.get('tab','large'), q.get('sort','size'), refresh=refresh))
+            self._json(self.get_files(q.get('tab','large'), q.get('sort','size')))
         elif p == '/api/apps':
             self._json({'apps': self.list_apps()})
         elif p == '/api/loginitems':
@@ -1660,7 +1549,18 @@ class H(http.server.SimpleHTTPRequestHandler):
                 'chat_default_relay_url': dashboard_origin(),
             })
         elif p == '/api/version':
-            self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6.5'})
+            self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6'})
+        elif p == '/api/forge/detect':
+            path = q.get('path', '.') if isinstance(q, dict) else '.'
+            self._json(_forge.detect(path) if _forge else {'error': 'forge unavailable'})
+        elif p == '/api/forge/tools':
+            self._json(_forge.tool_status() if _forge else [])
+        elif p == '/api/forge/plugins':
+            path = q.get('path', '.') if isinstance(q, dict) else '.'
+            self._json(_forge.plugin_list(path) if _forge else [])
+        elif p.startswith('/api/forge/github'):
+            query = q.get('q', '') if isinstance(q, dict) else ''
+            self._json(_forge.github_search(query) if _forge else {'error': 'forge unavailable'})
         elif p.startswith('/api/ext/key'):
             self.ext_get_apikey(q)
         elif p == '/api/artifacts':
@@ -1731,8 +1631,6 @@ class H(http.server.SimpleHTTPRequestHandler):
             if b.get('turn_credential') is not None: d['TURN_CREDENTIAL'] = safe_text(b.get('turn_credential', ''))[:200]
             if b.get('chat_relay_url') is not None: d['CHAT_RELAY_URL'] = normalize_relay_url(b.get('chat_relay_url', ''))[:300]
             save_keys(d); self._json({'result':'✅ Keys saved'})
-        elif p == '/api/update':
-            self._json(self.update_action(b))
         elif p == '/api/turn/generate':
             uname, cred = generate_turn_credentials()
             d = {
@@ -1833,6 +1731,21 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.handle_project_action(q, b)
         elif p == '/api/plugins/action':
             self.plugin_action(b)
+        elif p == '/api/forge/autofix':
+            self._json(_forge.autofix(b.get('path', '.'), b.get('env', True), b.get('gitignore', True), b.get('scaffold', True)) if _forge else {'error': 'forge unavailable'})
+        elif p == '/api/forge/install-tool':
+            self._json(_forge.install_tool(b.get('tool', '')) if _forge else {'error': 'forge unavailable'})
+        elif p == '/api/forge/security':
+            self._json(_forge.security_scan(b.get('path', '.')) if _forge else {'error': 'forge unavailable'})
+        elif p == '/api/forge/build':
+            self._json(_forge.smart_build(b.get('path', '.')) if _forge else {'error': 'forge unavailable'})
+        elif p == '/api/forge/github-clone':
+            self._json(_forge.github_clone(b.get('repo', ''), b.get('dest')) if _forge else {'error': 'forge unavailable'})
+        elif p == '/api/forge/plugin-new':
+            self._json(_forge.plugin_new(b.get('name', 'plugin'), b.get('path', '.')) if _forge else {'error': 'forge unavailable'})
+        elif p == '/api/forge/copilot':
+            ai = getattr(self, 'forge_ai_fn', None)
+            self._json(_forge.ai_prompt(b.get('prompt', ''), ai) if _forge else {'error': 'forge unavailable'})
         elif p == '/api/ext/music':
             self.ext_music(b)
         elif p == '/api/ext/generate-music':
@@ -1873,13 +1786,50 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.install_dashboard_app()
         elif p == '/api/install-swiftbar':
             self._json(self.install_swiftbar_quick_actions())
-        elif p == '/api/install-extension':
-            self._json(self.prepare_browser_extension())
         else:
             self._json({'error': f'unknown {p}'}, 404)
 
-    def get_files(self, tab, sort, refresh=False):
-        return get_cached_files(tab, sort, refresh=refresh)
+    def get_files(self, tab, sort):
+        files = []
+        if tab == 'large':
+            # Use Spotlight (mdfind) — instant on macOS, no TCC permission issues
+            out = sh("mdfind -onlyin ~ 'kMDItemFSSize > 10485760' 2>/dev/null | grep -v '/.Trash/' | grep -v '/node_modules/' | grep -v '/.git/' | head -200", 12)
+            if not out.strip():
+                # Fallback: targeted find on common user directories
+                out = sh(f"find '{HOME}/Downloads' '{HOME}/Desktop' '{HOME}/Documents' '{HOME}/Movies' '{HOME}/Music' '{HOME}/Pictures' -maxdepth 5 -type f -size +10M -not -path '*/.Trash/*' 2>/dev/null | head -120", 25)
+            for f in [x for x in out.split('\n') if x.strip()]:
+                e = entry(f)
+                if e: files.append(e)
+        elif tab == 'downloads':
+            dl = os.path.expanduser('~/Downloads')
+            try:
+                for n in os.listdir(dl):
+                    e = entry(os.path.join(dl,n))
+                    if e: files.append(e)
+            except: pass
+        elif tab == 'dupes':
+            out = sh("find ~/Downloads ~/Desktop ~/Documents ~/Movies -maxdepth 5 -type f -size +1M 2>/dev/null | head -400", 40)
+            by_size = {}
+            for f in [x for x in out.split('\n') if x.strip()]:
+                try: by_size.setdefault(os.path.getsize(f), []).append(f)
+                except: pass
+            for sz, paths in by_size.items():
+                if len(paths) < 2: continue
+                by_hash = {}
+                for fp in paths:
+                    h = md5_quick(fp)
+                    if h: by_hash.setdefault(h, []).append(fp)
+                for h, group in by_hash.items():
+                    if len(group) > 1:
+                        for fp in group:
+                            e = entry(fp)
+                            if e: e['dupe_group'] = h; files.append(e)
+        key = {'size':'size_bytes','date':'mtime','name':'name'}.get(sort,'size_bytes')
+        if key == 'name':
+            files.sort(key=lambda x: x.get('name','').lower())
+        else:
+            files.sort(key=lambda x: x.get(key, 0), reverse=True)
+        return {'files': files[:150], 'count': len(files), 'tab': tab, 'sort': sort}
 
     def list_apps(self):
         return list_installed_apps(limit=400)
@@ -2061,30 +2011,6 @@ fi
         except Exception as e:
             return {'error': safe_text(str(e))}
 
-    def prepare_browser_extension(self):
-        try:
-            src_candidates = [
-                os.path.join(REPO_ROOT, 'extension'),
-                os.path.join(CHINNA_HOME, 'extension'),
-            ]
-            src = next((x for x in src_candidates if os.path.exists(os.path.join(x, 'manifest.json'))), '')
-            if not src:
-                return {'error': 'Chinna extension source not found'}
-            dest = os.path.join(CHINNA_HOME, 'extension')
-            if os.path.abspath(src) != os.path.abspath(dest):
-                if os.path.exists(dest):
-                    shutil.rmtree(dest)
-                shutil.copytree(src, dest, ignore=shutil.ignore_patterns('dist'))
-            subprocess.run(['open', dest], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(['open', '-a', 'Google Chrome', 'chrome://extensions'], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            return {
-                'ok': True,
-                'extension_path': dest,
-                'result': 'Extension folder ready. In Chrome, enable Developer Mode, choose Load unpacked, then select this folder.'
-            }
-        except Exception as e:
-            return {'error': safe_text(str(e))}
-
     # ── Encrypted Chat Backend ───────────────────────────────
     def chat_register(self, b):
         uid = safe_id(b.get('user_id'))
@@ -2248,7 +2174,7 @@ fi
 
         # Detect images early for auto model selection
         has_images = any(
-            (a.get('mime','').startswith('image/') or
+            (a.get('mime','').startswith('image/') or 
              a.get('name','').lower().endswith(('.png','.jpg','.jpeg','.webp','.gif')))
             for a in raw_attachments
         )
@@ -2361,7 +2287,7 @@ fi
                         except:
                             args = {}
 
-                        result_text, is_long = execute_tool(name, args, session_state)
+                        result_text, is_long = execute_tool(name, args)
                         tool_traces.append({"tool": name, "args": args, "result": result_text[:800]})
 
                         # Feed result back as a tool message
@@ -2602,131 +2528,14 @@ fi
             self._json({'error': safe_text(str(e))}, 500)
 
 
-    def _update_snooze_until(self):
-        try:
-            with open(UPDATE_SNOOZE_FILE) as f:
-                return int((f.read().strip() or "0"))
-        except Exception:
-            return 0
-
-    def _set_update_snooze(self, seconds):
-        until = int(time.time()) + max(60, int(seconds or 0))
-        os.makedirs(CHINNA_HOME, exist_ok=True)
-        with open(UPDATE_SNOOZE_FILE, 'w') as f:
-            f.write(str(until))
-        return until
-
-    def _clear_update_snooze(self):
-        for path in (UPDATE_SNOOZE_FILE, UPDATE_PROMPT_FILE):
-            try:
-                os.remove(path)
-            except Exception:
-                pass
-
-    def _notify_update_available(self, latest):
-        if not latest:
-            return
-        prompted = ''
-        try:
-            with open(UPDATE_PROMPT_FILE) as f:
-                prompted = f.read().strip()
-        except Exception:
-            prompted = ''
-        if prompted == latest:
-            return
-        try:
-            os.makedirs(CHINNA_HOME, exist_ok=True)
-            with open(UPDATE_PROMPT_FILE, 'w') as f:
-                f.write(str(latest))
-            if shutil.which('osascript'):
-                title = f'Chinna v{latest} is ready'.replace('"', '\\"')
-                msg = 'Open Settings to update.'.replace('"', '\\"')
-                subprocess.Popen(
-                    ['osascript', '-e', f'display notification "{msg}" with title "{title}"'],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-        except Exception:
-            pass
-
-    def _install_script_command(self, fresh=False):
-        script = UPDATE_INSTALL_URL
-        if fresh:
-            return ['/bin/bash', '-lc', f'curl -fsSL "{script}" | bash -s -- --fresh']
-        return ['/bin/bash', '-lc', f'curl -fsSL "{script}" | bash']
-
     def check_update(self):
         try:
-            req = urllib.request.Request(
-                f"https://api.github.com/repos/pichimail/chinna-go/contents/VERSION?ref=main",
-                headers={'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'chinna-go'}
-            )
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                payload = json.load(resp)
-            latest = base64.b64decode(payload.get('content', '')).decode().strip()
-            if not latest:
-                latest = CHINNA_VERSION
-            snoozed_until = self._update_snooze_until()
-            now = int(time.time())
-            update_available = version_gt(latest, CHINNA_VERSION)
-            should_prompt = bool(update_available and (snoozed_until <= now))
-            if should_prompt:
-                self._notify_update_available(latest)
-            return {
-                "current": CHINNA_VERSION,
-                "latest": latest,
-                "update_available": update_available,
-                "should_prompt": should_prompt,
-                "snoozed_until": snoozed_until,
-                "install_url": UPDATE_INSTALL_URL,
-                "fresh_install_command": f'curl -fsSL "{UPDATE_INSTALL_URL}" | bash -s -- --fresh',
-                "update_command": f'curl -fsSL "{UPDATE_INSTALL_URL}" | bash',
-                "release_title": f"Chinna v{latest}",
-                "release_message": "A newer version is ready. Your data, config, and API keys stay intact.",
-            }
-        except Exception:
-            return {
-                "current": CHINNA_VERSION,
-                "latest": CHINNA_VERSION,
-                "update_available": False,
-                "should_prompt": False,
-                "snoozed_until": 0,
-                "install_url": UPDATE_INSTALL_URL,
-                "fresh_install_command": f'curl -fsSL "{UPDATE_INSTALL_URL}" | bash -s -- --fresh',
-                "update_command": f'curl -fsSL "{UPDATE_INSTALL_URL}" | bash',
-                "error": "offline",
-            }
-
-    def update_action(self, body):
-        action = safe_text(body.get('action', 'update')).lower()
-        fresh = bool(body.get('fresh', False))
-
-        if action in ('later', 'snooze'):
-            minutes = int(body.get('minutes') or 180)
-            until = self._set_update_snooze(minutes * 60)
-            return {'ok': True, 'result': 'Update reminder snoozed', 'snoozed_until': until}
-
-        if action in ('dismiss', 'hide'):
-            self._clear_update_snooze()
-            return {'ok': True, 'result': 'Update prompt cleared'}
-
-        if action in ('fresh', 'reinstall'):
-            fresh = True
-
-        cmd = self._install_script_command(fresh=fresh)
-        env = os.environ.copy()
-        env['CHINNA_HOME'] = CHINNA_HOME
-        log_path = os.path.join(CHINNA_HOME, 'update.log')
-        os.makedirs(CHINNA_HOME, exist_ok=True)
-        with open(log_path, 'a') as log:
-            subprocess.Popen(cmd, env=env, stdout=log, stderr=log, stdin=subprocess.DEVNULL, start_new_session=True)
-        return {
-            'ok': True,
-            'result': 'Update started',
-            'fresh': fresh,
-            'log': log_path,
-            'install_url': UPDATE_INSTALL_URL,
-        }
+            import urllib.request
+            url = "https://raw.githubusercontent.com/pichimail/chinna-go/main/VERSION"
+            latest = urllib.request.urlopen(url, timeout=5).read().decode().strip()
+            return {"current": CHINNA_VERSION, "latest": latest, "update_available": latest != CHINNA_VERSION}
+        except:
+            return {"current": CHINNA_VERSION, "latest": CHINNA_VERSION, "update_available": False, "error": "offline"}
 
     def list_models(self):
         models_file = os.path.join(CHINNA_HOME, "models")
@@ -2892,7 +2701,7 @@ fi
         out = os.path.join(HOME, "Desktop", f"chinna-audit-{int(time.time())}.txt")
         try:
             with open(out, "w") as f:
-                f.write(f"Chinna V6.5 Audit\n{'='*40}\nPath: {path}\nStack: {stack}\n\n")
+                f.write(f"Chinna V6 Audit\n{'='*40}\nPath: {path}\nStack: {stack}\n\n")
                 f.write(f"--- Top Directories ---\n{sizes}\n\n")
                 f.write(f"--- Git Status ---\n{git_s or 'clean'}\n\n")
                 f.write(f"--- Large Files ---\n{big or 'none'}\n\n")
@@ -3027,10 +2836,6 @@ from http.server import BaseHTTPRequestHandler
 
 ARTIFACTS_DIR = os.path.join(CHINNA_HOME, "artifacts")
 os.makedirs(ARTIFACTS_DIR, exist_ok=True)
-SANDBOX_ROOT = os.path.join(CHINNA_HOME, "sandboxes")
-os.makedirs(SANDBOX_ROOT, exist_ok=True)
-SANDBOX_EXEC_AVAILABLE = None
-SANDBOX_LAST_CLEANUP = 0
 
 AGENT_TOOLS = {
     "bash": "Run a shell command on this Mac (macOS-native: osascript, brew, xcode-select…)",
@@ -3047,219 +2852,6 @@ AGENT_TOOLS = {
 PLAN_MODE_TOOLS = {"ask_user", "update_plan"}  # read-only in plan mode
 MAX_AGENT_ROUNDS = 12
 AGENT_TIMEOUT_SECS = 60
-
-def _sandbox_session_id():
-    return hashlib.md5(f"{time.time()}-{secrets.token_hex(6)}".encode()).hexdigest()[:12]
-
-def _sandbox_session_paths(session_state: dict):
-    sid = session_state.get("sandbox_id")
-    if not sid:
-        sid = _sandbox_session_id()
-        session_state["sandbox_id"] = sid
-    root = os.path.join(SANDBOX_ROOT, sid)
-    repo_root = os.path.join(root, "repo")
-    tmp_dir = os.path.join(root, "tmp")
-    cache_dir = os.path.join(root, "cache")
-    return {"id": sid, "root": root, "repo": repo_root, "tmp": tmp_dir, "cache": cache_dir}
-
-def _seed_sandbox_repo(repo_root: str):
-    if os.path.exists(repo_root) and os.path.isdir(repo_root) and os.listdir(repo_root):
-        return
-    os.makedirs(repo_root, exist_ok=True)
-    ignore_names = {
-        ".git", ".DS_Store", "__pycache__", ".pytest_cache", ".mypy_cache",
-        "node_modules", ".venv", "dist", "build", ".next", ".turbo"
-    }
-
-    def _ignore(_, names):
-        return [n for n in names if n in ignore_names or n.endswith(".pyc")]
-
-    for name in os.listdir(REPO_ROOT):
-        if name in ignore_names:
-            continue
-        src = os.path.join(REPO_ROOT, name)
-        dst = os.path.join(repo_root, name)
-        try:
-            if os.path.isdir(src):
-                shutil.copytree(src, dst, ignore=_ignore, dirs_exist_ok=True)
-            else:
-                shutil.copy2(src, dst)
-        except Exception:
-            pass
-
-def cleanup_old_sandboxes(max_age_hours=48):
-    global SANDBOX_LAST_CLEANUP
-    now = time.time()
-    if now - SANDBOX_LAST_CLEANUP < 3600:
-        return
-    SANDBOX_LAST_CLEANUP = now
-    cutoff = now - max_age_hours * 3600
-    try:
-        for name in os.listdir(SANDBOX_ROOT):
-            path = os.path.join(SANDBOX_ROOT, name)
-            try:
-                if not os.path.isdir(path):
-                    continue
-                mtime = os.path.getmtime(path)
-                if mtime < cutoff:
-                    shutil.rmtree(path, ignore_errors=True)
-            except Exception:
-                pass
-    except Exception:
-        pass
-
-def ensure_agent_sandbox(session_state: dict):
-    cleanup_old_sandboxes()
-    paths = _sandbox_session_paths(session_state)
-    if not session_state.get("sandbox_ready"):
-        os.makedirs(paths["root"], exist_ok=True)
-        os.makedirs(paths["tmp"], exist_ok=True)
-        os.makedirs(paths["cache"], exist_ok=True)
-        _seed_sandbox_repo(paths["repo"])
-        session_state["sandbox_ready"] = True
-        session_state["sandbox_repo"] = paths["repo"]
-        session_state["sandbox_tmp"] = paths["tmp"]
-        session_state["sandbox_cache"] = paths["cache"]
-    return paths
-
-def _sandbox_profile():
-    return """
-(version 1)
-(deny default)
-(debug deny)
-(allow process-exec)
-(allow process-fork)
-(allow signal (target self))
-(allow file-read*
-    (subpath "/bin")
-    (subpath "/usr")
-    (subpath "/System")
-    (subpath "/Library")
-    (subpath "/private/etc")
-    (subpath "/etc")
-    (subpath "/dev")
-    (subpath "/private/var/db/dyld")
-    (subpath "/private/var/folders"))
-(allow file-write*
-    (subpath (param "workspace_dir"))
-    (subpath (param "sandbox_tmp_dir"))
-    (subpath (param "sandbox_cache_dir"))
-    (mount-relative-regex #"^/\\.TemporaryItems(/|$)"))
-(allow file-ioctl)
-(allow file-fsctl)
-(allow sysctl*)
-(if (defined? 'system-socket)
-    (deny system-socket))
-""".strip()
-
-def sandbox_exec_available():
-    global SANDBOX_EXEC_AVAILABLE
-    if SANDBOX_EXEC_AVAILABLE is not None:
-        return SANDBOX_EXEC_AVAILABLE
-    try:
-        with _tempfile.TemporaryDirectory(prefix="chinna-sb-check-") as tmp:
-            repo = os.path.join(tmp, "repo")
-            work = os.path.join(repo, "workspace")
-            temp = os.path.join(tmp, "tmp")
-            cache = os.path.join(tmp, "cache")
-            os.makedirs(work, exist_ok=True)
-            os.makedirs(temp, exist_ok=True)
-            os.makedirs(cache, exist_ok=True)
-            script = os.path.join(temp, "check.py")
-            with open(script, "w", encoding="utf-8") as f:
-                f.write("print('ok')\n")
-            proc = subprocess.run([
-                "sandbox-exec",
-                "-D", f"workspace_dir={work}",
-                "-D", f"sandbox_tmp_dir={temp}",
-                "-D", f"sandbox_cache_dir={cache}",
-                "-p", _sandbox_profile(),
-                "/usr/bin/python3",
-                script,
-            ], capture_output=True, text=True, timeout=10)
-            SANDBOX_EXEC_AVAILABLE = proc.returncode == 0 and proc.stdout.strip() == "ok"
-    except Exception:
-        SANDBOX_EXEC_AVAILABLE = False
-    return SANDBOX_EXEC_AVAILABLE
-
-def _sandbox_env(session_state: dict):
-    paths = ensure_agent_sandbox(session_state)
-    return {
-        "HOME": paths["repo"],
-        "TMPDIR": paths["tmp"],
-        "TMP": paths["tmp"],
-        "TEMP": paths["tmp"],
-        "PWD": paths["repo"],
-        "USER": os.environ.get("USER", "chinna"),
-        "LOGNAME": os.environ.get("LOGNAME", "chinna"),
-        "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
-        "LANG": os.environ.get("LANG", "en_US.UTF-8"),
-        "LC_ALL": os.environ.get("LC_ALL", "en_US.UTF-8"),
-        "CHINNA_HOME": CHINNA_HOME,
-        "CHINNA_SANDBOX_ROOT": paths["root"],
-        "CHINNA_SANDBOX_REPO": paths["repo"],
-    }
-
-def _sandbox_resolve_path(session_state: dict, path: str, must_exist=False, for_write=False):
-    paths = ensure_agent_sandbox(session_state)
-    repo_root = os.path.abspath(paths["repo"])
-    raw = safe_text(path or "")
-    if not raw:
-        return None, "path required"
-    if raw == "~":
-        raw = ""
-    elif raw.startswith("~/"):
-        raw = raw[2:]
-    candidate = os.path.abspath(os.path.join(repo_root, raw)) if not os.path.isabs(raw) else os.path.abspath(os.path.expanduser(raw))
-    if candidate != repo_root and not candidate.startswith(repo_root + os.sep):
-        return None, "Sandbox path blocked. Use files inside the sandbox workspace only."
-    if must_exist and not os.path.exists(candidate):
-        return None, "Path not found in sandbox workspace"
-    if for_write:
-        os.makedirs(os.path.dirname(candidate) or repo_root, exist_ok=True)
-    return candidate, ""
-
-def _run_in_sandbox(session_state: dict, argv, cwd=None, timeout=AGENT_TIMEOUT_SECS, input_text=None):
-    paths = ensure_agent_sandbox(session_state)
-    env = _sandbox_env(session_state)
-    workdir = cwd or paths["repo"]
-    cmd = list(argv)
-    if sandbox_exec_available():
-        cmd = [
-            "sandbox-exec",
-            "-D", f"workspace_dir={paths['repo']}",
-            "-D", f"sandbox_tmp_dir={paths['tmp']}",
-            "-D", f"sandbox_cache_dir={paths['cache']}",
-            "-p", _sandbox_profile(),
-        ] + list(argv)
-    proc = subprocess.run(
-        cmd,
-        cwd=workdir,
-        env=env,
-        input=input_text,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
-    out = (proc.stdout or "").strip()
-    err = (proc.stderr or "").strip()
-    if err and not out:
-        return f"stderr: {err[:3000]}"
-    if err:
-        return f"{out[:2000]}\nstderr: {err[:1000]}".strip()
-    return out[:4000] or "(no output)"
-
-def _sandbox_command_is_local(cmd: str) -> bool:
-    cmd = safe_text(cmd)
-    lowered = cmd.lower()
-    if "~" in cmd or "$home" in lowered or "${home}" in lowered:
-        return False
-    tokens = re.findall(r'''(?:[^\s"']+|"[^"]*"|'[^']*')+''', cmd)
-    for token in tokens:
-        token = token.strip("'\"")
-        if token.startswith("/"):
-            return False
-    return True
 
 def _agent_system_prompt(mode: str, model_name: str = "") -> str:
     tools_block = "\n".join(f"- **`{name}`** — {desc}" for name, desc in AGENT_TOOLS.items())
@@ -3301,10 +2893,8 @@ You may use ask_user to clarify what the user wants before committing to an appr
     else:  # build
         base += """
 
-**BUILD MODE ACTIVE** — Full tool access. Be decisive and take action.
-All code execution and file writes happen inside a private sandbox copy of the repo.
-Use relative paths inside that sandbox workspace whenever possible.
-Do not touch the user's live filesystem unless the task explicitly requires it."""
+**BUILD MODE ACTIVE** — Full tool access. Be decisive and take action. 
+Do not ask for clarification on small details — use your best judgment and iterate."""
 
     return base
 
@@ -3384,59 +2974,24 @@ def _parse_create_artifact(content: str) -> dict:
 
 def _execute_tool(tool: str, content: str, session_state: dict) -> str:
     """Execute a single tool block and return string result."""
-    sandbox_mode = bool(session_state.get("sandbox"))
     if tool == "bash":
-        if sandbox_mode:
-            script = os.path.join(ensure_agent_sandbox(session_state)["tmp"], "agent.sh")
-            with open(script, "w", encoding="utf-8") as f:
-                f.write(content)
-            try:
-                os.chmod(script, 0o755)
-            except Exception:
-                pass
-            return _run_in_sandbox(session_state, ["/bin/bash", script])
         return _exec_bash(content)
     elif tool == "python":
-        if sandbox_mode:
-            script = os.path.join(ensure_agent_sandbox(session_state)["tmp"], "agent.py")
-            with open(script, "w", encoding="utf-8") as f:
-                f.write(content)
-            return _run_in_sandbox(session_state, ["/usr/bin/python3", script])
         return _exec_python(content)
     elif tool == "write_file":
         lines = content.split("\n")
         path = ""
         for line in lines:
             if line.startswith("path:"):
-                path = line.split(":",1)[1].strip(); break
+                path = os.path.expanduser(line.split(":",1)[1].strip()); break
         body = "\n".join(l for l in lines if not l.startswith("path:"))
         if not path: return "Error: no path: line in write_file block"
-        if sandbox_mode:
-            abs_path, err = _sandbox_resolve_path(session_state, path, for_write=True)
-            if not abs_path:
-                return f"Error: {err}"
-            try:
-                with open(abs_path, "w", encoding="utf-8") as f:
-                    f.write(body)
-                return f"Written: {abs_path} ({len(body)} chars)"
-            except Exception as e:
-                return f"Error writing file: {e}"
         try:
-            path = os.path.expanduser(path)
             os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
             with open(path,"w") as f: f.write(body)
             return f"Written: {path} ({len(body)} chars)"
         except Exception as e: return f"Error writing file: {e}"
     elif tool == "read_file":
-        if sandbox_mode:
-            abs_path, err = _sandbox_resolve_path(session_state, content.strip(), must_exist=True)
-            if not abs_path:
-                return f"Error: {err}"
-            try:
-                txt = open(abs_path, encoding="utf-8", errors="replace").read()
-                return txt[:8000] + ("\n... (truncated)" if len(txt)>8000 else "")
-            except Exception as e:
-                return f"Error: {e}"
         path = os.path.expanduser(content.strip())
         try:
             txt = open(path).read()
@@ -3453,8 +3008,6 @@ def _execute_tool(tool: str, content: str, session_state: dict) -> str:
         session_state["plan"] = content.strip()
         return f"Plan updated ({len(content.splitlines())} steps)"
     elif tool == "mac_control":
-        if sandbox_mode:
-            return "Blocked in sandbox build mode."
         return _exec_bash(f"osascript -e '{content}' 2>/dev/null || echo 'osascript returned non-zero'")
     elif tool == "web_search":
         # Basic: use the existing search if available, else fallback
@@ -3476,85 +3029,63 @@ def _execute_tool(tool: str, content: str, session_state: dict) -> str:
 def _sse_event(data: dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
 
-def _agent_model_call(keys: dict, messages: list, model: str):
-    import urllib.request
-
-    if keys.get("OPENROUTER_API_KEY"):
-        endpoint = "https://openrouter.ai/api/v1/chat/completions"
-        api_key = keys["OPENROUTER_API_KEY"]
-        chosen_model = model or "meta-llama/llama-3.3-70b-instruct:free"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-            "HTTP-Referer": "http://localhost:7777",
-            "X-Title": "Chinna Dashboard",
-        }
-    elif keys.get("OPENAI_API_KEY"):
-        endpoint = "https://api.openai.com/v1/chat/completions"
-        api_key = keys["OPENAI_API_KEY"]
-        chosen_model = model if str(model).startswith(("gpt-", "o1", "o3", "o4")) else "gpt-4o-mini"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        }
-    else:
-        raise RuntimeError("No API key configured")
-
-    payload = json.dumps({
-        "model": chosen_model,
-        "messages": messages,
-        "max_tokens": 4000,
-        "stream": False,
-    }).encode()
-    req = urllib.request.Request(endpoint, data=payload, headers=headers)
-    resp = urllib.request.urlopen(req, timeout=90)
-    d = json.loads(resp.read())
-    return d.get("choices", [{}])[0].get("message", {}).get("content", ""), chosen_model
-
 async def _run_agent_loop(message: str, history: list, mode: str, model: str, keys: dict):
     """Core async generator that yields SSE events."""
     import asyncio
     import urllib.request, urllib.error
-
+    
     api_key = keys.get("OPENROUTER_API_KEY") or keys.get("OPENAI_API_KEY","")
     if not api_key:
         yield _sse_event({"type":"error","content":"No API key. Set OpenRouter key in Settings."})
         return
-
+    
     sys_prompt = _agent_system_prompt(mode, model)
     messages = [{"role":"system","content":sys_prompt}]
     for h in history[-20:]:
         messages.append(h)
     messages.append({"role":"user","content":message})
-
-    session_state = {"artifacts": [], "plan": "", "round": 0, "sandbox": mode == "build"}
-    if session_state["sandbox"]:
-        ensure_agent_sandbox(session_state)
+    
+    session_state = {"artifacts": [], "plan": "", "round": 0}
     yield _sse_event({"type":"mode","mode":mode})
-    if session_state["sandbox"]:
-        yield _sse_event({"type":"sandbox","enabled": True, "workspace": session_state.get("sandbox_repo", "")})
-
+    
     for round_num in range(MAX_AGENT_ROUNDS):
         session_state["round"] = round_num
         yield _sse_event({"type":"round_start","round":round_num})
-
+        
+        # Call AI
+        payload = json.dumps({
+            "model": model,
+            "messages": messages,
+            "max_tokens": 4000,
+            "stream": False,
+        }).encode()
+        
         try:
-            ai_text, model = _agent_model_call(keys, messages, model)
+            req = urllib.request.Request(
+                "https://openrouter.ai/api/v1/chat/completions",
+                data=payload,
+                headers={"Content-Type":"application/json",
+                         "Authorization":f"Bearer {api_key}",
+                         "HTTP-Referer":"http://localhost:7777"}
+            )
+            resp = urllib.request.urlopen(req, timeout=90)
+            d = json.loads(resp.read())
+            ai_text = d.get("choices",[{}])[0].get("message",{}).get("content","")
         except Exception as e:
             yield _sse_event({"type":"error","content":f"AI call failed: {e}"})
             return
-
+        
         # Sanitize text
         ai_text = ai_text.replace("\u2028"," ").replace("\u2029"," ")
-
+        
         # Strip tool blocks for display text
         display_text = _strip_tool_blocks(ai_text)
         if display_text:
             yield _sse_event({"type":"text","content":display_text})
-
+        
         # Parse tool blocks
         tool_blocks = _parse_tool_blocks(ai_text)
-
+        
         # Plan mode: only allow update_plan / ask_user
         if mode == "plan":
             tool_blocks = [b for b in tool_blocks if b["tool"] in PLAN_MODE_TOOLS]
@@ -3562,19 +3093,19 @@ async def _run_agent_loop(message: str, history: list, mode: str, model: str, ke
                 yield _sse_event({"type":"plan","content":ai_text})
                 yield _sse_event({"type":"done","artifacts":session_state["artifacts"]})
                 return
-
+        
         if not tool_blocks:
             yield _sse_event({"type":"done","artifacts":session_state["artifacts"],"plan":session_state.get("plan","")})
             return
-
+        
         # Execute tools
         messages.append({"role":"assistant","content":ai_text})
         tool_result_parts = []
-
+        
         for block in tool_blocks:
             tool = block["tool"]; content = block["content"]
             yield _sse_event({"type":"tool_start","tool":tool,"input":content[:500]})
-
+            
             if tool == "ask_user":
                 # Parse options from content
                 lines = [l.strip() for l in content.split("\n") if l.strip()]
@@ -3583,19 +3114,19 @@ async def _run_agent_loop(message: str, history: list, mode: str, model: str, ke
                 yield _sse_event({"type":"ask_user","question":question,"options":options})
                 yield _sse_event({"type":"paused","reason":"waiting_for_user"})
                 return  # Pause — resume when user picks
-
+            
             result = _execute_tool(tool, content, session_state)
             yield _sse_event({"type":"tool_result","tool":tool,"result":result[:3000]})
             tool_result_parts.append(f"Tool `{tool}` result:\n{result}")
-
+            
             # Emit artifact event if created
             if tool == "create_artifact" and session_state["artifacts"]:
                 yield _sse_event({"type":"artifact","meta":session_state["artifacts"][-1]})
-
+        
         # Feed results back to AI
         tool_summary = "\n\n".join(tool_result_parts)
         messages.append({"role":"user","content":f"Tool results:\n{tool_summary}"})
-
+    
     yield _sse_event({"type":"done","artifacts":session_state["artifacts"],"plan":session_state.get("plan","")})
 
 def serve_agent(self, b):
@@ -3606,17 +3137,17 @@ def serve_agent(self, b):
     history = b.get("history", [])
     model = b.get("model","") or load_keys().get("ACTIVE_MODEL","meta-llama/llama-3.3-70b-instruct:free")
     keys = load_keys()
-
+    
     if mode not in ("ask","plan","build"):
         mode = "build"
-
+    
     self.send_response(200)
     self.send_header("Content-Type","text/event-stream")
     self.send_header("Cache-Control","no-cache")
     self.send_header("Access-Control-Allow-Origin","*")
     self.send_header("X-Accel-Buffering","no")
     self.end_headers()
-
+    
     try:
         loop = asyncio.new_event_loop()
         async def _run():
@@ -3804,7 +3335,7 @@ H.delete_artifact = delete_artifact
 H.exec_shell_direct = exec_shell_direct
 
 if __name__ == '__main__':
-    print(f"Chinna V6.5 -> http://localhost:{PORT}")
+    print(f"Chinna V6 -> http://localhost:{PORT}")
     print(f"serving {DASHBOARD_DIR}")
     threading.Thread(target=stats_loop, daemon=True).start()
     try:

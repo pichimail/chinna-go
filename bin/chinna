@@ -6,7 +6,7 @@
 # ╚══════════════════════════════════════════════════════════════╝
 set -uo pipefail
 
-CHINNA_VERSION="6.5.0"
+CHINNA_VERSION="6.7.0"
 CHINNA_REPO="pichimail/chinna-go"
 CHINNA_HOME="${CHINNA_HOME:-$HOME/.chinna}"
 CHINNA_CONFIG="$CHINNA_HOME/config"
@@ -54,13 +54,16 @@ if [ -t 1 ]; then
     BOLD=$'\033[1m'; RESET=$'\033[0m'
     ORANGE=$'\033[38;5;208m'; PINK=$'\033[38;5;205m'; TEAL=$'\033[38;5;51m'
     GREEN=$'\033[38;5;46m'
+    ACID=$'\033[38;5;154m'; ACID2=$'\033[38;5;112m'; GLOW=$'\033[1;38;5;154m'
+    GRAY=$'\033[38;5;240m'; BLUE2=$'\033[38;5;75m'; PURP=$'\033[38;5;141m'
 else
     R='' G='' Y='' B='' M='' C='' W='' D='' BOLD='' RESET=''
     ORANGE='' PINK='' TEAL='' GREEN=''
+    ACID='' ACID2='' GLOW='' GRAY='' BLUE2='' PURP=''
 fi
 
 # ─── UI helpers ───────────────────────────────────────────────
-ok()    { echo -e "  ${G}✓${RESET} $*"; }
+ok()    { echo -e "  ${ACID}✓${RESET} $*"; }
 warn()  { echo -e "  ${Y}!${RESET} $*"; }
 fail()  { echo -e "  ${R}✗${RESET} $*"; }
 info()  { echo -e "  ${C}ℹ${RESET} $*"; }
@@ -68,14 +71,14 @@ sep()   { echo -e "  ${D}──────────────────�
 
 section() {
     echo ""
-    echo -e "  ${TEAL}▶ $*${RESET}"
+    echo -e "  ${GLOW}▸${RESET} ${BOLD}$*${RESET}"
     sep
 }
 
 progress_bar() {
     local msg="$1" pct="${2:-0}" width=28
     local filled=$(( pct * width / 100 ))
-    local bar="" color="$G"
+    local bar="" color="$ACID"
     [ "$pct" -gt 70 ] && color="$Y"
     [ "$pct" -gt 85 ] && color="$R"
     for ((i=0;i<filled;i++)); do bar+="█"; done
@@ -100,7 +103,7 @@ spinner() {
     tput civis 2>/dev/null
     while kill -0 "$pid" 2>/dev/null; do
         i=$(( (i+1) % 8 ))
-        printf "\r  ${ORANGE}%s${RESET}  ${D}%s${RESET}   " "${s:$i:1}" "$msg"
+        printf "\r  ${ACID}%s${RESET}  ${GRAY}%s${RESET}   " "${s:$i:1}" "$msg"
         sleep 0.1
     done
     tput cnorm 2>/dev/null
@@ -137,13 +140,16 @@ taunt() { echo -e "  ${D}${SARCASM[$RANDOM % ${#SARCASM[@]}]}${RESET}"; }
 banner() {
     clear
     echo ""
-    echo -e "   ${ORANGE}╔═══════════════════════════════════════╗${RESET}"
-    echo -e "   ${ORANGE}║${RESET}  ${BOLD}C H I N N A${RESET}  ${D}v${CHINNA_VERSION}${RESET}                    ${ORANGE}║${RESET}"
-    echo -e "   ${ORANGE}║${RESET}  ${D}your sarcastic mac sidekick${RESET}           ${ORANGE}║${RESET}"
-    echo -e "   ${ORANGE}║${RESET}  ${D}telugu · hindi · english · tinglish${RESET}   ${ORANGE}║${RESET}"
-    echo -e "   ${ORANGE}╚═══════════════════════════════════════╝${RESET}"
+    echo -e "   ${ACID2}▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄${RESET}"
+    echo -e "   ${GLOW} ██████ ██   ██ ██ ███    ██ ███    ██  █████  ${RESET}"
+    echo -e "   ${ACID} ██     ██   ██ ██ ████   ██ ████   ██ ██   ██ ${RESET}"
+    echo -e "   ${ACID} ██     ███████ ██ ██ ██  ██ ██ ██  ██ ███████ ${RESET}"
+    echo -e "   ${ACID2} ██     ██   ██ ██ ██  ██ ██ ██  ██ ██ ██   ██ ${RESET}"
+    echo -e "   ${ACID2} ██████ ██   ██ ██ ██   ████ ██   ████ ██   ██ ${RESET}"
+    echo -e "   ${GRAY}▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀${RESET}"
+    echo -e "   ${GLOW}▸${RESET} ${BOLD}Mac Sidekick${RESET} ${GRAY}·${RESET} ${ACID}v${CHINNA_VERSION}${RESET}   ${GRAY}telugu · hindi · english · tinglish${RESET}"
     echo ""
-    echo -ne "   ${D}Disk: ${RESET}"
+    echo -ne "   ${GRAY}Disk ${RESET}"
     disk_bar
     echo ""
 }
@@ -163,14 +169,7 @@ version_gt() {
 }
 
 remote_version() {
-    python3 - <<'PY'
-import base64, json, urllib.request
-url = 'https://api.github.com/repos/pichimail/chinna-go/contents/VERSION?ref=main'
-req = urllib.request.Request(url, headers={'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'chinna-go'})
-with urllib.request.urlopen(req, timeout=10) as r:
-    data = json.load(r)
-print(base64.b64decode(data['content']).decode().strip())
-PY
+    curl -fsSL "https://raw.githubusercontent.com/${CHINNA_REPO}/main/VERSION" 2>/dev/null | tr -d '[:space:]'
 }
 
 resolve_installer() {
@@ -221,44 +220,6 @@ apply_update() {
     rc=$?
 
     rm -f "$CHINNA_HOME/update_prompted_version" 2>/dev/null || true
-
-    case "$installer" in
-        "$CHINNA_HOME"/*|*"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"/*) ;;
-        *) rm -f "$installer" 2>/dev/null || true ;;
-    esac
-
-    return "$rc"
-}
-
-cmd_reinstall() {
-    banner
-    echo -e "   ${BOLD}${ORANGE}♻️  FRESH REINSTALL${RESET}"; echo ""
-
-    local installer
-    installer="$(resolve_remote_installer)" || installer="$(resolve_installer)" || { fail "Installer unavailable"; return 1; }
-    local rc=0
-
-    info "This preserves your API keys, config, and local data while refreshing app code."
-
-    if [ ! -t 0 ] || [ "${1:-}" = "--apply" ] || [ "${1:-}" = "-y" ] || [ "${1:-}" = "--yes" ]; then
-        bash "$installer" --fresh
-        rc=$?
-    else
-        local choice
-        choice=$(chinna_toast_action \
-            "Chinna Fresh Reinstall" \
-            "Refresh app code and clear cached app files while keeping keys and config?" \
-            "Reinstall Now|Later" 2>/dev/null)
-        [ -n "$choice" ] || choice="Later"
-
-        if [ "$choice" = "Reinstall Now" ]; then
-            bash "$installer" --fresh
-            rc=$?
-        else
-            info "Reinstall postponed"
-            rc=0
-        fi
-    fi
 
     case "$installer" in
         "$CHINNA_HOME"/*|*"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"/*) ;;
@@ -1088,7 +1049,7 @@ cmd_audit() {
     local report="$audit_dir/audit-$timestamp.txt"
 
     {
-        echo "CHINNA V6 AUDIT REPORT"
+        echo "CHINNA V5 AUDIT REPORT"
         echo "Generated: $(date)"
         echo "Path: $(pwd)"
         echo "Stack: $(detect_stack .)"
@@ -1290,76 +1251,6 @@ cmd_app() {
 # ═══════════════════════════════════════════════════════════════
 # COMMAND: uninstall
 # ═══════════════════════════════════════════════════════════════
-remove_chinna_path() {
-    local target="$1"
-    [ -e "$target" ] || [ -L "$target" ] || return 0
-    rm -rf "$target" 2>/dev/null || sudo rm -rf "$target" 2>/dev/null || true
-}
-
-remove_chinna_glob() {
-    local pattern="$1"
-    local match
-    while IFS= read -r match; do
-        [ -n "$match" ] || continue
-        remove_chinna_path "$match"
-    done < <(compgen -G "$pattern" 2>/dev/null || true)
-}
-
-remove_zsh_chinna_block() {
-    local zshrc="$HOME/.zshrc"
-    [ -f "$zshrc" ] || return 0
-    python3 - "$zshrc" <<'PY'
-from pathlib import Path
-import sys
-
-path = Path(sys.argv[1])
-lines = path.read_text().splitlines(True)
-start = '# ── Chinna V6.5 ───────────────────────────────────────'
-block_len = 6  # marker + PATH/CHINNA_HOME/env/models/alias
-out = []
-i = 0
-changed = False
-while i < len(lines):
-    if lines[i].startswith(start):
-        changed = True
-        if out and out[-1].strip() == '':
-            out.pop()
-        i += block_len
-        continue
-    out.append(lines[i])
-    i += 1
-
-if changed:
-    path.write_text(''.join(out))
-PY
-}
-
-stop_chinna_services() {
-    launchctl unload "$HOME/Library/LaunchAgents/com.chinna.daemon.plist" 2>/dev/null || true
-    [ -f "$CHINNA_HOME/dashboard.pid" ] && kill "$(cat "$CHINNA_HOME/dashboard.pid" 2>/dev/null)" 2>/dev/null || true
-    [ -f "$CHINNA_HOME/chinna.pid" ] && kill "$(cat "$CHINNA_HOME/chinna.pid" 2>/dev/null)" 2>/dev/null || true
-    pkill -f "$CHINNA_HOME/dashboard_server.py" 2>/dev/null || true
-    pkill -f "$CHINNA_HOME/whatsapp_bridge/server.js" 2>/dev/null || true
-    rm -f "$HOME/Library/LaunchAgents/com.chinna.daemon.plist"
-    rm -f "$CHINNA_HOME/dashboard.pid" "$CHINNA_HOME/chinna.pid" 2>/dev/null || true
-}
-
-cleanup_chinna_installation_traces() {
-    remove_chinna_path "$HOME/.local/bin/chinna"
-    remove_chinna_path "/usr/local/bin/chinna"
-    remove_chinna_path "/opt/homebrew/bin/chinna"
-    remove_chinna_path "$HOME/Applications/Chinna.app"
-    remove_chinna_path "/Applications/Chinna.app"
-    remove_chinna_path "$HOME/Library/Application Support/SwiftBar/Plugins/chinna.1m.sh"
-    remove_chinna_glob "$HOME/Library/Application Support/SwiftBar/Plugins/chinna*"
-    remove_chinna_glob "$HOME/Library/Preferences/com.chinna*"
-    remove_chinna_glob "$HOME/Library/Saved Application State/com.chinna*"
-    remove_chinna_glob "$HOME/Library/Caches/com.chinna*"
-    remove_chinna_glob "$HOME/Library/Logs/com.chinna*"
-    remove_chinna_glob "$HOME/Library/Logs/Chinna*"
-    remove_zsh_chinna_block
-}
-
 cmd_uninstall() {
     banner
     echo -e "   ${BOLD}${R}🗑️  UNINSTALL${RESET}"; echo ""
@@ -1368,15 +1259,17 @@ cmd_uninstall() {
         --purge|--full|-f) purge=1 ;;
     esac
 
+    launchctl unload "$HOME/Library/LaunchAgents/com.chinna.daemon.plist" 2>/dev/null || true
+    rm -f "$HOME/Library/LaunchAgents/com.chinna.daemon.plist"
+    rm -f "$CHINNA_HOME/dashboard.pid" "$CHINNA_HOME/chinna.pid" 2>/dev/null || true
+
     if [ "$purge" -eq 1 ]; then
-        warn "This will delete the entire Chinna home, caches, configs, API keys, shell setup, and app traces."
+        warn "This will delete the entire Chinna home, caches, configs, and API keys."
         echo -ne "   ${Y}Type 'purge' to confirm:${RESET} "
         read -r yn
         if [ "$yn" = "purge" ]; then
-            stop_chinna_services
-            cleanup_chinna_installation_traces
-            remove_chinna_glob "$HOME/.zshrc.backup.*"
             rm -rf "$CHINNA_HOME"
+            sudo rm -f /usr/local/bin/chinna /opt/homebrew/bin/chinna 2>/dev/null || true
             ok "Chinna fully removed from this Mac"
         else
             info "Cancelled"
@@ -1384,14 +1277,12 @@ cmd_uninstall() {
         return 0
     fi
 
-    warn "This removes the app code and command but keeps your config, API keys, and user data."
+    warn "This removes the app code but keeps your config, API keys, and user data."
     echo -ne "   ${Y}Type 'yes' to confirm:${RESET} "
     read -r yn
     if [ "$yn" = "yes" ]; then
-        stop_chinna_services
-        cleanup_chinna_installation_traces
         rm -rf "$CHINNA_HOME/bin" "$CHINNA_HOME/lib" "$CHINNA_HOME/dashboard" "$CHINNA_HOME/install" "$CHINNA_HOME/dashboard_server.py"
-        rm -f "$HOME/.local/bin/chinna" 2>/dev/null || true
+        sudo rm -f /usr/local/bin/chinna /opt/homebrew/bin/chinna 2>/dev/null || true
         ok "Chinna removed. Your data and keys were preserved."
     else
         info "Cancelled"
@@ -1560,9 +1451,9 @@ show_help() {
      ${C}stop${RESET}                   Stop background daemon
      ${C}config${RESET}                 Set API keys
      ${C}publish${RESET}                Push update to GitHub
+     ${ACID}forge${RESET} [sub]            Dev shell: detect/fix/tools/scan/build/search
      ${C}doctor${RESET}                 Health check
      ${C}update${RESET}                 Self-update Chinna
-     ${C}reinstall${RESET}              Fresh reinstall, preserving keys and config
     ${C}app-install${RESET}            Install Chinna as a 1-click Mac app
     ${C}notch${RESET}                  Install menu-bar quick actions (Purge/Clean/Update)
      ${C}uninstall${RESET} [--purge]    Remove Chinna app or fully purge everything
@@ -1578,6 +1469,53 @@ show_help() {
    ${D}github.com/pichimail/chinna-go${RESET}
 
 HELP
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# CHINNA FORGE — dev shell CLI
+# ═══════════════════════════════════════════════════════════════
+cmd_forge() {
+    local sub="${1:-menu}"
+    case "$sub" in
+        menu|"")
+            section "Chinna Forge — dev shell"
+            echo -e "     ${ACID}detect${RESET}     Scan current project (stacks, files, issues)"
+            echo -e "     ${ACID}fix${RESET}        Auto-scaffold missing files (.env, entry points)"
+            echo -e "     ${ACID}tools${RESET}      Check installed dev toolchain"
+            echo -e "     ${ACID}scan${RESET}       Security scan for secrets & vulns"
+            echo -e "     ${ACID}build${RESET}      Smart build (Turbo/Nx/Cargo/Go/npm)"
+            echo -e "     ${ACID}search${RESET} <q> Search GitHub repos"
+            echo ""
+            info "Full UI: chinna dashboard → Forge"
+            ;;
+        detect|scan-project)
+            section "Scanning project"
+            python3 -c "import sys; sys.path.insert(0,'$CHINNA_HOME'); import forge,json; print(json.dumps(forge.detect('.'),indent=2))" 2>/dev/null || warn "Forge backend not found"
+            ;;
+        fix|autofix)
+            section "Auto-fix & scaffold"
+            python3 -c "import sys; sys.path.insert(0,'$CHINNA_HOME'); import forge,json; r=forge.autofix('.'); print('Created',r['count'],'files:',', '.join(r['created']) or 'none')" 2>/dev/null || warn "Forge backend not found"
+            ;;
+        tools)
+            section "Toolchain"
+            python3 -c "import sys; sys.path.insert(0,'$CHINNA_HOME'); import forge; [print(('  \033[38;5;46m✓\033[0m ' if t['installed'] else '  \033[38;5;240m·\033[0m ')+t['name']+('  '+t['version'] if t['version'] else '')) for t in forge.tool_status()]" 2>/dev/null || warn "Forge backend not found"
+            ;;
+        scan|security)
+            section "Security scan"
+            python3 -c "import sys; sys.path.insert(0,'$CHINNA_HOME'); import forge; r=forge.security_scan('.'); print('  Scanned',r['scanned'],'files'); [print('  \033[0;31m⚠\033[0m',f['type'],'→',f['file']) for f in r['findings']] or print('  \033[38;5;46m✓\033[0m No secrets found')" 2>/dev/null || warn "Forge backend not found"
+            ;;
+        build)
+            section "Smart build"
+            python3 -c "import sys; sys.path.insert(0,'$CHINNA_HOME'); import forge; r=forge.smart_build('.'); print('  '+('✓' if r['ok'] else '✗'),r['system'],'build'); print(r['msg'][:500])" 2>/dev/null || warn "Forge backend not found"
+            ;;
+        search)
+            shift
+            section "GitHub search"
+            python3 -c "import sys; sys.path.insert(0,'$CHINNA_HOME'); import forge; [print('  \033[38;5;154m'+r['name']+'\033[0m  ★'+str(r['stars'])+'\n    '+(r['desc'] or '')[:70]) for r in forge.github_search('$*')]" 2>/dev/null || warn "Forge backend not found"
+            ;;
+        *) warn "Unknown forge command: $sub"; cmd_forge menu ;;
+    esac
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -1633,10 +1571,10 @@ main() {
         publish)                    cmd_publish ;;
         doctor|health)              cmd_doctor ;;
         audit)                      cmd_audit ;;
+        forge|dev|shell)            shift; cmd_forge "$@" ;;
         projects)                   shift; cmd_projects "$@" ;;
         plugin|plugins)             shift; cmd_plugins "$@" ;;
         update|upgrade)             shift; cmd_update "$@" ;;
-        reinstall|refresh)          shift; cmd_reinstall "$@" ;;
         app-install|install-app)    cmd_app_install ;;
         app)                        shift; cmd_app "$@" ;;
         notch|quickbar|menubar)     cmd_notch ;;

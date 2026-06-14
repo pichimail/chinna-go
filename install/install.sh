@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════╗
-# ║  CHINNA V6.5 — Always-Fresh installer                   ║
+# ║  CHINNA V6 — Always-Fresh installer                     ║
 # ║  curl -fsSL https://raw.githubusercontent.com/          ║
 # ║    pichimail/chinna-go/main/install/install.sh | bash   ║
 # ╚══════════════════════════════════════════════════════════╝
@@ -13,19 +13,6 @@ PORT="${CHINNA_DASHBOARD_PORT:-7777}"
 STATE_FILE="${CHINNA}/.installstate"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-FRESH=0
-VERIFY=0
-
-for arg in "$@"; do
-    case "$arg" in
-        --fresh|--reinstall|--refresh|-f)
-            FRESH=1
-            ;;
-        --verify|-v)
-            VERIFY=1
-            ;;
-    esac
-done
 
 LOCAL_SOURCE="off"
 if [ -f "${REPO_ROOT}/lib/server.py" ] && [ -f "${REPO_ROOT}/dashboard/index.html" ] && [ -f "${REPO_ROOT}/bin/chinna" ]; then
@@ -34,23 +21,10 @@ fi
 
 echo ""
 echo "  ╔══════════════════════════════════════════════════╗"
-echo "  ║   C H I N N A   V 6.5 —  Mac Sidekick          ║"
-echo "  ║   V6.5 · Always-Fresh · Models · Music · WhatsApp║"
+echo "  ║   C H I N N A   V 6   —  Mac Sidekick           ║"
+echo "  ║   Always-Fresh · Models · Music · WhatsApp · More║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo ""
-if [ "$FRESH" -eq 1 ]; then
-    echo "  → Fresh reinstall requested: preserving keys and config, clearing app code..."
-    rm -rf \
-        "${CHINNA}/dashboard" \
-        "${CHINNA}/lib" \
-        "${CHINNA}/whatsapp_bridge" \
-        "${CHINNA}/extension" \
-        "${CHINNA}/dashboard_server.py" \
-        "${CHINNA}/dashboard.log" \
-        "${CHINNA}/update_prompted_version" \
-        "${CHINNA}/update_snooze_until" 2>/dev/null || true
-    rm -f "$HOME/.local/bin/chinna" 2>/dev/null || true
-fi
 if [ "${LOCAL_SOURCE}" = "on" ]; then
     echo "  Source: local repo checkout (${REPO_ROOT})"
 else
@@ -73,44 +47,6 @@ copy_or_fetch() {
     fi
 
     curl -fsSL "${RAW}/${rel}" -o "${dest}"
-}
-
-# ── Optional SHA256 verification (defense-in-depth for curl|bash) ──
-# Enable with: CHINNA_VERIFY=1 or --verify flag
-# Requires SHA256SUMS file in repo root (maintainer updates with sha256sum)
-verify_checksums() {
-    if [ "$VERIFY" -eq 0 ] && [ "${CHINNA_VERIFY:-0}" != "1" ]; then
-        return 0
-    fi
-    echo "  → Verifying key files with SHA256 (CHINNA_VERIFY)..."
-    local sums_url="${RAW}/SHA256SUMS"
-    local sums_file="${CHINNA}/SHA256SUMS.tmp"
-    if ! curl -fsSL "$sums_url" -o "$sums_file" 2>/dev/null; then
-        echo "    ⚠ Could not fetch SHA256SUMS — skipping verification"
-        return 0
-    fi
-    # Verify a few critical files if present in sums
-    for f in bin/chinna lib/server.py install/install.sh; do
-        if [ -f "${CHINNA}/$f" ] || [ "$f" = "install/install.sh" ]; then
-            local target="$f"
-            if [ "$f" = "install/install.sh" ]; then target="${SCRIPT_DIR}/install.sh"; fi
-            if grep -q "  $f$" "$sums_file" 2>/dev/null; then
-                expected=$(grep "  $f$" "$sums_file" | awk '{print $1}')
-                actual=$(shasum -a 256 "$target" 2>/dev/null | awk '{print $1}' || true)
-                if [ -n "$expected" ] && [ "$actual" != "$expected" ]; then
-                    echo "    ✗ SHA256 mismatch for $f — possible tampering! Aborting."
-                    echo "    Expected: $expected"
-                    echo "    Got:      $actual"
-                    rm -f "$sums_file"
-                    exit 1
-                else
-                    echo "    ✓ Verified: $f"
-                fi
-            fi
-        fi
-    done
-    rm -f "$sums_file"
-    echo "  ✓ Checksum verification complete (or skipped for missing entries)"
 }
 
 # ── One-time-setup resumable step system ─────────────────────
@@ -185,6 +121,7 @@ step_install_node_tools() {
 step_write_server() {
     echo "    ↻ Force-refreshing server (dashboard_server.py)..."
     copy_or_fetch "lib/server.py" "${CHINNA}/dashboard_server.py"
+    copy_or_fetch "lib/forge.py" "${CHINNA}/forge.py"
     copy_or_fetch "lib/server.py" "${CHINNA}/lib/server.py"
     echo "    ✓ server.py updated"
 }
@@ -192,18 +129,10 @@ step_write_server() {
 step_write_dashboard() {
     echo "    ↻ Force-refreshing dashboard (index.html)..."
     copy_or_fetch "dashboard/index.html" "${CHINNA}/dashboard/index.html"
-    mkdir -p "${CHINNA}/dashboard/assets"
-    # Sync the full dashboard asset bundle so installed users never get a bare HTML shell.
-    if [ "${LOCAL_SOURCE}" = "on" ] && [ -d "${REPO_ROOT}/dashboard/assets" ]; then
-        while IFS= read -r -d '' asset_path; do
-            rel="${asset_path#${REPO_ROOT}/}"
-            copy_or_fetch "${rel}" "${CHINNA}/${rel}"
-        done < <(find "${REPO_ROOT}/dashboard/assets" -maxdepth 1 -type f -print0)
-    else
-        for asset in dashboard.css dashboard.js chinna-favicon.svg chinna-icon.svg chinna-logo.svg; do
-            copy_or_fetch "dashboard/assets/${asset}" "${CHINNA}/dashboard/assets/${asset}" 2>/dev/null || true
-        done
-    fi
+    # Also copy dashboard assets if present
+    for asset in chinna-favicon.svg chinna-icon.svg chinna-logo.svg; do
+        copy_or_fetch "dashboard/assets/${asset}" "${CHINNA}/dashboard/assets/${asset}" 2>/dev/null || true
+    done
     echo "    ✓ dashboard updated"
 }
 
@@ -252,10 +181,10 @@ step_write_bin() {
 }
 
 step_write_defaults() {
-    echo "6.5.0" > "${CHINNA}/VERSION"
+    echo "6.0.0" > "${CHINNA}/VERSION"
     if [ ! -f "${CHINNA}/env" ]; then
         cat > "${CHINNA}/env" << 'ENV'
-# Chinna V6.5 Environment (chmod 600 — never share this file)
+# Chinna V6 Environment (chmod 600 — never share this file)
 # OPENROUTER_API_KEY=
 # ANTHROPIC_API_KEY=
 # OPENAI_API_KEY=
@@ -286,13 +215,13 @@ MODELS
 }
 
 step_zshrc_block() {
-    local BLOCK='# ── Chinna V6.5 ───────────────────────────────────────
+    local BLOCK='# ── Chinna V6 ──────────────────────────────────────────
 export PATH="$HOME/.local/bin:$PATH"
 export CHINNA_HOME="$HOME/.chinna"
 [ -f "$CHINNA_HOME/env" ]    && source "$CHINNA_HOME/env"
 [ -f "$CHINNA_HOME/models" ] && source "$CHINNA_HOME/models"
 alias chinna="$HOME/.local/bin/chinna"'
-    if ! grep -q 'Chinna V6.5' "$HOME/.zshrc" 2>/dev/null; then
+    if ! grep -q 'Chinna V6' "$HOME/.zshrc" 2>/dev/null; then
         echo "" >> "$HOME/.zshrc"
         echo "$BLOCK" >> "$HOME/.zshrc"
         echo "    ✓ Chinna block added to ~/.zshrc"
@@ -309,7 +238,7 @@ step_start_server() {
     sleep 3
     if curl -sf "http://localhost:${PORT}/api/version" >/dev/null 2>&1; then
         VER=$(curl -sf "http://localhost:${PORT}/api/version" | \
-              python3 -c "import json,sys;print(json.load(sys.stdin).get('name','Chinna V6.5'))" 2>/dev/null || echo "Chinna V6.5")
+              python3 -c "import json,sys;print(json.load(sys.stdin).get('name','Chinna V6'))" 2>/dev/null || echo "Chinna V6")
         echo "    ✓ ${VER} running on port ${PORT}"
     else
         echo "    ⚠ Server warming up — check: curl http://localhost:${PORT}/api/version"
@@ -339,9 +268,6 @@ step_write_libs
 step_write_bin
 step_write_defaults
 
-# ── Optional verification after downloads ──
-verify_checksums
-
 # ──────────────────────────────────────────────────────────────
 # RESTART SERVER
 # ──────────────────────────────────────────────────────────────
@@ -349,16 +275,15 @@ step_write_extension
 step_start_server
 
 # ── macOS notification ─────────────────────────────────────
-osascript -e 'display notification "Models, Music, WhatsApp & 15 Godspeed features ready!" with title "🟢 Chinna V6.5 installed"' 2>/dev/null || true
+osascript -e 'display notification "Models, Music, WhatsApp & 15 Godspeed features ready!" with title "🟢 Chinna V6 installed"' 2>/dev/null || true
 
 echo ""
 echo "  ══════════════════════════════════════════════════════"
-echo "  ✅  CHINNA V6.5 READY!"
+echo "  ✅  CHINNA V6 READY!"
 echo "  ══════════════════════════════════════════════════════"
 echo ""
 echo "  🌐  Dashboard   →  http://localhost:${PORT}"
-echo "  📦  Install     →  curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash"
-echo "  ♻️  Fresh reinstall (preserve keys) → curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash -s -- --fresh --verify (optional)"
+echo "  📦  Share URL   →  curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash"
 echo ""
 echo "  Quick commands (in a new terminal tab):"
 echo "    chinna doctor         → full system health check"
@@ -368,13 +293,8 @@ echo "    chinna dashboard      → open dashboard"
 echo "    chinna model-set free → switch AI model"
 echo "    chinna clean          → deep Mac clean"
 echo "    chinna audit          → project audit"
-echo "    chinna reinstall      → fresh reinstall, keep keys/config"
 echo ""
-if [ "$FRESH" -eq 1 ]; then
-    echo "  Fresh mode finished — code was cleared and reinstalled while keeping keys."
-else
-    echo "  Re-run anytime — one-time setup is skipped, app code is always refreshed."
-fi
+echo "  Re-run anytime — one-time setup is skipped, app code is always refreshed."
 echo ""
 
 open "http://localhost:${PORT}" 2>/dev/null || true

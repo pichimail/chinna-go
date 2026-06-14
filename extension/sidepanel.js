@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════
-   CHINNA COMPANION — sidepanel logic (Enhanced v2)
-   Dynamic Browser Automation + Accessibility + Futuristic UX
+   CHINNA COMPANION — sidepanel logic
+   Backend: local Chinna-Go dashboard on :7777
    ═══════════════════════════════════════════════════════════════════ */
 'use strict';
 
@@ -9,13 +9,11 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 
 let state = {
-  contextMode: 'this-tab',
+  contextMode: 'this-tab',     // this-tab | all-tabs | selected
   selectedTabIds: [],
   chatId: null,
-  history: [],
+  history: [],                  // current chat messages
   online: false,
-  recording: false,
-  recordedActions: [],
 };
 
 // ── Utilities ────────────────────────────────────────────────────────
@@ -27,15 +25,7 @@ async function api(path, opts = {}) {
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }
-function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&','<':'<','>':'>','"':'"'}[c]));}
-
-function toast(msg) {
-  const t = document.createElement('div');
-  t.textContent = msg;
-  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--line3);color:var(--t1);padding:8px 14px;border-radius:8px;font-size:12px;z-index:200;box-shadow:0 6px 20px rgba(0,0,0,.5)';
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2500);
-}
+function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 // ── Connection status ──────────────────────────────────────────────────
 async function checkConn() {
@@ -62,7 +52,6 @@ function addMsg(who, text, isHTML) {
   $('#messages').scrollTop = $('#messages').scrollHeight;
   return m.querySelector('.bubble');
 }
-
 function addTyping() {
   const m = document.createElement('div');
   m.className = 'msg ai'; m.id = 'typingMsg';
@@ -70,7 +59,6 @@ function addTyping() {
   $('#messages').appendChild(m);
   $('#messages').scrollTop = $('#messages').scrollHeight;
 }
-
 function rmTyping(){ const t = $('#typingMsg'); if (t) t.remove(); }
 
 // ── Tab context ────────────────────────────────────────────────────────
@@ -78,7 +66,6 @@ async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
 }
-
 async function scrapeTab(tabId) {
   try {
     const [res] = await chrome.scripting.executeScript({
@@ -93,7 +80,6 @@ async function scrapeTab(tabId) {
     return res.result;
   } catch (e) { return { title: '', url: '', text: '', links: [] }; }
 }
-
 async function buildContext() {
   if (state.contextMode === 'this-tab') {
     const tab = await getActiveTab();
@@ -116,7 +102,6 @@ async function buildContext() {
   }
   return '';
 }
-
 function updateCtxBar() {
   const labels = { 'this-tab': 'This tab', 'all-tabs': 'All tabs', 'selected': `${state.selectedTabIds.length} tabs` };
   const ics = { 'this-tab': '◰', 'all-tabs': '◳', 'selected': '☰' };
@@ -125,7 +110,7 @@ function updateCtxBar() {
   getActiveTab().then(t => { if (t) $('#ctxTabTitle').textContent = t.title || ''; });
 }
 
-// ── AI chat ────────────────────────────────────────────────────────────
+// ── AI chat (routes through local dashboard's /api/ai) ────────────────
 async function sendMessage(text) {
   if (!text.trim()) return;
   addMsg('user', text);
@@ -136,12 +121,18 @@ async function sendMessage(text) {
 
   try {
     const context = await buildContext();
-    const payload = { message: text, context, history: state.history.slice(-10) };
+    const payload = {
+      message: text,
+      context: context,
+      history: state.history.slice(-10),
+    };
+    // Try local dashboard AI first
     let reply = '';
     try {
-      const r = await api('/api/chat', { method: 'POST', body: JSON.stringify({ ...payload, system: context }) });
+      const r = await api('/api/ai', { method: 'POST', body: JSON.stringify(payload) });
       reply = r.reply || r.response || r.text || JSON.stringify(r);
     } catch {
+      // Fallback: direct call instructions
       reply = "I couldn't reach your local Chinna-Go AI. Make sure the dashboard is running (`chinna dashboard`) and you've set an API key in Settings.";
     }
     rmTyping();
@@ -154,7 +145,7 @@ async function sendMessage(text) {
   }
 }
 
-// ── Chat history ───────────────────────────────────────────────────────
+// ── Chat history (chrome.storage.local) ────────────────────────────────
 async function saveChat() {
   if (!state.history.length) return;
   if (!state.chatId) state.chatId = 'chat_' + Date.now();
@@ -168,7 +159,6 @@ async function saveChat() {
   };
   await chrome.storage.local.set({ chats: all });
 }
-
 async function loadHistory() {
   const all = (await chrome.storage.local.get('chats')).chats || {};
   const list = Object.values(all).sort((a, b) => b.updated - a.updated);
@@ -183,18 +173,21 @@ async function loadHistory() {
     el.appendChild(item);
   });
 }
-
 function loadChat(c) {
   state.chatId = c.id;
   state.history = c.messages.slice();
   $('#messages').innerHTML = '';
   c.messages.forEach(m => addMsg(m.role === 'user' ? 'user' : 'ai', m.content));
 }
-
 function newChat() {
   state.chatId = null;
   state.history = [];
-  $('#messages').innerHTML = `<div class="welcome" id="welcome"><div class="welcome-mark">C</div><div class="welcome-title">New chat</div><div class="welcome-sub">Ask about this page, run commands, control music, or autofill forms.</div></div>`;
+  $('#messages').innerHTML = `
+    <div class="welcome" id="welcome">
+      <div class="welcome-mark">C</div>
+      <div class="welcome-title">New chat</div>
+      <div class="welcome-sub">Ask about this page, run commands, control music, or autofill forms.</div>
+    </div>`;
 }
 
 // ── Terminal ───────────────────────────────────────────────────────────
@@ -212,7 +205,7 @@ async function runTerminal(cmd) {
   out.scrollTop = out.scrollHeight;
 }
 
-// ── Music & Generate ───────────────────────────────────────────────────
+// ── Music control ──────────────────────────────────────────────────────
 async function musicControl(action) {
   try {
     const r = await api('/api/ext/music', { method: 'POST', body: JSON.stringify({ action }) });
@@ -220,23 +213,37 @@ async function musicControl(action) {
     if (r.title) { $('#mpTitle').textContent = r.title; $('#mpArtist').textContent = r.artist || ''; }
     else if (r.now_playing) { $('#mpTitle').textContent = r.now_playing; }
     return r;
-  } catch (e) { toast('Music control needs Chinna-Go running'); }
+  } catch (e) {
+    toast('Music control needs Chinna-Go running');
+  }
 }
 
+// ── Generate music ─────────────────────────────────────────────────────
 async function generateMusic() {
   const prompt = $('#musicPrompt').value.trim();
   if (!prompt) { $('#mgStatus').textContent = 'Enter a prompt first.'; return; }
   $('#mgStatus').textContent = 'Checking API key…';
   try {
     const key = await api('/api/ext/key?name=ACCOUSTICA_API_KEY');
-    if (!key.present) { $('#mgStatus').textContent = '⚠ No key. Set ACCOUSTICA_API_KEY in dashboard Settings.'; return; }
+    if (!key.present) { $('#mgStatus').textContent = '⚠ No key. Set ACCOUSTICA_API_KEY (or KIE_API_KEY) in dashboard Settings.'; return; }
     $('#mgStatus').textContent = 'Generating… this can take ~1 min.';
-    const r = await api('/api/ext/generate-music', { method: 'POST', body: JSON.stringify({ prompt, instrumental: $('#mgInstrumental').checked, model: $('#mgModel').value, customMode: false }) });
-    $('#mgStatus').textContent = r.error ? '✗ ' + r.error : '✓ Generation queued! Check Accoustica / your KIE dashboard.';
-  } catch (e) { $('#mgStatus').textContent = '✗ ' + e.message; }
+    const r = await api('/api/ext/generate-music', {
+      method: 'POST',
+      body: JSON.stringify({
+        prompt,
+        instrumental: $('#mgInstrumental').checked,
+        model: $('#mgModel').value,
+        customMode: false,
+      }),
+    });
+    if (r.error) $('#mgStatus').textContent = '✗ ' + r.error;
+    else $('#mgStatus').textContent = '✓ Generation queued! Check Accoustica / your KIE dashboard.';
+  } catch (e) {
+    $('#mgStatus').textContent = '✗ ' + e.message;
+  }
 }
 
-// ── Screenshot & Clone ─────────────────────────────────────────────────
+// ── Screenshot ─────────────────────────────────────────────────────────
 async function screenshot() {
   try {
     const dataUrl = await chrome.tabs.captureVisibleTab({ format: 'png' });
@@ -247,159 +254,52 @@ async function screenshot() {
   } catch (e) { toast('Screenshot failed'); }
 }
 
+// ── Clone page ─────────────────────────────────────────────────────────
 async function clonePage() {
   const tab = await getActiveTab();
   addMsg('user', 'Clone this page into a single HTML file');
   addTyping();
   try {
-    const [res] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => document.documentElement.outerHTML });
-    const blob = new Blob([res.result], { type: 'text/html' });
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => document.documentElement.outerHTML,
+    });
+    const html = res.result;
+    const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     await chrome.downloads.download({ url, filename: 'chinna-clone-' + Date.now() + '.html' });
     rmTyping();
-    addMsg('ai', '✓ Cloned the page HTML and downloaded it.');
-  } catch (e) { rmTyping(); addMsg('ai', 'Clone failed: ' + e.message); }
-}
-
-// ── NEW: Element Inspector + Accessibility ─────────────────────────────
-async function inspectElement() {
-  const tab = await getActiveTab();
-  addMsg('user', 'Inspect element on this page (click any element)');
-  
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: () => {
-        if (window.__chinnaInspector) { window.__chinnaInspector.disconnect(); }
-        
-        const overlay = document.createElement('div');
-        overlay.id = '__chinnaOverlay';
-        overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;pointer-events:none;';
-        document.body.appendChild(overlay);
-
-        const infoBox = document.createElement('div');
-        infoBox.style.cssText = 'position:fixed;bottom:20px;left:20px;background:rgba(0,0,0,0.9);color:#0f0;border:1px solid #0f0;padding:12px 16px;border-radius:8px;font-family:monospace;font-size:12px;max-width:420px;z-index:2147483648;';
-        document.body.appendChild(infoBox);
-
-        function updateInfo(el) {
-          const role = el.getAttribute('role') || el.tagName.toLowerCase();
-          const label = el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.innerText?.slice(0,80) || '';
-          const rect = el.getBoundingClientRect();
-          infoBox.innerHTML = `
-            <div style="color:#0f0;margin-bottom:6px">🔍 CHINNA INSPECTOR</div>
-            <div><b>Tag:</b> ${el.tagName.toLowerCase()}</div>
-            <div><b>Role:</b> ${role}</div>
-            <div><b>Label:</b> ${label || '(none)'}</div>
-            <div><b>Classes:</b> ${el.className || '(none)'}</div>
-            <div style="margin-top:6px;color:#888;font-size:11px">Click element to copy selector • ESC to exit</div>
-          `;
-          infoBox.style.left = Math.min(rect.left, window.innerWidth - 440) + 'px';
-          infoBox.style.top = (rect.bottom + 10) + 'px';
-        }
-
-        const observer = new MutationObserver(() => {});
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        document.addEventListener('mousemove', (e) => {
-          const el = document.elementFromPoint(e.clientX, e.clientY);
-          if (el && el !== overlay && el !== infoBox) updateInfo(el);
-        }, { capture: true });
-
-        document.addEventListener('click', (e) => {
-          const el = document.elementFromPoint(e.clientX, e.clientY);
-          if (el) {
-            const selector = el.id ? `#${el.id}` : el.className ? `.${el.className.split(' ')[0]}` : el.tagName.toLowerCase();
-            navigator.clipboard.writeText(selector);
-            infoBox.innerHTML += `<div style="color:#0f0;margin-top:8px">✓ Copied selector: ${selector}</div>`;
-            setTimeout(() => { overlay.remove(); infoBox.remove(); observer.disconnect(); }, 800);
-          }
-          e.preventDefault();
-          e.stopImmediatePropagation();
-        }, { capture: true, once: true });
-
-        document.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape') { overlay.remove(); infoBox.remove(); observer.disconnect(); }
-        }, { once: true });
-
-        window.__chinnaInspector = { disconnect: () => { overlay.remove(); infoBox.remove(); observer.disconnect(); } };
-      }
-    });
-    toast('Inspector active — move mouse and click element');
+    addMsg('ai', '✓ Cloned the page HTML and downloaded it. Note: external CSS/JS still reference original URLs.');
   } catch (e) {
-    toast('Inspector failed. Reload the page.');
+    rmTyping(); addMsg('ai', 'Clone failed: ' + e.message);
   }
 }
 
-// ── NEW: Quick Accessibility Audit ─────────────────────────────────────
-async function runAccessibilityAudit() {
+// ── Form autofill (delegates to content.js) ────────────────────────────
+async function autofillForm() {
   const tab = await getActiveTab();
-  addMsg('user', 'Run accessibility audit on this page');
+  addMsg('user', 'Fill the form on this page');
   addTyping();
-  
   try {
-    const [res] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: () => {
-        const issues = [];
-        document.querySelectorAll('img:not([alt])').forEach((img, i) => { if (i < 5) issues.push(`Missing alt on image: ${img.src?.slice(0,60) || 'unknown'}`); });
-        document.querySelectorAll('button, a, input').forEach(el => {
-          const style = window.getComputedStyle(el);
-          if (parseFloat(style.fontSize) < 12) issues.push(`Small text on interactive element: ${el.innerText?.slice(0,30) || el.tagName}`);
-        });
-        document.querySelectorAll('input:not([aria-label]):not([placeholder])').forEach((inp, i) => { if (i < 3 && !inp.labels?.length) issues.push(`Input missing label: ${inp.name || inp.type}`); });
-        return { issues: issues.slice(0, 12), score: Math.max(60, 100 - issues.length * 8) };
-      }
-    });
-    rmTyping();
-    const result = res.result;
-    let msg = `Accessibility Score: ${result.score}/100\n`;
-    if (result.issues.length) { msg += 'Issues found:\n' + result.issues.map(i => '• ' + i).join('\n'); }
-    else { msg += 'No major issues detected.'; }
-    addMsg('ai', msg);
-  } catch (e) { rmTyping(); addMsg('ai', 'Accessibility audit failed. Reload the page.'); }
-}
-
-// ── NEW: Dynamic Script Runner from Sidepanel ──────────────────────────
-async function runDynamicScript() {
-  const code = prompt('Enter JavaScript to run on current page:');
-  if (!code) return;
-  const tab = await getActiveTab();
-  try {
-    const [res] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: (script) => { try { return eval(script); } catch(e) { return 'Error: ' + e.message; } }, args: [code] });
-    addMsg('ai', 'Script result: ' + JSON.stringify(res.result).slice(0, 500));
-  } catch (e) { addMsg('ai', 'Script execution failed: ' + e.message); }
-}
-
-// ── Automation Panel Actions ───────────────────────────────────────────
-async function runBrowserAutomation(action, value = '') {
-  const out = $('#browserOut');
-  const tab = await getActiveTab();
-  if (out) out.textContent = 'Running...';
-  try {
-    const res = await chrome.tabs.sendMessage(tab.id, { type: 'BROWSER_AUTOMATION', action, value });
-    const text = res?.summary || res?.result || JSON.stringify(res || {});
-    if (out) out.textContent = text;
-    if (action === 'extract') addMsg('ai', text);
-    else toast(text);
-  } catch (e) { if (out) out.textContent = 'Automation failed. Reload the page.'; toast('Automation failed'); }
-}
-
-// ── Record Automation (simple) ─────────────────────────────────────────
-function toggleRecording() {
-  state.recording = !state.recording;
-  const btn = $('#recordBtn');
-  if (state.recording) {
-    state.recordedActions = [];
-    btn.textContent = '⏹ Stop Recording';
-    btn.style.background = '#f55';
-    toast('Recording started — perform actions on the page');
-  } else {
-    btn.textContent = '⏺ Record Automation';
-    btn.style.background = '';
-    if (state.recordedActions.length) {
-      const script = state.recordedActions.join('\n');
-      addMsg('ai', 'Recorded script:\n```js\n' + script + '\n```');
+    // Get form fields from content script
+    const fields = await chrome.tabs.sendMessage(tab.id, { type: 'GET_FORM_FIELDS' });
+    if (!fields || !fields.length) { rmTyping(); addMsg('ai', 'No form fields found on this page.'); return; }
+    // Ask AI to generate values
+    const prompt = `Fill these form fields with realistic sample values. Return ONLY JSON {fieldName: value}. Fields: ${JSON.stringify(fields)}`;
+    let values = {};
+    try {
+      const r = await api('/api/ai', { method: 'POST', body: JSON.stringify({ message: prompt }) });
+      const txt = (r.reply || r.response || '').replace(/```json|```/g, '').trim();
+      values = JSON.parse(txt);
+    } catch {
+      // fallback: sample values
+      fields.forEach(f => { values[f.name] = f.type === 'email' ? 'test@example.com' : f.type === 'tel' ? '+1234567890' : 'Sample ' + f.name; });
     }
+    await chrome.tabs.sendMessage(tab.id, { type: 'FILL_FORM', values });
+    rmTyping();
+    addMsg('ai', `✓ Filled ${Object.keys(values).length} fields. Review before submitting.`);
+  } catch (e) {
+    rmTyping(); addMsg('ai', 'Autofill needs the page to allow content scripts. Try reloading the page.');
   }
 }
 
@@ -420,6 +320,15 @@ async function openTabsPicker() {
   openPanel('tabsPanel');
 }
 
+// ── Toast ──────────────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--line3);color:var(--t1);padding:8px 14px;border-radius:8px;font-size:12px;z-index:200;box-shadow:0 6px 20px rgba(0,0,0,.5)';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
 // ── Menu actions ───────────────────────────────────────────────────────
 function handleAction(act) {
   $('#menu').classList.remove('open');
@@ -429,17 +338,12 @@ function handleAction(act) {
     case 'this-tab': state.contextMode = 'this-tab'; state.selectedTabIds = []; updateCtxBar(); break;
     case 'all-tabs': state.contextMode = 'all-tabs'; updateCtxBar(); break;
     case 'select-tabs': openTabsPicker(); break;
-    case 'terminal': openPanel('terminalPanel'); $('#termInput').focus(); break;
-    case 'music': musicControl('playpause'); break;
+    case 'terminal': case 'terminal-quick': openPanel('terminalPanel'); $('#termInput').focus(); break;
+    case 'music': case 'music-quick': musicControl('playpause'); break;
     case 'generate-music': openPanel('musicGenPanel'); break;
     case 'autofill': autofillForm(); break;
-    case 'browser-tools': openPanel('browserPanel'); break;
     case 'screenshot': screenshot(); break;
     case 'clone': clonePage(); break;
-    case 'inspect': inspectElement(); break;
-    case 'a11y-audit': runAccessibilityAudit(); break;
-    case 'run-script': runDynamicScript(); break;
-    case 'record-auto': toggleRecording(); break;
     case 'settings': chrome.tabs.create({ url: API }); break;
   }
 }
@@ -450,50 +354,46 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(checkConn, 8000);
   updateCtxBar();
 
+  // Send
   const input = $('#input');
   input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 120) + 'px'; });
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input.value); } });
   $('#sendBtn').addEventListener('click', () => sendMessage(input.value));
 
+  // New chat
   $('#newChatBtn').addEventListener('click', newChat);
 
+  // Menu
   $('#menuBtn').addEventListener('click', (e) => { e.stopPropagation(); $('#menu').classList.toggle('open'); });
   document.addEventListener('click', () => $('#menu').classList.remove('open'));
   $('#menu').addEventListener('click', (e) => { e.stopPropagation(); const it = e.target.closest('.menu-item'); if (it) handleAction(it.dataset.act); });
 
+  // Suggest chips + tool chips
   $$('.suggest, .tool-chip').forEach(b => b.addEventListener('click', () => {
     if (b.dataset.act) handleAction(b.dataset.act);
     else if (b.dataset.prompt) sendMessage(b.dataset.prompt);
   }));
 
+  // Panel close buttons
   $$('[data-close]').forEach(b => b.addEventListener('click', () => closePanel(b.dataset.close)));
 
+  // Terminal
   $('#termRun').addEventListener('click', () => { const c = $('#termInput').value.trim(); if (c) { runTerminal(c); $('#termInput').value = ''; } });
   $('#termInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const c = e.target.value.trim(); if (c) { runTerminal(c); e.target.value = ''; } } });
 
+  // Music
   $$('[data-music]').forEach(b => b.addEventListener('click', () => musicControl(b.dataset.music)));
+
+  // Generate music
   $('#mgGenerate').addEventListener('click', generateMusic);
 
+  // Tabs picker apply
   $('#tabsApply').addEventListener('click', () => {
     state.selectedTabIds = [...$$('#tabsList input:checked')].map(i => parseInt(i.value));
     state.contextMode = 'selected';
     updateCtxBar(); closePanel('tabsPanel');
   });
 
-  $$('[data-browser-act]').forEach(b => b.addEventListener('click', () => runBrowserAutomation(b.dataset.browserAct)));
-  $('#browserClickRun').addEventListener('click', () => {
-    const value = $('#browserClickText').value.trim();
-    if (value) runBrowserAutomation(/^\d+$/.test(value) ? 'click-index' : 'click-text', value);
-  });
-
-  // New advanced buttons
-  const recordBtn = document.createElement('button');
-  recordBtn.id = 'recordBtn';
-  recordBtn.textContent = '⏺ Record Automation';
-  recordBtn.style.cssText = 'margin:8px 0;padding:6px 12px;background:var(--s2);border:1px solid var(--line3);color:var(--t1);border-radius:6px;cursor:pointer;font-size:12px';
-  recordBtn.onclick = () => handleAction('record-auto');
-  const browserPanel = $('#browserPanel .panel-body');
-  if (browserPanel) browserPanel.appendChild(recordBtn);
-
+  // Listen for new-chat command from background
   chrome.runtime.onMessage.addListener((msg) => { if (msg.type === 'NEW_CHAT') newChat(); });
 });

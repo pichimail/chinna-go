@@ -1,35 +1,17 @@
 #!/usr/bin/env node
-/**
- * Chinna WhatsApp Bridge - Baileys v7 Ready (ESM + LID Mapping)
- * 
- * MIGRATION STATUS:
- * - Converted to ESM ("type": "module")
- * - Updated to Baileys ^7.0.0-rc13
- * - Added LID/PN resolution helpers
- * - Prefers .id field from chats/contacts (v7 style)
- * - Auto-enrichment of chats and messages with display JIDs
- * 
- * WARNING: Baileys v7 is still in Release Candidate.
- * Test thoroughly with multi-device WhatsApp setups before relying on it.
- * LID mapping is now core to the library.
- */
+'use strict';
 
-import http from 'http';
-import fs from 'fs';
-import path from 'path';
-import { URL } from 'url';
-import pino from 'pino';
-import makeWASocket, {
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const { URL } = require('url');
+const pino = require('pino');
+const {
+  default: makeWASocket,
   DisconnectReason,
   fetchLatestBaileysVersion,
   useMultiFileAuthState,
-} from '@whiskeysockets/baileys';
-
-import {
-  enrichChats,
-  enrichMessage,
-  normalizeChat,
-} from './lid-helper.js';
+} = require('@whiskeysockets/baileys');
 
 const CHINNA_HOME = process.env.CHINNA_HOME || path.join(process.env.HOME || '.', '.chinna');
 const PORT = Number(process.env.PORT || 7858);
@@ -41,7 +23,6 @@ fs.mkdirSync(WA_DIR, { recursive: true });
 fs.mkdirSync(AUTH_DIR, { recursive: true });
 
 const logger = pino({ level: process.env.CHINNA_WA_LOG_LEVEL || 'silent' });
-
 let sock = null;
 let saveCreds = null;
 let starting = null;
@@ -50,7 +31,6 @@ let connected = false;
 let lastError = '';
 let me = null;
 let lastConnectionAt = 0;
-
 const chats = new Map();
 const messages = new Map();
 const calls = [];
@@ -89,20 +69,13 @@ function jidFrom(value) {
 
 function chatName(jid) {
   const c = chats.get(jid) || {};
-  return c.name || c.subject || c.notify || c.pushName || (jid ? jid.split('@')[0] : '');
+  return c.name || c.subject || c.notify || c.pushName || jid.split('@')[0];
 }
 
 function upsertChat(jid, patch = {}) {
   if (!jid) return;
-  const normalized = normalizeChat({ jid, ...patch });
-  const prev = chats.get(jid) || { 
-    id: jid, 
-    jid, 
-    name: jid.split('@')[0], 
-    unread: 0, 
-    timestamp: 0 
-  };
-  chats.set(jid, { ...prev, ...normalized, id: jid });
+  const prev = chats.get(jid) || { jid, name: jid.split('@')[0], unread: 0, timestamp: 0 };
+  chats.set(jid, { ...prev, ...patch, jid });
 }
 
 function msgText(m) {
@@ -145,13 +118,10 @@ function storeMessage(m) {
 async function startSocket(force = false) {
   if (starting) return starting;
   if (sock && !force) return sock;
-
   starting = (async () => {
     const auth = await useMultiFileAuthState(AUTH_DIR);
     saveCreds = auth.saveCreds;
-
     const { version } = await fetchLatestBaileysVersion();
-
     sock = makeWASocket({
       version,
       auth: auth.state,
@@ -162,11 +132,9 @@ async function startSocket(force = false) {
     });
 
     sock.ev.on('creds.update', saveCreds);
-
     sock.ev.on('connection.update', (update) => {
       if (update.qr) qr = update.qr;
       const { connection, lastDisconnect } = update;
-
       if (connection === 'open') {
         connected = true;
         qr = '';
@@ -174,74 +142,38 @@ async function startSocket(force = false) {
         me = sock.user || null;
         lastConnectionAt = Date.now();
       }
-
       if (connection === 'close') {
         connected = false;
         const code = lastDisconnect?.error?.output?.statusCode;
         lastError = lastDisconnect?.error?.message || '';
         sock = null;
-
         if (code !== DisconnectReason.loggedOut) {
           setTimeout(() => startSocket(true).catch((e) => { lastError = e.message; }), 1200);
         }
       }
     });
-
     sock.ev.on('chats.upsert', (items) => {
-      for (const c of items || []) {
-        const normalized = normalizeChat(c);
-        upsertChat(normalized.id || normalized.jid, { 
-          name: normalized.name, 
-          unread: normalized.unreadCount || 0, 
-          timestamp: Number(normalized.conversationTimestamp || 0) 
-        });
-      }
+      for (const c of items || []) upsertChat(c.id, { name: c.name, unread: c.unreadCount || 0, timestamp: Number(c.conversationTimestamp || 0) });
     });
-
     sock.ev.on('chats.update', (items) => {
-      for (const c of items || []) {
-        const normalized = normalizeChat(c);
-        upsertChat(normalized.id || normalized.jid, { 
-          name: normalized.name, 
-          unread: normalized.unreadCount, 
-          timestamp: Number(normalized.conversationTimestamp || 0) 
-        });
-      }
+      for (const c of items || []) upsertChat(c.id, { name: c.name, unread: c.unreadCount, timestamp: Number(c.conversationTimestamp || 0) });
     });
-
     sock.ev.on('contacts.update', (items) => {
-      for (const c of items || []) {
-        const normalized = normalizeChat(c);
-        upsertChat(normalized.id || normalized.jid, { 
-          name: normalized.notify || normalized.name || normalized.verifiedName 
-        });
-      }
+      for (const c of items || []) upsertChat(c.id, { name: c.notify || c.name || c.verifiedName });
     });
-
     sock.ev.on('messages.upsert', ({ messages: batch }) => {
       for (const m of batch || []) storeMessage(m);
     });
-
     sock.ev.on('messaging-history.set', ({ chats: cs, messages: ms }) => {
-      for (const c of cs || []) {
-        const normalized = normalizeChat(c);
-        upsertChat(normalized.id || normalized.jid, { 
-          name: normalized.name, 
-          unread: normalized.unreadCount || 0, 
-          timestamp: Number(normalized.conversationTimestamp || 0) 
-        });
-      }
+      for (const c of cs || []) upsertChat(c.id, { name: c.name, unread: c.unreadCount || 0, timestamp: Number(c.conversationTimestamp || 0) });
       for (const m of ms || []) storeMessage(m);
     });
-
     sock.ev.on('call', (items) => {
       for (const c of items || []) calls.unshift({ ...c, at: Date.now() });
       calls.splice(30);
     });
-
     return sock;
   })().finally(() => { starting = null; });
-
   return starting;
 }
 
@@ -262,44 +194,27 @@ function status() {
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return json(res, { ok: true });
-
   const url = new URL(req.url, `http://${HOST}:${PORT}`);
-
   try {
     if (url.pathname === '/health') return json(res, { ok: true });
-
     await startSocket(false);
 
-    if (req.method === 'GET' && url.pathname === '/status') {
-      return json(res, status());
-    }
-
-    if (req.method === 'GET' && url.pathname === '/qr') {
-      return json(res, { ok: true, qr, connected });
-    }
-
+    if (req.method === 'GET' && url.pathname === '/status') return json(res, status());
+    if (req.method === 'GET' && url.pathname === '/qr') return json(res, { ok: true, qr, connected });
     if (req.method === 'GET' && url.pathname === '/chats') {
-      const rawChats = [...chats.values()].map(normalizeChat);
-      const enriched = await enrichChats(sock, rawChats);
-      const sorted = enriched.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
-      return json(res, { ok: true, chats: sorted.slice(0, 100) });
+      const out = [...chats.values()].sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+      return json(res, { ok: true, chats: out.slice(0, 100) });
     }
-
     if (req.method === 'GET' && url.pathname === '/messages') {
       const jid = jidFrom(url.searchParams.get('chat') || '');
-      const rawMessages = messages.get(jid) || [];
-      const enriched = await Promise.all(rawMessages.map(m => enrichMessage(sock, m)));
-      return json(res, { ok: true, jid, messages: enriched });
+      return json(res, { ok: true, jid, messages: messages.get(jid) || [] });
     }
-
     if (req.method === 'POST' && url.pathname === '/send') {
       const body = await readBody(req);
       const jid = jidFrom(body.jid || body.number);
       if (!jid) return json(res, { ok: false, error: 'valid WhatsApp number or jid required' }, 400);
-
       const text = String(body.text || body.message || '').trim();
       if (!text && !body.file_b64) return json(res, { ok: false, error: 'message text or file required' }, 400);
-
       let sent;
       if (body.file_b64) {
         const buffer = Buffer.from(String(body.file_b64), 'base64');
@@ -312,30 +227,21 @@ const server = http.createServer(async (req, res) => {
       } else {
         sent = await sock.sendMessage(jid, { text });
       }
-
       upsertChat(jid, { last: text || '[file]', timestamp: Math.floor(Date.now() / 1000) });
       return json(res, { ok: true, jid, id: sent?.key?.id || '' });
     }
-
     if (req.method === 'POST' && url.pathname === '/reconnect') {
       await startSocket(true);
       return json(res, status());
     }
-
     if (req.method === 'POST' && url.pathname === '/logout') {
       try { await sock?.logout?.(); } catch {}
       fs.rmSync(AUTH_DIR, { recursive: true, force: true });
       fs.mkdirSync(AUTH_DIR, { recursive: true });
-      sock = null;
-      connected = false;
-      qr = '';
-      me = null;
-      chats.clear();
-      messages.clear();
+      sock = null; connected = false; qr = ''; me = null; chats.clear(); messages.clear();
       await startSocket(true);
       return json(res, { ok: true, logged_out: true });
     }
-
     if (req.method === 'POST' && url.pathname === '/handoff') {
       const body = await readBody(req);
       const jid = jidFrom(body.jid || body.number);
@@ -347,9 +253,7 @@ const server = http.createServer(async (req, res) => {
         note: 'WhatsApp call media is handled by WhatsApp. Chinna can open the chat, while Secure Chat provides in-dashboard calls.',
       });
     }
-
     return json(res, { ok: false, error: `unknown ${url.pathname}` }, 404);
-
   } catch (e) {
     lastError = e && e.message ? e.message : String(e);
     return json(res, { ok: false, error: lastError }, 500);
@@ -357,7 +261,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 startSocket(false).catch((e) => { lastError = e.message; });
-
 server.listen(PORT, HOST, () => {
-  console.log(`Chinna WhatsApp bridge (v7-ready + auto LID resolution) listening on http://${HOST}:${PORT}`);
+  console.log(`Chinna WhatsApp bridge listening on http://${HOST}:${PORT}`);
 });
