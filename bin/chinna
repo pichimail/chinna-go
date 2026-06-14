@@ -63,8 +63,14 @@ if [ -t 1 ]; then
     WARN=$'\033[38;5;208m'
     ERR=$'\033[38;5;196m'
     PROMPT=$'\033[38;5;75m'     # grok prompt color
+
+    # Map old color names to new Grok palette for compatibility (strict new style)
+    R=$ERR; G=$OKGREEN; Y=$WARN; B=$ACCENT; M=$ACCENT2; C=$ACCENT
+    W=$WHITE; D=$DIM; ORANGE=$WARN; PINK=$ACCENT2; TEAL=$ACCENT
+    GREEN=$OKGREEN; ACID=$CHINNA; ACID2=$CHINNA; GLOW=$BOLD; BLUE2=$ACCENT; PURP=$ACCENT2
 else
     RESET='' BOLD='' DIM='' GRAY='' DARK='' WHITE='' ACCENT='' ACCENT2='' CHINNA='' OKGREEN='' WARN='' ERR='' PROMPT=''
+    R='' G='' Y='' B='' M='' C='' W='' D='' ORANGE='' PINK='' TEAL='' GREEN='' ACID='' ACID2='' GLOW='' BLUE2='' PURP=''
 fi
 
 # ─── Grok CLI Exact Style UI helpers (strictly clean, minimal, premium) ─────────
@@ -91,9 +97,9 @@ grok_line() {
 progress_bar() {
     local msg="$1" pct="${2:-0}" width=28
     local filled=$(( pct * width / 100 ))
-    local bar="" color="$ACID"
-    [ "$pct" -gt 70 ] && color="$Y"
-    [ "$pct" -gt 85 ] && color="$R"
+    local bar="" color="$CHINNA"
+    [ "$pct" -gt 70 ] && color="$WARN"
+    [ "$pct" -gt 85 ] && color="$ERR"
     for ((i=0;i<filled;i++)); do bar+="█"; done
     for ((i=filled;i<width;i++)); do bar+="░"; done
     printf "\r  ${color}%s${RESET} %3d%%  %-30s" "$bar" "$pct" "$msg"
@@ -116,7 +122,7 @@ spinner() {
     tput civis 2>/dev/null
     while kill -0 "$pid" 2>/dev/null; do
         i=$(( (i+1) % 8 ))
-        printf "\r  ${ACID}%s${RESET}  ${GRAY}%s${RESET}   " "${s:$i:1}" "$msg"
+        printf "\r  ${CHINNA}%s${RESET}  ${GRAY}%s${RESET}   " "${s:$i:1}" "$msg"
         sleep 0.1
     done
     tput cnorm 2>/dev/null
