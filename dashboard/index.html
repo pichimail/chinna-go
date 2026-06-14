@@ -578,150 +578,308 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
     </div>
   </aside>
   <main id="center">
-<div class="view" id="view-agent"><div class="vhead">
-    <h2>◈ Chinna Agent</h2>
-    <span class="sub">Plan · Build · Execute — powered by your model</span>
-    <div class="spacer"></div>
-    <!-- Mode selector -->
-    <div class="agent-modes" id="agentModes">
-      <button class="mode-btn" data-mode="ask" onclick="agentSetMode('ask')" title="Ask — chat, no tools">Ask</button>
-      <button class="mode-btn active" data-mode="build" onclick="agentSetMode('build')" title="Build — full tool access">Build</button>
-      <button class="mode-btn" data-mode="plan" onclick="agentSetMode('plan')" title="Plan — generate plan first">Plan</button>
+<div class="view" id="view-agent">
+  <!-- v0.app / emergent style advanced conversational app builder header -->
+  <div class="agent-v0-header">
+    <div class="av0-left">
+      <div class="av0-brand">
+        <div class="av0-logo">◈</div>
+        <div>
+          <div class="av0-title">Agent</div>
+          <div class="av0-sub">conversational app builder · mac powered</div>
+        </div>
+      </div>
+      <div class="av0-key-pill" id="agentKeyStatus" onclick="go('settings');" title="Click to open Settings &amp; manage keys">checking keys…</div>
     </div>
-    <button class="bigbtn ghost smallbtn" onclick="agentClearHistory()" title="New session">↺ New</button>
+
+    <!-- Dynamic Ask / Plan / Build mode switcher -->
+    <div class="av0-modes" id="agentModes">
+      <button class="av0-mode" data-mode="ask" onclick="agentSetMode('ask')" title="Ask — pure conversation, no side effects">
+        <span class="m-ic">💬</span>
+        <span class="m-lbl">Ask</span>
+      </button>
+      <button class="av0-mode" data-mode="plan" onclick="agentSetMode('plan')" title="Plan — think step-by-step, output checklist only">
+        <span class="m-ic">📋</span>
+        <span class="m-lbl">Plan</span>
+      </button>
+      <button class="av0-mode active" data-mode="build" onclick="agentSetMode('build')" title="Build — full agent: tools, code, artifacts, mac control, iterate live">
+        <span class="m-ic">⚒︎</span>
+        <span class="m-lbl">Build</span>
+      </button>
+    </div>
+
+    <div class="av0-actions">
+      <button class="av0-btn ghost" onclick="agentClearHistory()" title="Start fresh conversation">New</button>
+      <div class="av0-dropdown">
+        <button class="av0-btn" onclick="agentToggleExportMenu(event)" title="Export &amp; share options">Export ▾</button>
+        <div id="agentExportMenu" class="av0-menu" style="display:none">
+          <div onclick="agentExport('disk')">Export to ~/ChinnaExports (local folder)</div>
+          <div onclick="agentExport('zip')">Export + download ZIP</div>
+          <div onclick="agentDownloadCurrent()">Download current artifact</div>
+          <div onclick="agentOpenPreviewNewTab()">Open preview in new tab</div>
+        </div>
+      </div>
+      <button class="av0-btn solid" onclick="agentShare()" title="Copy beautifully formatted share text + code to clipboard">Share</button>
+    </div>
   </div>
 
-  <!-- Plan checklist (slides down when in plan mode) -->
-  <div id="agentPlanBar" style="display:none;padding:10px 18px;background:var(--s0);border-bottom:1px solid var(--line)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-      <span style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--acc)">PLAN</span>
-      <button class="bigbtn solid smallbtn" id="agentPlanExec" onclick="agentExecutePlan()" style="display:none">▶ Execute Plan</button>
-      <button class="bigbtn ghost smallbtn" id="agentPlanEdit" onclick="agentEditPlan()">Edit</button>
-    </div>
-    <div id="agentPlanContent" style="font-family:var(--font-mono);font-size:12px;line-height:1.8;color:var(--t2)"></div>
+  <!-- Mode description bar (dynamic) -->
+  <div class="av0-modebar" id="agentModeBar">
+    <span id="agentModeLabel" class="mode-label build">BUILD MODE — full tools, live artifacts, code gen, macOS actions. Iterate by chatting.</span>
   </div>
 
-  <div id="agentBody" style="flex:1;display:flex;min-height:0;gap:0;overflow:hidden">
-    <!-- Messages + tools stream -->
-    <div id="agentChat" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
-      <div id="agentMsgs" style="flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
-        <!-- Welcome state -->
-        <div id="agentWelcome" style="text-align:center;padding:48px 20px;color:var(--t3)">
-          <div style="font-size:40px;margin-bottom:14px;opacity:.4">◈</div>
-          <div style="font-size:16px;font-weight:700;color:var(--t1);margin-bottom:6px">Chinna Agent</div>
-          <div style="font-size:13px;line-height:1.6;max-width:360px;margin:0 auto">Beats Odysseus with macOS-native tools.<br>Pick a mode and start building.</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:18px">
-            <button class="sugg-chip" onclick="agentQuickPrompt('Write a Python script to show top 10 memory processes')">⚡ Show top processes</button>
-            <button class="sugg-chip" onclick="agentQuickPrompt('Create a beautiful responsive landing page HTML artifact')">🎨 Generate landing page</button>
-            <button class="sugg-chip" onclick="agentQuickPrompt('Plan a disk cleanup and organize Downloads folder')">🗂 Plan disk cleanup</button>
-            <button class="sugg-chip" onclick="agentQuickPrompt('Show me disk usage by folder in home directory')">💾 Analyze disk usage</button>
+  <!-- Main split: Chat + Workspace (preview/code) -->
+  <div id="agentBody" class="av0-body">
+    <!-- Left: Conversation -->
+    <div class="av0-chat">
+      <div id="agentMsgs" class="av0-msgs">
+        <div id="agentWelcome" class="av0-welcome">
+          <div class="welcome-hero">◈</div>
+          <div class="welcome-title">Build anything on your Mac.</div>
+          <div class="welcome-desc">Describe an app, a script, a dashboard, a workflow.<br>Switch modes • chat to refine • export when ready.</div>
+          <div class="welcome-suggs">
+            <button class="sugg-v0" onclick="agentQuickPrompt('Build a beautiful modern todo app with localStorage and nice animations in a single HTML file')">Todo app with motion</button>
+            <button class="sugg-v0" onclick="agentQuickPrompt('Create a stunning SaaS landing page with hero, features, pricing, dark mode and subtle gradients')">SaaS landing page</button>
+            <button class="sugg-v0" onclick="agentQuickPrompt('Build an interactive analytics dashboard with charts (Chart.js), filters and fake data in pure HTML/JS')">Analytics dashboard</button>
+            <button class="sugg-v0" onclick="agentQuickPrompt('Plan and then build a full local AI chat UI mock with message bubbles, composer and model switcher')">AI chat mock UI</button>
+            <button class="sugg-v0" onclick="agentQuickPrompt('Create a macOS-inspired file manager interface with sidebar, list, preview pane and drag-drop hints')">macOS file manager</button>
           </div>
         </div>
       </div>
 
-      <!-- ask_user choices panel -->
-      <div id="agentChoices" style="display:none;padding:12px 18px;border-top:1px solid var(--line);background:var(--s0)">
-        <div id="agentQuestion" style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--t1)"></div>
-        <div id="agentOptions" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      <!-- Interactive choices for ask_user -->
+      <div id="agentChoices" class="av0-choices" style="display:none">
+        <div id="agentQuestion" class="choice-q"></div>
+        <div id="agentOptions" class="choice-opts"></div>
       </div>
 
-      <!-- Composer -->
-      <div class="agent-composer">
-        <div class="agent-input-wrap">
-          <textarea id="agentInput" placeholder="Ask anything, plan a task, or build something…" rows="1"
+      <!-- Composer (v0 style) -->
+      <div class="av0-composer">
+        <div class="av0-composer-inner">
+          <button class="av0-attach" title="Attach files / images (supported in build)" onclick="agentHandleAttachClick()">+</button>
+          <textarea id="agentInput" class="av0-ta" placeholder="Describe the app or change you want. Build mode is powerful." rows="1"
             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();agentSend()}"
-            oninput="this.style.height='auto';this.style.height=Math.min(160,this.scrollHeight)+'px'"></textarea>
-          <div class="agent-input-actions">
-            <span id="agentStatus" class="agent-status-pill" style="display:none">
-              <i class="status-dot"></i><span id="agentStatusTxt">thinking…</span>
-            </span>
+            oninput="this.style.height='auto';this.style.height=Math.min(180,this.scrollHeight)+'px'"></textarea>
+          <div class="av0-meta">
+            <span id="agentStatus" class="av0-status" style="display:none"><span class="dot"></span><span id="agentStatusTxt">thinking…</span></span>
+            <span class="av0-hint" id="agentModeHint">build • artifacts auto-preview</span>
           </div>
         </div>
-        <button class="agent-send" id="agentSendBtn" onclick="agentSend()">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <button class="av0-send" id="agentSendBtn" onclick="agentSend()" aria-label="Send">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
     </div>
 
-    <!-- Artifacts panel (slides in from right) -->
-    <div id="agentArtifactsPanel" style="width:0;overflow:hidden;transition:width .2s ease;border-left:1px solid var(--line);flex-shrink:0">
-      <div style="width:320px;height:100%;display:flex;flex-direction:column;overflow:hidden">
-        <div style="padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-shrink:0">
-          <span style="font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t3)">Artifacts</span>
-          <span id="agentArtifactCount" style="font-size:10px;font-weight:700;padding:2px 7px;background:var(--acc-bg);color:var(--acc);border-radius:99px;border:1px solid var(--acc-bd)">0</span>
-          <div class="spacer"></div>
-          <button class="bigbtn ghost smallbtn" onclick="agentCloseArtifacts()" style="padding:3px 8px">✕</button>
+    <!-- Resizer -->
+    <div class="av0-resizer" id="agentResizer" title="Drag to resize workspace"></div>
+
+    <!-- Right: Workspace with Code / Preview / Files toggles -->
+    <div class="av0-workspace" id="agentWorkspace">
+      <div class="av0-ws-header">
+        <div class="av0-tabs" id="agentWsTabs">
+          <button class="av0-tab active" data-tab="preview" onclick="agentSwitchTab('preview')">Preview</button>
+          <button class="av0-tab" data-tab="code" onclick="agentSwitchTab('code')">Code</button>
+          <button class="av0-tab" data-tab="files" onclick="agentSwitchTab('files')">Files <span id="wsFileCount" class="tab-cnt">0</span></button>
         </div>
-        <!-- Artifact list -->
-        <div id="agentArtifactList" style="flex:1;overflow-y:auto;padding:8px"></div>
-        <!-- iFrame preview -->
-        <div id="agentPreviewWrap" style="display:none;flex-direction:column;flex-shrink:0;max-height:300px;border-top:1px solid var(--line)">
-          <div style="padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--t3)">
-            <span id="agentPreviewLabel">Preview</span>
-            <div class="spacer"></div>
-            <button class="bigbtn ghost smallbtn" onclick="agentDownloadArtifact(agentPreviewingId)" title="Download">↓</button>
-            <button class="bigbtn ghost smallbtn" onclick="agentOpenPreviewFull()" title="Open full screen">⤢</button>
-            <button class="bigbtn ghost smallbtn" onclick="agentClosePreview()">✕</button>
+        <div class="av0-ws-actions">
+          <button class="av0-mini" onclick="agentRefreshPreview()" title="Refresh preview">↻</button>
+          <button class="av0-mini" onclick="agentOpenPreviewNewTab()" title="Open in new tab">⤢</button>
+          <button class="av0-mini" onclick="agentDownloadCurrent()" title="Download">↓</button>
+          <button class="av0-mini danger" onclick="agentClearCurrentPreview()" title="Clear current">✕</button>
+        </div>
+      </div>
+
+      <div class="av0-ws-body">
+        <!-- PREVIEW PANE -->
+        <div class="av0-ws-panel av0-preview on" id="wsPreview">
+          <div class="preview-bar">
+            <div class="preview-label">
+              <span id="previewName">Live Preview</span>
+              <span class="preview-badge" id="previewBadge">HTML</span>
+            </div>
+            <div class="preview-controls">
+              <button class="av0-mini" onclick="agentSimulateDevice('desktop')">Desktop</button>
+              <button class="av0-mini" onclick="agentSimulateDevice('mobile')">Mobile</button>
+            </div>
           </div>
-          <iframe id="agentPreviewFrame" sandbox="allow-scripts allow-same-origin" style="flex:1;border:none;background:#fff;min-height:200px;max-height:260px"></iframe>
+          <div class="preview-frame-wrap">
+            <iframe id="mainPreviewFrame" sandbox="allow-scripts allow-same-origin allow-forms" class="main-preview-frame"></iframe>
+            <div id="previewEmpty" class="preview-empty">No preview yet.<br>Build something in <b>Build</b> mode or ask for an HTML artifact.</div>
+          </div>
         </div>
+
+        <!-- CODE PANE -->
+        <div class="av0-ws-panel av0-code" id="wsCode">
+          <div class="code-bar">
+            <div class="code-meta">
+              <span id="codeFileName">artifact.html</span>
+              <span id="codeFileMeta" class="code-meta-small"></span>
+            </div>
+            <div class="code-actions">
+              <button class="av0-mini" onclick="agentCopyCode()">Copy</button>
+              <button class="av0-mini" onclick="agentDownloadCurrent()">Download</button>
+            </div>
+          </div>
+          <div class="code-scroll">
+            <pre><code id="codeContent" class="code-content"></code></pre>
+          </div>
+        </div>
+
+        <!-- FILES / ARTIFACTS PANE -->
+        <div class="av0-ws-panel av0-files" id="wsFiles">
+          <div class="files-head">
+            <span>Artifacts <span id="filesCountBig">0</span></span>
+            <button class="av0-mini" onclick="agentOpenArtifactsLegacy()">Legacy panel</button>
+          </div>
+          <div id="wsArtifactList" class="files-list"></div>
+          <div class="files-foot">Click any file to load into Preview / Code. Latest HTML auto-loads on generation.</div>
+        </div>
+      </div>
+
+      <div class="av0-ws-foot">
+        <span class="ws-foot-text">Artifacts live in ~/.chinna/artifacts • fully conversational — keep chatting to refine</span>
       </div>
     </div>
   </div>
+</div>
 
 
 <style>
-/* Agent view styles */
-.agent-modes{display:flex;background:var(--s2);border:1px solid var(--line);border-radius:var(--r-xs);padding:2px;gap:1px}
-.mode-btn{border:none;background:transparent;color:var(--t3);font-size:11px;font-weight:600;padding:4px 12px;border-radius:3px;cursor:pointer;font-family:var(--font);transition:all .11s;letter-spacing:.2px}
-.mode-btn.active,.mode-btn:hover{background:var(--acc);color:#06120a}
-.sugg-chip{padding:7px 13px;background:var(--s2);border:1px solid var(--line2);border-radius:var(--r-sm);color:var(--t2);cursor:pointer;font-size:12px;font-weight:500;transition:all .12s;font-family:var(--font)}
-.sugg-chip:hover{border-color:var(--acc);color:var(--acc)}
-.agent-composer{display:flex;align-items:flex-end;gap:8px;padding:12px 14px;border-top:1px solid var(--line);background:var(--bg)}
-.agent-input-wrap{flex:1;background:var(--s1);border:1px solid var(--line2);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:6px;transition:border-color .12s}
-.agent-input-wrap:focus-within{border-color:var(--acc)}
-#agentInput{background:none;border:none;outline:none;color:var(--t1);font-size:13px;font-family:var(--font);resize:none;line-height:1.5;max-height:160px;overflow-y:auto}
-#agentInput::placeholder{color:var(--t3)}
-.agent-input-actions{display:flex;align-items:center;gap:8px}
-.agent-status-pill{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--acc);padding:3px 8px;background:var(--acc-bg);border:1px solid var(--acc-bd);border-radius:99px}
-.agent-status-pill .status-dot{width:6px;height:6px;border-radius:50%;background:var(--acc);animation:pulse 1.2s ease infinite}
-@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
-.agent-send{width:40px;height:40px;flex-shrink:0;background:var(--acc);color:#06120a;border:none;border-radius:var(--r);cursor:pointer;display:grid;place-items:center;transition:filter .12s;flex-shrink:0}
-.agent-send:hover{filter:brightness(1.1)}
-.agent-send:disabled{opacity:.4;cursor:not-allowed}
-/* Message bubbles */
-.agent-msg{display:flex;flex-direction:column;gap:4px;animation:msgIn .16s ease}
-@keyframes msgIn{from{opacity:0;transform:translateY(4px)}}
-.agent-msg .who{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--t3)}
+/* ========== ADVANCED v0.app / EMERGENT-STYLE AGENT UI (replaces old agent styles) ========== */
+.av0-header, .agent-v0-header{display:flex;align-items:center;gap:14px;padding:10px 16px 8px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--s0),transparent);flex-shrink:0}
+.av0-left{display:flex;align-items:center;gap:12px}
+.av0-brand{display:flex;align-items:center;gap:10px}
+.av0-logo{width:28px;height:28px;border-radius:7px;background:linear-gradient(145deg,var(--acc),#a3e635);color:#05120a;font-weight:900;display:grid;place-items:center;font-size:16px;box-shadow:0 1px 0 rgba(255,255,255,.6) inset}
+.av0-title{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.av0-sub{font-size:10px;color:var(--t3);margin-top:-1px;letter-spacing:.3px}
+.av0-key-pill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--line2);background:var(--s1);color:var(--t2);cursor:pointer;transition:all .1s}
+.av0-key-pill:hover{border-color:var(--acc);color:var(--acc)}
+.av0-key-pill.ready{border-color:rgba(186,255,41,.4);background:rgba(186,255,41,.06);color:var(--acc)}
+.av0-key-pill.bad{border-color:rgba(248,113,113,.4);color:#f87171}
+
+.av0-modes{display:flex;background:var(--s1);border:1px solid var(--line);border-radius:999px;padding:3px;gap:3px}
+.av0-mode{border:none;background:transparent;color:var(--t2);font-size:12px;font-weight:700;padding:6px 14px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .12s;font-family:var(--font)}
+.av0-mode .m-ic{font-size:13px}
+.av0-mode.active,.av0-mode:hover{background:#fff;color:#111; box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.av0-mode.active{color:#06120a}
+
+.av0-actions{display:flex;align-items:center;gap:6px;margin-left:auto}
+.av0-btn{font-size:11.5px;font-weight:700;padding:6px 13px;border-radius:8px;border:1px solid var(--line2);background:var(--s1);color:var(--t1);cursor:pointer;transition:.1s}
+.av0-btn:hover{background:var(--s2);border-color:var(--line3)}
+.av0-btn.solid{background:var(--acc);color:#06120a;border-color:var(--acc);font-weight:800}
+.av0-btn.ghost{background:transparent;border-color:transparent;color:var(--t2)}
+.av0-btn.ghost:hover{background:var(--s2)}
+
+.av0-menu{position:absolute;background:var(--s0);border:1px solid var(--line3);border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.6);z-index:400;min-width:210px;margin-top:4px;overflow:hidden}
+.av0-menu div{padding:9px 13px;font-size:12.5px;color:var(--t1);cursor:pointer}
+.av0-menu div:hover{background:var(--s2);color:var(--acc)}
+
+.av0-modebar{padding:4px 16px 3px;font-size:10.5px;color:var(--t3);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;background:var(--bg)}
+.mode-label{font-weight:700;letter-spacing:.5px}
+.mode-label.build{color:#a3e635}
+.mode-label.plan{color:#c084fc}
+.mode-label.ask{color:#60a5fa}
+
+.av0-body{flex:1;min-height:0;display:flex;overflow:hidden}
+.av0-chat{flex:1;min-width:280px;max-width:52%;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--line)}
+.av0-msgs{flex:1;overflow-y:auto;padding:14px 16px 8px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;background:var(--bg)}
+.av0-welcome{text-align:center;padding:38px 12px 24px;color:var(--t3)}
+.welcome-hero{font-size:42px;opacity:.35;margin-bottom:6px}
+.welcome-title{font-size:15px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.welcome-desc{font-size:12.2px;line-height:1.45;margin-bottom:16px}
+.welcome-suggs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.sugg-v0{padding:5px 11px;font-size:11.5px;background:var(--s1);border:1px solid var(--line2);border-radius:999px;color:var(--t2);cursor:pointer;transition:all .1s}
+.sugg-v0:hover{border-color:var(--acc);color:var(--acc);background:var(--s2)}
+
+.av0-choices{padding:9px 14px 10px;border-top:1px solid var(--line);background:var(--s0)}
+.choice-q{font-size:12.5px;font-weight:600;color:var(--t1);margin-bottom:7px}
+.choice-opts{display:flex;flex-wrap:wrap;gap:6px}
+.choice-opts button{font-size:12px;padding:5px 10px}
+
+.av0-composer{padding:10px 12px;border-top:1px solid var(--line);background:linear-gradient(0deg,var(--s0),var(--bg));flex-shrink:0}
+.av0-composer-inner{display:flex;align-items:flex-end;gap:8px;background:var(--s1);border:1px solid var(--line2);border-radius:14px;padding:6px 8px 6px 8px}
+.av0-composer-inner:focus-within{border-color:var(--acc)}
+.av0-attach{width:30px;height:30px;border-radius:999px;border:1px solid var(--line);background:var(--s2);color:var(--t2);font-size:18px;line-height:1;display:grid;place-items:center;cursor:pointer;flex-shrink:0}
+.av0-attach:hover{border-color:var(--acc);color:var(--acc)}
+.av0-ta{flex:1;background:none;border:none;outline:none;color:var(--t1);font-size:13.5px;font-family:var(--font);resize:none;line-height:1.45;max-height:180px;padding:4px 2px;min-height:22px}
+.av0-ta::placeholder{color:var(--t3)}
+.av0-meta{display:flex;align-items:center;justify-content:space-between;font-size:10px;padding:0 2px}
+.av0-status{display:inline-flex;align-items:center;gap:5px;color:var(--acc);font-weight:600}
+.av0-status .dot{width:5px;height:5px;border-radius:50%;background:var(--acc);animation:pulse 1.1s infinite}
+.av0-hint{color:var(--t4);font-size:9.5px}
+.av0-send{width:38px;height:38px;border-radius:12px;background:var(--acc);color:#06120a;border:none;display:grid;place-items:center;cursor:pointer;transition:filter .1s;box-shadow:0 2px 8px rgba(186,255,41,.3)}
+.av0-send:hover{filter:brightness(1.06)}
+
+.av0-resizer{width:4px;background:transparent;cursor:col-resize;transition:background .1s;flex-shrink:0}
+.av0-resizer:hover{background:rgba(186,255,41,.3)}
+
+.av0-workspace{flex:1;min-width:320px;display:flex;flex-direction:column;overflow:hidden;background:var(--s0)}
+.av0-ws-header{display:flex;align-items:center;padding:6px 10px;border-bottom:1px solid var(--line);gap:8px;background:var(--s1);flex-shrink:0}
+.av0-tabs{display:flex;background:var(--s2);border:1px solid var(--line);border-radius:999px;padding:2px;gap:2px}
+.av0-tab{border:none;background:transparent;color:var(--t2);font-size:11.5px;font-weight:700;padding:5px 13px;border-radius:999px;cursor:pointer;transition:all .1s}
+.av0-tab.active{background:#fff;color:#0a0a0a;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tab-cnt{font-size:9px;padding:0 4px;opacity:.7}
+
+.av0-ws-actions{margin-left:auto;display:flex;gap:4px}
+.av0-mini{font-size:10px;padding:3px 7px;border:1px solid var(--line);background:var(--s2);color:var(--t2);border-radius:6px;cursor:pointer}
+.av0-mini:hover{border-color:var(--line3);color:var(--t1)}
+.av0-mini.danger:hover{border-color:#f87171;color:#f87171}
+
+.av0-ws-body{flex:1;overflow:hidden;position:relative}
+.av0-ws-panel{display:none;flex-direction:column;height:100%;overflow:hidden}
+.av0-ws-panel.on{display:flex}
+
+.av0-preview .preview-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--s1);border-bottom:1px solid var(--line);font-size:11px}
+.preview-label{display:flex;align-items:center;gap:7px;font-weight:600}
+.preview-badge{font-size:9px;padding:1px 6px;border-radius:4px;background:var(--acc-bg);color:var(--acc);border:1px solid var(--acc-bd)}
+.preview-controls{display:flex;gap:4px}
+.preview-frame-wrap{flex:1;position:relative;background:#111;display:flex}
+.main-preview-frame{flex:1;border:none;background:#fff}
+.preview-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#666;font-size:12px;line-height:1.4}
+
+.av0-code .code-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--s1);border-bottom:1px solid var(--line);font-size:11px;font-weight:600}
+.code-meta{display:flex;align-items:center;gap:8px}
+.code-meta-small{color:var(--t4);font-weight:500}
+.code-scroll{flex:1;overflow:auto;padding:10px 12px;background:#0b0b0c}
+.code-content{font-family:var(--font-mono);font-size:12px;line-height:1.55;color:#ddd;white-space:pre;tab-size:2}
+
+.av0-files .files-head{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--line);font-size:11px;font-weight:700}
+.files-list{flex:1;overflow-y:auto;padding:6px}
+.files-list .fitem{padding:6px 9px;border:1px solid transparent;border-radius:8px;cursor:pointer;font-size:12px;display:flex;gap:8px;align-items:center}
+.files-list .fitem:hover{background:var(--s1);border-color:var(--line)}
+.files-list .fitem .nm{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.files-list .fitem .meta{font-size:10px;color:var(--t4)}
+.files-foot{padding:6px 10px;font-size:10px;color:var(--t4);border-top:1px solid var(--line)}
+
+.av0-ws-foot{padding:4px 10px;border-top:1px solid var(--line);background:var(--bg);font-size:10px;color:var(--t4);flex-shrink:0}
+
+/* Keep some legacy agent classes for tool/artifact rendering in chat (JS still uses) */
+.agent-msg{display:flex;flex-direction:column;gap:3px;animation:msgIn .14s ease;margin-bottom:2px}
+@keyframes msgIn{from{opacity:0;transform:translateY(3px)}}
+.agent-msg .who{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t3)}
 .agent-msg.user .who{color:var(--acc)}
-.agent-msg .bubble{padding:10px 14px;border-radius:var(--r);font-size:13px;line-height:1.6;word-break:break-word;white-space:pre-wrap}
-.agent-msg.user .bubble{background:var(--acc-bg);border:1px solid var(--acc-bd)}
-.agent-msg.ai .bubble{background:var(--s2);border:1px solid var(--line)}
-/* Tool display */
-.tool-block{margin:6px 0;border:1px solid var(--line2);border-radius:var(--r-sm);overflow:hidden;background:var(--s0)}
-.tool-header{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--s2);border-bottom:1px solid var(--line);cursor:pointer}
-.tool-label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:2px 7px;border-radius:99px;flex-shrink:0}
-.tool-label.bash{background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3)}
-.tool-label.python{background:rgba(96,165,250,.15);color:#60a5fa;border:1px solid rgba(96,165,250,.3)}
-.tool-label.create_artifact{background:rgba(186,255,41,.15);color:var(--acc);border:1px solid var(--acc-bd)}
-.tool-label.web_search{background:rgba(167,139,250,.15);color:#c084fc;border:1px solid rgba(167,139,250,.3)}
-.tool-label.write_file,.tool-label.read_file{background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3)}
-.tool-label.mac_control{background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.3)}
-.tool-input{font-family:var(--font-mono);font-size:11px;padding:8px 12px;color:var(--t3);max-height:120px;overflow-y:auto;white-space:pre-wrap;display:none}
-.tool-result{font-family:var(--font-mono);font-size:11px;padding:8px 12px;color:var(--t2);max-height:180px;overflow-y:auto;white-space:pre-wrap;border-top:1px solid var(--line)}
-.tool-toggle{margin-left:auto;font-size:10px;color:var(--t3)}
-/* Artifact cards */
-.artifact-card{padding:10px;border:1px solid var(--line);border-radius:var(--r-sm);margin-bottom:6px;background:var(--s2);cursor:pointer;transition:all .12s}
-.artifact-card:hover{border-color:var(--line2);background:var(--s3)}
-.artifact-card .af-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.artifact-card .af-meta{font-size:10px;color:var(--t3);margin-top:2px}
-.artifact-card .af-acts{display:flex;gap:4px;margin-top:8px}
-/* Plan checklist */
-#agentPlanContent ul,.plan-list{list-style:none;padding:0;margin:0}
-.plan-step{display:flex;align-items:flex-start;gap:8px;padding:3px 0}
-.plan-step input[type=checkbox]{accent-color:var(--acc);flex-shrink:0;margin-top:2px}
-.plan-step.done span{text-decoration:line-through;opacity:.5}
-</style></div>
+.agent-msg .bubble{padding:8px 11px;border-radius:10px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.agent-msg.user .bubble{background:rgba(186,255,41,.1);border:1px solid var(--acc-bd)}
+.agent-msg.ai .bubble{background:var(--s1);border:1px solid var(--line)}
+.tool-block{margin:4px 0 6px;border:1px solid var(--line2);border-radius:8px;overflow:hidden;background:var(--s0);font-size:11px}
+.tool-header{display:flex;gap:6px;padding:5px 8px;background:var(--s2);border-bottom:1px solid var(--line);cursor:pointer;align-items:center}
+.tool-label{font-size:9px;font-weight:700;letter-spacing:.6px;padding:1px 6px;border-radius:99px}
+.tool-result{padding:5px 8px;color:var(--t2);max-height:140px;overflow:auto;white-space:pre-wrap;font-family:var(--font-mono);font-size:10.5px;border-top:1px solid var(--line)}
+.artifact-card{font-size:11.5px}
+
+.av0-status-pill{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--acc);padding:2px 7px;background:var(--acc-bg);border:1px solid var(--acc-bd);border-radius:99px}
+
+/* Global polish for new agent */
+#view-agent .sugg-chip {padding:6px 10px}
+#view-agent { background: var(--bg); }
+.av0-chat, .av0-workspace { min-height: 0; }
+@media (max-width: 920px) {
+  .av0-body { flex-direction: column; }
+  .av0-chat { max-width: 100%; border-right: none; border-bottom: 1px solid var(--line); }
+  .av0-resizer { display: none; }
+}
+</style>
 <div class="view" id="view-forge"><div class="vhead">
   <h2>⚒ Chinna Forge</h2>
   <span class="sub">Full-stack dev shell — detect, scaffold, install, scan, build, deploy</span>
@@ -5554,20 +5712,71 @@ initV6();
 })();
 </script>
 <script>
-// ── CHINNA AGENT V1 JS ────────────────────────────────────────────────────
+// ── CHINNA AGENT — v0.app / EMERGENT STYLE CONVERSATIONAL APP BUILDER (advanced dynamic) ──
 let agentMode = 'build';
 let agentHistory = [];
 let agentRunning = false;
-let agentEventSource = null;
 let agentArtifacts = [];
 let agentPreviewingId = null;
 let agentCurrentPlan = '';
+let agentCurrentTab = 'preview';
+let agentWsResizerBound = false;
+
+function updateAgentModeUI() {
+  // Update fancy av0-modes
+  document.querySelectorAll('.av0-mode').forEach(b => b.classList.toggle('active', b.dataset.mode === agentMode));
+  // Dynamic bar label + hint
+  const label = document.getElementById('agentModeLabel');
+  const hint = document.getElementById('agentModeHint');
+  if (!label) return;
+  if (agentMode === 'ask') {
+    label.textContent = 'ASK MODE — conversational answers only. Great for questions & explanations.';
+    label.className = 'mode-label ask';
+    if (hint) hint.textContent = 'ask • read-only';
+  } else if (agentMode === 'plan') {
+    label.textContent = 'PLAN MODE — outputs structured checklist only. Approve then switch to Build to execute.';
+    label.className = 'mode-label plan';
+    if (hint) hint.textContent = 'plan • checklist';
+  } else {
+    label.textContent = 'BUILD MODE — full power: tools, write files, create live artifacts, macOS control, iterate instantly.';
+    label.className = 'mode-label build';
+    if (hint) hint.textContent = 'build • artifacts auto-preview';
+  }
+}
 
 function agentSetMode(mode) {
   agentMode = mode;
+  updateAgentModeUI();
+  // Legacy support
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-  const planBar = document.getElementById('agentPlanBar');
-  if (planBar) planBar.style.display = mode === 'plan' ? 'block' : 'none';
+  // Dynamic placeholder + UX
+  const ta = document.getElementById('agentInput');
+  if (ta) {
+    if (mode === 'ask') ta.placeholder = 'Ask anything about your Mac, code, or workflows…';
+    else if (mode === 'plan') ta.placeholder = 'Describe the goal — I will output a detailed actionable plan…';
+    else ta.placeholder = 'Describe the app, UI, script or change you want built. Chat to iterate live.';
+  }
+}
+
+async function updateAgentKeyStatus() {
+  const pill = document.getElementById('agentKeyStatus');
+  if (!pill) return;
+  try {
+    const r = await fetch('/api/ai/status');
+    const s = await r.json();
+    if (s && s.ready) {
+      pill.textContent = s.label || 'AI ready';
+      pill.className = 'av0-key-pill ready';
+      pill.title = 'Keys detected — ' + (s.provider || 'multi');
+    } else {
+      pill.textContent = 'Add API keys';
+      pill.className = 'av0-key-pill bad';
+      pill.title = s.label || 'No AI key — click to open Settings';
+    }
+  } catch (e) {
+    pill.textContent = 'key status error';
+    pill.className = 'av0-key-pill bad';
+  }
 }
 
 function agentQuickPrompt(text) {
@@ -5594,7 +5803,8 @@ function agentAddMsg(role, text) {
   d.className = 'agent-msg ' + role;
   const who = role === 'user' ? 'You' : '◈ Chinna';
   d.innerHTML = `<div class="who">${who}</div><div class="bubble"></div>`;
-  d.querySelector('.bubble').textContent = text || '';
+  const bubble = d.querySelector('.bubble');
+  if (bubble) bubble.textContent = text || '';
   msgs.appendChild(d);
   msgs.scrollTop = msgs.scrollHeight;
   return d;
@@ -5603,7 +5813,7 @@ function agentAddMsg(role, text) {
 function agentAppendText(msgEl, chunk) {
   if (!msgEl) return;
   const b = msgEl.querySelector('.bubble');
-  if (b) { b.textContent += chunk; }
+  if (b) b.textContent += chunk;
   const msgs = document.getElementById('agentMsgs');
   if (msgs) msgs.scrollTop = msgs.scrollHeight;
 }
@@ -5619,11 +5829,9 @@ function agentAddToolBlock(tool, input, result) {
   d.innerHTML = `
     <div class="tool-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">
       <span class="tool-label ${tool}">${label}</span>
-      <span style="font-size:11.5px;color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:2px">${(input||'').replace(/\n/g,' ').slice(0,80)}</span>
-      <span class="tool-toggle">▾ expand</span>
+      <span style="font-size:11px;color:var(--t2);flex:1;margin-left:4px;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(input||'').replace(/\n/g,' ').slice(0,78)}</span>
     </div>
-    <div class="tool-input" style="display:none">${escHtml(input||'')}</div>
-    <div class="tool-result">${escHtml((result||'').slice(0,3000))}</div>`;
+    <div class="tool-result">${escHtml((result||'').slice(0,2400))}</div>`;
   msgs.appendChild(d);
   msgs.scrollTop = msgs.scrollHeight;
 }
@@ -5631,78 +5839,153 @@ function agentAddToolBlock(tool, input, result) {
 function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function agentAddArtifact(meta) {
+  // de-dupe
+  agentArtifacts = agentArtifacts.filter(a => a.id !== meta.id);
   agentArtifacts.push(meta);
-  const count = document.getElementById('agentArtifactCount');
-  if (count) count.textContent = agentArtifacts.length;
-  agentRenderArtifactList();
-  agentOpenArtifactsPanel();
-  if (meta.preview) agentShowPreview(meta.id, meta.name);
+  // Update files pane count + list
+  const cnt = document.getElementById('wsFileCount');
+  if (cnt) cnt.textContent = agentArtifacts.length;
+  const big = document.getElementById('filesCountBig');
+  if (big) big.textContent = agentArtifacts.length;
+  renderWorkspaceFiles();
+  // Auto-promote nice HTML artifacts into main preview + code
+  const isHtml = (meta.lang || '').toLowerCase().includes('html') || (meta.name||'').match(/\.(html|htm)$/i);
+  if (isHtml || meta.preview) {
+    agentPreviewingId = meta.id;
+    agentSwitchTab('preview');
+    loadArtifactIntoPreview(meta.id, meta.name);
+    loadArtifactIntoCode(meta.id, meta.name);
+  }
+  // keep legacy count if present
+  const legacy = document.getElementById('agentArtifactCount');
+  if (legacy) legacy.textContent = agentArtifacts.length;
 }
 
-function agentRenderArtifactList() {
-  const list = document.getElementById('agentArtifactList');
+function renderWorkspaceFiles() {
+  const list = document.getElementById('wsArtifactList');
   if (!list) return;
-  list.innerHTML = agentArtifacts.slice().reverse().map(a => `
-    <div class="artifact-card" onclick="agentShowPreview('${a.id}','${escHtml(a.name)}')">
-      <div class="af-name">${escHtml(a.name)}</div>
-      <div class="af-meta">${a.lang} · ${(a.size/1024).toFixed(1)}KB</div>
-      <div class="af-acts">
-        ${a.preview ? `<button class="bigbtn smallbtn" onclick="event.stopPropagation();agentShowPreview('${a.id}','${escHtml(a.name)}')">Preview</button>` : ''}
-        <button class="bigbtn smallbtn" onclick="event.stopPropagation();agentDownloadArtifact('${a.id}')">Download</button>
-        <button class="bigbtn danger smallbtn" onclick="event.stopPropagation();agentDeleteArtifact('${a.id}')">Delete</button>
+  if (!agentArtifacts.length) {
+    list.innerHTML = '<div style="padding:12px;color:var(--t3);font-size:11.5px">No artifacts yet. Use Build mode to generate HTML, code, etc.</div>';
+    return;
+  }
+  list.innerHTML = agentArtifacts.slice().reverse().map(a => {
+    const size = a.size ? ((a.size/1024).toFixed(1)+'KB') : '';
+    return `<div class="fitem" onclick="agentLoadArtifact('${a.id}','${escHtml(a.name)}')">
+      <div style="flex:1;min-width:0">
+        <div class="nm">${escHtml(a.name || a.id)}</div>
+        <div class="meta">${escHtml(a.lang||'file')} ${size}</div>
       </div>
-    </div>`).join('');
+      <button class="av0-mini" onclick="event.stopPropagation();agentDownloadArtifact('${a.id}')">↓</button>
+    </div>`;
+  }).join('');
 }
 
-function agentOpenArtifactsPanel() {
-  const panel = document.getElementById('agentArtifactsPanel');
-  if (panel && panel.style.width === '0px' || panel && !panel.style.width) {
-    panel.style.width = '320px';
+function agentLoadArtifact(id, name) {
+  agentPreviewingId = id;
+  const isLikelyHtml = (name||'').match(/\.(html?|htm)$/i);
+  if (isLikelyHtml || agentCurrentTab === 'preview') {
+    agentSwitchTab('preview');
+    loadArtifactIntoPreview(id, name);
+  } else {
+    agentSwitchTab('code');
+  }
+  loadArtifactIntoCode(id, name);
+}
+
+async function loadArtifactIntoPreview(id, name) {
+  const frame = document.getElementById('mainPreviewFrame');
+  const empty = document.getElementById('previewEmpty');
+  const label = document.getElementById('previewName');
+  const badge = document.getElementById('previewBadge');
+  if (!frame) return;
+  if (label) label.textContent = name || 'Live Preview';
+  if (badge) badge.textContent = (name||'').split('.').pop().toUpperCase() || 'HTML';
+  frame.src = `/api/artifact/${id}/preview`;
+  if (empty) empty.style.display = 'none';
+  agentPreviewingId = id;
+}
+
+async function loadArtifactIntoCode(id, name) {
+  try {
+    const d = await (window.api ? api(`artifact/${id}`) : fetch(`/api/artifact/${id}`).then(r=>r.json()));
+    const codeEl = document.getElementById('codeContent');
+    const fn = document.getElementById('codeFileName');
+    const meta = document.getElementById('codeFileMeta');
+    if (fn) fn.textContent = d.name || name || id;
+    if (meta) meta.textContent = `${d.lang||''} · ${(d.size||0)/1024|0}KB`;
+    if (codeEl) codeEl.textContent = d.content || '(no content)';
+    agentPreviewingId = id;
+  } catch(e) {
+    const codeEl = document.getElementById('codeContent');
+    if (codeEl) codeEl.textContent = 'Failed to load artifact content: ' + e;
   }
 }
-function agentCloseArtifacts() {
-  const panel = document.getElementById('agentArtifactsPanel');
-  if (panel) panel.style.width = '0';
-  agentClosePreview();
+
+function agentSwitchTab(tab) {
+  agentCurrentTab = tab;
+  document.querySelectorAll('.av0-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.av0-ws-panel').forEach(p => p.classList.remove('on'));
+  const map = {preview:'wsPreview', code:'wsCode', files:'wsFiles'};
+  const el = document.getElementById(map[tab]);
+  if (el) el.classList.add('on');
+  // If switching to code or preview and we have a current, ensure loaded
+  if (agentPreviewingId && tab !== 'files') {
+    if (tab === 'preview') loadArtifactIntoPreview(agentPreviewingId, '');
+    else if (tab === 'code') loadArtifactIntoCode(agentPreviewingId, '');
+  }
 }
 
-function agentShowPreview(id, name) {
-  agentPreviewingId = id;
-  const wrap = document.getElementById('agentPreviewWrap');
-  const frame = document.getElementById('agentPreviewFrame');
-  const label = document.getElementById('agentPreviewLabel');
-  if (!wrap || !frame) return;
-  if (label) label.textContent = name || 'Preview';
-  frame.src = `/api/artifact/${id}/preview`;
-  wrap.style.display = 'flex';
-  agentOpenArtifactsPanel();
+function agentRefreshPreview() {
+  const f = document.getElementById('mainPreviewFrame');
+  if (f && agentPreviewingId) {
+    f.src = `/api/artifact/${agentPreviewingId}/preview?ts=${Date.now()}`;
+  }
 }
-function agentClosePreview() {
-  const wrap = document.getElementById('agentPreviewWrap');
-  const frame = document.getElementById('agentPreviewFrame');
-  if (wrap) wrap.style.display = 'none';
-  if (frame) frame.src = 'about:blank';
+
+function agentSimulateDevice(which) {
+  const f = document.getElementById('mainPreviewFrame');
+  if (!f) return;
+  if (which === 'mobile') {
+    f.style.width = '380px';
+    f.style.margin = '0 auto';
+    f.style.boxShadow = '0 0 0 1px #222, 0 10px 30px rgba(0,0,0,.6)';
+  } else {
+    f.style.width = '';
+    f.style.margin = '';
+    f.style.boxShadow = '';
+  }
+}
+
+function agentClearCurrentPreview() {
+  const f = document.getElementById('mainPreviewFrame');
+  const e = document.getElementById('previewEmpty');
+  if (f) f.src = 'about:blank';
+  if (e) e.style.display = 'flex';
+  const code = document.getElementById('codeContent');
+  if (code) code.textContent = '';
   agentPreviewingId = null;
 }
-function agentOpenPreviewFull() {
-  if (agentPreviewingId) window.open(`/api/artifact/${agentPreviewingId}/preview`,'_blank');
-}
+
 async function agentDownloadArtifact(id) {
-  const d = await api(`artifact/${id}`);
-  if (!d.content) return;
-  const blob = new Blob([d.content], {type:'text/plain'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = d.name || `artifact-${id}.txt`;
-  a.click(); URL.revokeObjectURL(a.href);
-  toast('Downloaded: ' + (d.name||id));
+  try {
+    const d = await (window.api ? api(`artifact/${id}`) : fetch(`/api/artifact/${id}`).then(r=>r.json()));
+    if (!d || !d.content) { toast('No content'); return; }
+    const blob = new Blob([d.content], {type: 'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = d.name || `artifact-${id}.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Downloaded ' + (d.name||id));
+  } catch(e){ toast('Download failed'); }
 }
+
 async function agentDeleteArtifact(id) {
-  await fetch(`/api/artifact/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({_delete:true})});
+  await fetch(`/api/artifact/${id}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({_delete:true})});
   agentArtifacts = agentArtifacts.filter(a=>a.id!==id);
-  const count = document.getElementById('agentArtifactCount');
-  if (count) count.textContent = agentArtifacts.length;
-  agentRenderArtifactList();
-  if (agentPreviewingId === id) agentClosePreview();
+  renderWorkspaceFiles();
+  const cnt = document.getElementById('wsFileCount'); if (cnt) cnt.textContent=agentArtifacts.length;
+  if (agentPreviewingId === id) agentClearCurrentPreview();
   toast('Artifact deleted');
 }
 
@@ -5712,15 +5995,13 @@ function agentShowChoices(question, options) {
   const opts = document.getElementById('agentOptions');
   if (!wrap || !qEl || !opts) return;
   qEl.textContent = question;
-  opts.innerHTML = options.map((o,i) => `
-    <button class="bigbtn" onclick="agentPickOption('${escHtml(o.label||o)}')">${escHtml(o.label||o)}</button>`
-  ).join('');
+  opts.innerHTML = options.map(o => `<button class="av0-btn" onclick="agentPickOption('${escHtml(o.label||o)}')">${escHtml(o.label||o)}</button>`).join('');
   wrap.style.display = 'block';
 }
+
 function agentPickOption(label) {
   const wrap = document.getElementById('agentChoices');
   if (wrap) wrap.style.display = 'none';
-  // Send the chosen option as the next message
   const inp = document.getElementById('agentInput');
   if (inp) inp.value = label;
   agentSend();
@@ -5728,25 +6009,28 @@ function agentPickOption(label) {
 
 function agentUpdatePlan(planText) {
   agentCurrentPlan = planText;
-  const bar = document.getElementById('agentPlanBar');
-  const content = document.getElementById('agentPlanContent');
-  const execBtn = document.getElementById('agentPlanExec');
-  if (bar) bar.style.display = 'block';
-  if (execBtn) execBtn.style.display = 'inline-flex';
-  if (!content) return;
-  // Render checklist
-  const lines = planText.split('\n');
-  content.innerHTML = lines.map(l => {
-    const done = /^\s*-\s*\[x\]/i.test(l);
-    const pending = /^\s*-\s*\[\s*\]/.test(l);
-    if (done || pending) {
-      const text = l.replace(/^\s*-\s*\[.\]\s*/,'');
-      return `<div class="plan-step ${done?'done':''}"><input type="checkbox" ${done?'checked':''} disabled><span>${escHtml(text)}</span></div>`;
-    }
-    if (/^#+\s/.test(l)) { var ht=l.replace(/^#+\s*/,''); return '<div style="font-weight:700;color:var(--t1);font-size:12px;margin:4px 0">'+escHtml(ht)+'</div>'; }
-    return l.trim() ? `<div style="font-size:12px;color:var(--t2)">${escHtml(l)}</div>` : '';
+  const msgs = document.getElementById('agentMsgs');
+  if (!msgs) return;
+  // Remove previous plan cards for freshness
+  msgs.querySelectorAll('.plan-card').forEach(el=>el.remove());
+  const card = document.createElement('div');
+  card.className = 'tool-block plan-card';
+  card.style.borderColor = 'rgba(192,132,252,.4)';
+  const html = planText.split('\n').map(l => {
+    if (/^#+\s/.test(l)) return `<div style="font-weight:700;color:#c084fc;margin:4px 0 2px">${escHtml(l.replace(/^#+\s*/,''))}</div>`;
+    if (/^\s*-\s*\[x\]/i.test(l)) return `<div style="opacity:.6">☑ ${escHtml(l.replace(/^\s*-\s*\[x\]\s*/i,''))}</div>`;
+    if (/^\s*-\s*\[/.test(l)) return `<div>☐ ${escHtml(l.replace(/^\s*-\s*\[\s*\]\s*/,''))}</div>`;
+    return l.trim() ? `<div style="color:var(--t2);font-size:12px">${escHtml(l)}</div>` : '';
   }).join('');
+  card.innerHTML = `<div class="tool-header"><span class="tool-label" style="background:rgba(192,132,252,.2);color:#c084fc;border:1px solid rgba(192,132,252,.4)">PLAN</span><span style="flex:1">Live plan — switch to Build &amp; execute</span></div><div class="tool-result" style="max-height:260px">${html}</div>
+  <div style="padding:6px 8px;display:flex;gap:6px;background:#111">
+    <button class="av0-mini" onclick="agentExecutePlan()">Execute in Build</button>
+    <button class="av0-mini" onclick="agentEditPlan()">Revise</button>
+  </div>`;
+  msgs.appendChild(card);
+  msgs.scrollTop = msgs.scrollHeight;
 }
+
 function agentExecutePlan() {
   if (!agentCurrentPlan) return;
   agentSetMode('build');
@@ -5754,30 +6038,121 @@ function agentExecutePlan() {
   if (inp) inp.value = `Execute this plan:\n${agentCurrentPlan}`;
   agentSend();
 }
+
 function agentEditPlan() {
   const inp = document.getElementById('agentInput');
-  if (inp && agentCurrentPlan) {
-    inp.value = 'Revise the plan: ';
-    inp.focus();
-  }
+  if (inp && agentCurrentPlan) { inp.value = 'Revise this plan with more detail and macOS specifics: ' + agentCurrentPlan.slice(0,400); inp.focus(); }
 }
 
 function agentClearHistory() {
-  agentHistory = []; agentArtifacts = []; agentCurrentPlan = '';
-  if (agentEventSource) { agentEventSource.close(); agentEventSource = null; }
+  agentHistory = []; agentArtifacts = []; agentCurrentPlan = ''; agentPreviewingId = null;
   const msgs = document.getElementById('agentMsgs');
-  if (msgs) msgs.innerHTML = `<div id="agentWelcome" style="text-align:center;padding:48px 20px;color:var(--t3)">
-    <div style="font-size:40px;margin-bottom:14px;opacity:.4">◈</div>
-    <div style="font-size:16px;font-weight:700;color:var(--t1);margin-bottom:6px">Chinna Agent</div>
-    <div style="font-size:13px;line-height:1.6">Ready for a new session.</div>
+  if (msgs) msgs.innerHTML = `<div id="agentWelcome" class="av0-welcome">
+    <div class="welcome-hero">◈</div>
+    <div class="welcome-title">Ready for a new session.</div>
+    <div class="welcome-desc">Pick Ask / Plan / Build and start building beautiful things.</div>
   </div>`;
-  const count = document.getElementById('agentArtifactCount');
-  if (count) count.textContent = '0';
-  const list = document.getElementById('agentArtifactList');
-  if (list) list.innerHTML = '';
-  agentCloseArtifacts();
+  const cnts = ['wsFileCount','filesCountBig','agentArtifactCount'];
+  cnts.forEach(id=>{const el=document.getElementById(id); if(el) el.textContent='0';});
+  const fl = document.getElementById('wsArtifactList'); if(fl) fl.innerHTML='';
+  const f = document.getElementById('mainPreviewFrame'); if(f) f.src='about:blank';
+  const e = document.getElementById('previewEmpty'); if(e) e.style.display='flex';
+  const c = document.getElementById('codeContent'); if(c) c.textContent='';
   agentSetStatus(false);
 }
+
+function agentToggleExportMenu(e) {
+  e.stopImmediatePropagation();
+  const m = document.getElementById('agentExportMenu');
+  if (!m) return;
+  const show = m.style.display === 'none' || !m.style.display;
+  m.style.display = show ? 'block' : 'none';
+  if (show) {
+    const closer = (ev) => { m.style.display='none'; document.removeEventListener('click',closer,true); };
+    setTimeout(()=>document.addEventListener('click',closer,{once:true,capture:true}),10);
+  }
+}
+
+async function agentExport(kind) {
+  document.getElementById('agentExportMenu').style.display='none';
+  const ids = agentArtifacts.map(a=>a.id);
+  const payload = { ids, zip: kind==='zip', to_disk: true };
+  try {
+    const res = await fetch('/api/agent/export', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    const j = await res.json();
+    if (j.ok) {
+      toast('Exported: ' + (j.export_dir || j.message));
+      if (j.zip_path) toast('ZIP: ' + j.zip_path);
+      // Bonus: auto open in finder is not possible but we can show the path prominently
+      const msgs = document.getElementById('agentMsgs');
+      if (msgs) {
+        const note = document.createElement('div');
+        note.style.cssText='font-size:11px;padding:6px 10px;background:#111;border:1px solid var(--line);border-radius:6px;color:#a3e635;margin:4px 0';
+        note.textContent = 'Files written to ' + j.export_dir;
+        msgs.appendChild(note);
+      }
+    } else toast('Export issue');
+  } catch(e) { toast('Export failed: '+e.message); }
+}
+
+async function agentDownloadCurrent() {
+  if (!agentPreviewingId) { toast('No current artifact'); return; }
+  await agentDownloadArtifact(agentPreviewingId);
+}
+
+function agentOpenPreviewNewTab() {
+  if (agentPreviewingId) {
+    window.open(`/api/artifact/${agentPreviewingId}/preview`, '_blank');
+  } else {
+    toast('Generate an HTML artifact first');
+  }
+}
+
+function agentCopyCode() {
+  const code = document.getElementById('codeContent');
+  if (!code || !code.textContent) { toast('Nothing to copy'); return; }
+  navigator.clipboard.writeText(code.textContent).then(()=>toast('Code copied to clipboard'));
+}
+
+function agentShare() {
+  const lastUser = [...agentHistory].reverse().find(h=>h.role==='user')?.content || 'Built with Chinna Agent';
+  const codeEl = document.getElementById('codeContent');
+  let code = codeEl && codeEl.textContent ? codeEl.textContent.slice(0,1800) : '';
+  const shareText = `## Chinna Agent — ${agentMode.toUpperCase()} result\n\n**Prompt:** ${lastUser}\n\n${code ? '```html\n'+code+'\n```\n\n' : ''}Generated with Chinna Agent (local). Open the preview or re-run the prompt.`;
+  navigator.clipboard.writeText(shareText).then(()=> {
+    toast('Share text + code copied. Paste anywhere!');
+  }).catch(()=>toast('Copy failed'));
+}
+
+function agentHandleAttachClick() {
+  const inp = document.getElementById('agentInput');
+  if (inp) inp.placeholder = 'File attachments supported in Build (paste or describe files to include)';
+  setTimeout(()=>{ if(inp) inp.placeholder = (agentMode==='ask'?'Ask anything...':'Describe the app or change you want built...'); }, 1600);
+}
+
+function initAgentWorkspaceResizer() {
+  if (agentWsResizerBound) return;
+  const res = document.getElementById('agentResizer');
+  const chat = document.querySelector('#view-agent .av0-chat');
+  const ws = document.getElementById('agentWorkspace');
+  if (!res || !chat || !ws) return;
+  let dragging = false, startX=0, startChat=0;
+  res.addEventListener('mousedown', (e)=>{
+    dragging=true; startX=e.clientX; startChat=chat.offsetWidth;
+    document.body.style.userSelect='none';
+  });
+  document.addEventListener('mousemove', (e)=>{
+    if(!dragging) return;
+    const delta = e.clientX - startX;
+    const newW = Math.max(240, Math.min(620, startChat + delta));
+    chat.style.flex = `0 0 ${newW}px`;
+    chat.style.maxWidth = '70%';
+  });
+  document.addEventListener('mouseup', ()=>{ dragging=false; document.body.style.userSelect=''; });
+  agentWsResizerBound = true;
+}
+
+function agentSwitchToLegacyArtifacts() { /* deprecated but keep hook */ }
 
 async function agentSend() {
   if (agentRunning) return;
@@ -5796,18 +6171,20 @@ async function agentSend() {
   let currentTool = null;
 
   try {
-    // Use fetch with ReadableStream for SSE
     const resp = await fetch('/api/agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message, mode: agentMode,
-        history: agentHistory.slice(-20),
+        history: agentHistory.slice(-22),
         model: ''
       })
     });
 
-    if (!resp.ok) throw new Error('Server error: ' + resp.status);
+    if (!resp.ok) {
+      const errTxt = await resp.text().catch(()=>(''));
+      throw new Error('Server ' + resp.status + ' ' + errTxt.slice(0,120));
+    }
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -5824,9 +6201,7 @@ async function agentSend() {
         let evt;
         try { evt = JSON.parse(line.slice(6)); } catch { continue; }
 
-        if (evt.type === 'mode') {
-          // mode confirmed
-        } else if (evt.type === 'text') {
+        if (evt.type === 'text') {
           if (!aiMsgEl) aiMsgEl = agentAddMsg('ai', '');
           agentAppendText(aiMsgEl, evt.content);
           aiText += evt.content;
@@ -5847,28 +6222,59 @@ async function agentSend() {
           return;
         } else if (evt.type === 'error') {
           if (!aiMsgEl) aiMsgEl = agentAddMsg('ai', '');
-          agentAppendText(aiMsgEl, '⚠ ' + evt.content);
+          agentAppendText(aiMsgEl, '⚠ ' + (evt.content || 'Agent error'));
           agentSetStatus(false);
           return;
         } else if (evt.type === 'done') {
-          if (evt.plan && evt.plan !== agentCurrentPlan) agentUpdatePlan(evt.plan);
-          if (evt.artifacts) evt.artifacts.forEach(a => {
-            if (!agentArtifacts.find(x=>x.id===a.id)) agentAddArtifact(a);
-          });
+          if (evt.plan) agentUpdatePlan(evt.plan);
+          if (evt.artifacts && Array.isArray(evt.artifacts)) {
+            evt.artifacts.forEach(a => { if (!agentArtifacts.find(x=>x.id===a.id)) agentAddArtifact(a); });
+          }
           agentSetStatus(false);
         }
       }
     }
-
     if (aiText) agentHistory.push({ role: 'assistant', content: aiText });
     agentSetStatus(false);
-
   } catch (err) {
     const errEl = agentAddMsg('ai','');
-    agentAppendText(errEl, '⚠ Agent error: ' + err.message);
+    agentAppendText(errEl, '⚠ Agent error: ' + (err.message || err));
     agentSetStatus(false);
   }
 }
+
+/* Init enhancements for the new UI when agent view activates */
+function initAdvancedAgentUI() {
+  updateAgentModeUI();
+  updateAgentKeyStatus();
+  // Poll key status occasionally while on agent (dynamic)
+  if (!window._agentKeyPoll) {
+    window._agentKeyPoll = setInterval(()=>{ 
+      const v = document.getElementById('view-agent');
+      if (v && v.classList.contains('on')) updateAgentKeyStatus(); 
+    }, 22000);
+  }
+  // Initial files render
+  const fc = document.getElementById('wsFileCount'); if(fc) fc.textContent = agentArtifacts.length;
+  renderWorkspaceFiles();
+  // Wire resizer once
+  initAgentWorkspaceResizer();
+  // Default tab
+  setTimeout(()=>{ if (!agentCurrentTab) agentSwitchTab('preview'); }, 30);
+  // Make sure legacy globals exist for old functions if called
+  window.agentOpenArtifactsLegacy = function(){ agentSwitchTab('files'); };
+  // Nice: when user focuses input, ensure we show dynamic hint
+  const ta = document.getElementById('agentInput');
+  if (ta) ta.addEventListener('focus', ()=>{ updateAgentModeUI(); }, {once:true});
+}
+
+// Auto init when script loads and also hook into the global go('agent')
+setTimeout(initAdvancedAgentUI, 160);
+const _origGo = window.go;
+window.go = function(v){ 
+  if (typeof _origGo==='function') _origGo(v); 
+  if (v==='agent') setTimeout(initAdvancedAgentUI, 80); 
+};
 </script>
 <script>
 

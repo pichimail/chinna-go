@@ -1659,6 +1659,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             })
         elif p == '/api/version':
             self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6.7'})
+        elif p == '/api/ai/status':
+            self._json(ai_key_status())
         elif p == '/api/forge/detect':
             path = q.get('path', '.') if isinstance(q, dict) else '.'
             self._json(_forge.detect(path) if _forge else {'error': 'forge unavailable'})
@@ -1676,6 +1678,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.serve_artifacts_list()
         elif p.startswith('/api/artifact/') and p.endswith('/preview'):
             self.serve_artifact_preview(p.split('/')[3])
+        elif p == '/api/agent/export/download':
+            self.serve_export_download(q)
         elif p.startswith('/api/artifact/') and len(p.split('/')) == 4:
             self.serve_artifact_content(p.split('/')[3])
         elif p == '/api/check-update':
@@ -1865,6 +1869,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.ext_shell(b)
         elif p == '/api/agent':
             self.serve_agent(b)
+        elif p == '/api/agent/export':
+            self.export_artifacts(b)
         elif p == '/api/shell':
             self.exec_shell_direct(b)
         elif p.startswith('/api/artifact/') and len(p.split('/')) == 4:
@@ -3163,7 +3169,7 @@ async def _run_agent_loop(message: str, history: list, mode: str, model: str, ke
             "Authorization": f"Bearer {api_key}",
         }
     else:
-        yield _sse_event({"type":"error","content":"No AI API key. Add an OpenAI or OpenRouter key in Settings."})
+        yield _sse_event({"type":"error","content":"No AI API key. Add an OpenAI or OpenRouter key in Settings (dynamic reload on each call)."})
         return
     
     sys_prompt = _agent_system_prompt(mode, model)
@@ -3251,7 +3257,7 @@ async def _run_agent_loop(message: str, history: list, mode: str, model: str, ke
     yield _sse_event({"type":"done","artifacts":session_state["artifacts"],"plan":session_state.get("plan","")})
 
 def serve_agent(self, b):
-    """POST /api/agent — streaming SSE agent endpoint."""
+    """POST /api/agent — streaming SSE agent endpoint. Always dynamic key load + unified status."""
     import asyncio
     message = safe_text(b.get("message",""))
     mode = b.get("mode","build").lower()
@@ -3261,6 +3267,21 @@ def serve_agent(self, b):
     
     if mode not in ("ask","plan","build"):
         mode = "build"
+    
+    # Dynamic key status using the single source of truth
+    status = ai_key_status(keys)
+    if not status.get('ready'):
+        self.send_response(200)
+        self.send_header("Content-Type","text/event-stream")
+        self.send_header("Cache-Control","no-cache")
+        self.send_header("Access-Control-Allow-Origin","*")
+        self.send_header("X-Accel-Buffering","no")
+        self.end_headers()
+        try:
+            self.wfile.write(_sse_event({"type":"error","content": status.get('label','No AI API key configured. Add keys in Settings.') + ' Open Settings to add OpenRouter or OpenAI key.'}).encode())
+            self.wfile.flush()
+        except: pass
+        return
     
     self.send_response(200)
     self.send_header("Content-Type","text/event-stream")
@@ -3329,6 +3350,96 @@ def delete_artifact(self, aid: str):
         try: os.remove(f)
         except: pass
     self._json({"ok":True})
+
+def export_artifacts(self, b):
+    """POST /api/agent/export — export artifacts to local disk + optional zip download."""
+    import zipfile, io
+    from datetime import datetime
+    ids = b.get('ids') or []
+    do_zip = bool(b.get('zip', False))
+    to_disk = b.get('to_disk', True)
+    ts = datetime.now().strftime('%Y%m%d-%H%M%S')
+    base_name = f"chinna-export-{ts}"
+    export_root = os.path.join(HOME, 'ChinnaExports')
+    export_dir = os.path.join(export_root, base_name)
+    os.makedirs(export_dir, exist_ok=True)
+
+    selected = []
+    if ids:
+        for aid in ids:
+            mf = os.path.join(ARTIFACTS_DIR, f"{aid}.json")
+            if os.path.exists(mf):
+                try:
+                    m = json.load(open(mf))
+                    selected.append((aid, m))
+                except: pass
+    else:
+        # all recent
+        for mf in sorted(_glob.glob(os.path.join(ARTIFACTS_DIR, "*.json")), reverse=True)[:30]:
+            try:
+                m = json.load(open(mf))
+                aid = os.path.splitext(os.path.basename(mf))[0]
+                selected.append((aid, m))
+            except: pass
+
+    written = []
+    for aid, meta in selected:
+        try:
+            src = os.path.join(ARTIFACTS_DIR, meta.get("file",""))
+            if os.path.exists(src):
+                dest_name = meta.get("name", aid) or aid
+                if not os.path.splitext(dest_name)[1]:
+                    dest_name += "." + (meta.get("lang","txt") or "txt")
+                dest = os.path.join(export_dir, dest_name)
+                _shutil.copy2(src, dest)
+                written.append({"id":aid, "name":dest_name, "path":dest})
+                # also meta
+                with open(os.path.join(export_dir, f".{aid}.meta.json"), "w") as mf: json.dump(meta, mf, indent=2)
+        except Exception as ex:
+            written.append({"id":aid, "error":str(ex)})
+
+    zip_path = None
+    if do_zip and written:
+        zip_path = os.path.join(export_root, base_name + ".zip")
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for w in written:
+                if 'path' in w and os.path.exists(w['path']):
+                    zf.write(w['path'], arcname=os.path.basename(w['path']))
+            # include metas
+            for mf in _glob.glob(os.path.join(export_dir, ".*.meta.json")):
+                zf.write(mf, arcname=os.path.basename(mf))
+        # also copy zip to export_dir for convenience
+        try: _shutil.copy2(zip_path, os.path.join(export_dir, base_name+".zip"))
+        except: pass
+
+    result = {
+        "ok": True,
+        "export_dir": export_dir,
+        "count": len([x for x in written if 'path' in x]),
+        "files": written,
+        "zip_path": zip_path,
+        "message": f"Exported to {export_dir}"
+    }
+    if do_zip and zip_path:
+        result["zip_download"] = f"/api/agent/export/download?file={os.path.basename(zip_path)}"
+    self._json(result)
+
+def serve_export_download(self, q):
+    """Serve a previously generated zip for direct download."""
+    import os as _os
+    fname = q.get('file','')
+    if not fname or '..' in fname or '/' in fname: 
+        self._json({"error":"bad file"},400); return
+    fpath = os.path.join(HOME, 'ChinnaExports', fname)
+    if not os.path.exists(fpath):
+        self._json({"error":"not found"},404); return
+    data = open(fpath,'rb').read()
+    self.send_response(200)
+    self.send_header("Content-Type", "application/zip")
+    self.send_header("Content-Disposition", f'attachment; filename="{fname}"')
+    self.send_header("Content-Length", str(len(data)))
+    self.end_headers()
+    self.wfile.write(data)
 
 def exec_shell_direct(self, b):
     """POST /api/shell — direct shell exec (bash or python)."""

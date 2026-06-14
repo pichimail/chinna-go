@@ -1,0 +1,19 @@
+[     116ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:blank:0
+[     364ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://127.0.0.1:7777/#settings:0
+[     365ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://127.0.0.1:7777/#settings:0
+[     365ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://127.0.0.1:7777/#settings:0
+[     365ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://127.0.0.1:7777/#settings:0
+[  122646ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ http://127.0.0.1:7777/api/stats:0
+[  134971ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:7777/api/stats:0
+[  134971ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:7777/api/stats:0
+[  136365ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:7777/api/stats:0
+[  138368ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:7777/api/stats:0
+[  386364ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:7777/api/stats:0
+[  386901ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:7777/api/stats:0
+[  752662ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ http://127.0.0.1:7777/api/stats:0
+[  768189ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ http://127.0.0.1:7777/api/stats:0
+[  776611ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ http://127.0.0.1:7777/api/stats:0
+[  778622ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ http://127.0.0.1:7777/api/stats:0
+[  783744ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ http://127.0.0.1:7777/api/stats:0
+[ 1473679ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:7777/api/stats:0
+[ 1474384ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:7777/api/stats:0
