@@ -599,13 +599,14 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
   </aside>
   <main id="center">
   <!-- Top floating command bar (clean shadcn-style, no slop: subtle border, functional, reuses existing styles/vars) -->
-  <div id="top-command-bar" class="surface" style="position:fixed; top:8px; left:calc(var(--sidebar-w) + 8px); right:8px; z-index:450; display:flex; align-items:center; gap:8px; padding:4px 10px; height:32px; backdrop-filter:blur(8px);">
+  <div id="top-command-bar" class="surface" role="toolbar" aria-label="Global commands and search" style="position:fixed; top:8px; left:calc(var(--sidebar-w) + 8px); right:8px; z-index:450; display:flex; align-items:center; gap:8px; padding:4px 10px; height:32px; backdrop-filter:blur(8px);">
     <input id="top-search" placeholder="Search commands or views (Ctrl+K)" style="flex:1; background:var(--s1); border:1px solid var(--line2); border-radius:var(--r); padding:2px 8px; font-size:12px; color:var(--t1);" onfocus="if(window.showCommandPalette) window.showCommandPalette(); this.blur();">
     <button class="bigbtn smallbtn" onclick="go('agent')" title="New Agent session" style="font-size:11px; padding:2px 8px;">+ Agent</button>
     <button class="bigbtn smallbtn" onclick="confirmAction('clean')" title="Quick Clean" style="font-size:11px; padding:2px 8px;">🧹 Clean</button>
     <button class="bigbtn smallbtn" onclick="go('doctor')" title="Doctor" style="font-size:11px; padding:2px 8px;">🩺 Doctor</button>
     <span id="top-model-pill" onclick="go('models')" style="font-size:10px; padding:2px 6px; background:var(--s2); border:1px solid var(--line); border-radius:4px; cursor:pointer; white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis;" title="Click to change model">model</span>
     <button class="bigbtn smallbtn" onclick="if(window.showShortcuts) window.showShortcuts();" title="Shortcuts (?)" style="font-size:11px; padding:2px 6px;">?</button>
+    <button class="bigbtn smallbtn" onclick="toggleFloatSidebar()" title="Float/Dock sidebar" aria-label="Toggle floating mode for the sidebar" style="font-size:11px; padding:2px 6px;">⇆</button>
   </div>
 <div class="view" id="view-agent">
   <!-- v0.app / emergent style advanced conversational app builder header -->
@@ -715,7 +716,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <button class="av0-mini" onclick="agentRefreshPreview()" title="Refresh preview">↻</button>
           <button class="av0-mini" onclick="agentOpenPreviewNewTab()" title="Open in new tab">⤢</button>
           <button class="av0-mini" onclick="agentDownloadCurrent()" title="Download">↓</button>
-          <button class="av0-mini" onclick="if(window.createFloatingSurface){ const p=document.getElementById('wsPreview'); window.createFloatingSurface('agent-preview', p ? p.outerHTML : '', {title:'Agent Preview', x:200, y:100, w:480, h:320}); }" title="Float preview as surface">⤴</button>
+          <button class="av0-mini" onclick="if(window.createFloatingSurface){ const p=document.getElementById('wsPreview'); window.createFloatingSurface('agent-preview', p ? p.outerHTML : '', {title:'Agent Preview', x:200, y:100, w:480, h:320}); }" title="Float preview as surface" aria-label="Float this preview pane as a movable surface">⤴</button>
           <button class="av0-mini danger" onclick="agentClearCurrentPreview()" title="Clear current">✕</button>
         </div>
       </div>
@@ -922,7 +923,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
       <button class="av0-mini" onclick="addQuickWebView()" title="Add new web view">+ Add</button>
       <button class="av0-mini" onclick="go('settings')" title="Manage all in Settings">Manage</button>
       <button class="av0-mini" onclick="resetToDefaults()" title="Reset to default widgets">↺ Defaults</button>
-      <button class="av0-mini" onclick="if(window.createFloatingSurface && window.customViews && window.customViews[0]){ window.createFloatingSurface('web-'+window.customViews[0].id, '<iframe src=&quot;'+window.customViews[0].url+'&quot; style=&quot;width:100%;height:100%;border:none;&quot;></iframe>', {title:window.customViews[0].name, x:150, y:80, w:600, h:400}); }" title="Float first web view">⤴ Float</button>
+      <button class="av0-mini" onclick="if(window.createFloatingSurface && window.customViews && window.customViews[0]){ window.createFloatingSurface('web-'+window.customViews[0].id, '<iframe src=&quot;'+window.customViews[0].url+'&quot; style=&quot;width:100%;height:100%;border:none;&quot;></iframe>', {title:window.customViews[0].name, x:150, y:80, w:600, h:400}); }" title="Float first web view" aria-label="Float the first web view as a movable surface">⤴ Float</button>
     </div>
   </div>
 
@@ -1072,7 +1073,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
   <div id="ov-extra"></div>
 </div></div>
 <div class="view" id="view-processes"><div class="vhead"><h2>Processes</h2><span class="sub">Top memory consumers · live</span></div>
-        <div class="vbody"><div class="list" id="proc-list"></div></div>
+        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="list" id="proc-list"></div></div></div>
       
 
       <!-- NETWORK --></div>
@@ -1485,6 +1486,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
         <div class="vbody">
           <div class="settings-shell pro-settings">
             <main class="settings-scroll">
+              <div class="surface" style="padding:4px; margin-bottom:8px;">
               <section class="settings-card settings-main">
                 <div class="settings-card-head">
                   <div>
@@ -1522,6 +1524,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
               </section>
 
               <!-- v6.8: Dynamic full-window web embeds / iframes manager (minimal + powerful) -->
+              <div class="surface" style="padding:4px; margin-bottom:8px;">
               <section class="settings-card" id="web-embeds-card">
                 <div class="settings-card-head">
                   <div>
@@ -1542,6 +1545,8 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 
                 <div class="settings-note">Tip: After adding, use the Web Views sidebar entry (or sub menu) to open. Fullscreen and Dock controls are in the view header.</div>
               </section>
+              </div>
+              <div class="sep"></div>
 
               <section class="settings-card settings-install">
                 <div class="settings-card-head">
@@ -7351,6 +7356,7 @@ window.chinnaAddWebView = (name, url) => {
         <div><b>1</b>–<b>8</b></div><div>Quick nav to common sections</div>
         <div><b>Esc</b></div><div>Return to bento grid from full iframe</div>
         <div><b>Arrows+Enter</b></div><div>Navigate bento cards (in Web view)</div>
+        <div><b>New UI</b></div><div>Top floating bar, .surface panels, resizable (drag handles), float pop buttons, #workspace for floats</div>
       </div>
       <div style="margin-top:10px;font-size:10.5px;color:var(--t4);">Ignored while typing in inputs. More web-specific keys active when the Web view is open.</div>
     `;
@@ -7535,7 +7541,18 @@ window.chinnaAddWebView = (name, url) => {
 
   // Hook go + init
   const _g = window.go;
-  window.go = v => { if(_g) _g(v); setTimeout(()=>{ initRedesignResizers(); },50); };
+  window.go = v => { 
+    if(_g) _g(v); 
+    setTimeout(()=>{ 
+      initRedesignResizers(); 
+      const ws = document.getElementById('workspace');
+      if (ws) {
+        ws.style.position = 'relative';
+        const activeView = document.querySelector('.view.on');
+        if (activeView) activeView.style.position = 'relative';
+      }
+    },50); 
+  };
 
   async function initRedesign() {
     await loadUILayout();
@@ -7548,6 +7565,7 @@ window.chinnaAddWebView = (name, url) => {
     document.querySelectorAll('#view-agent .av0-chat, #view-agent .av0-workspace, #web-bento .web-card, #sidebar').forEach(el=>el.classList.add('surface'));
     // Top bar model sync (upgrade, reuse existing model logic)
     syncTopModelPill();
+    syncSidebarWidthVar();
     // Auto-apply persisted floats (complete the floats array support)
     if (currentLayout.floats && Array.isArray(currentLayout.floats)) {
       currentLayout.floats.forEach(f => {
@@ -7569,10 +7587,52 @@ window.chinnaAddWebView = (name, url) => {
       observer.observe(sidePill, { childList: true, characterData: true });
       topPill.textContent = sidePill.textContent || 'model';
     }
-    // Also sync on model change if API
-    if (topPill) {
-      // On click already goes to models
+  }
+
+  function syncSidebarWidthVar() {
+    const app = document.getElementById('app');
+    const sb = document.getElementById('sidebar');
+    if (!app || !sb) return;
+    const update = () => {
+      const w = app.classList.contains('sidebar-collapsed') ? 54 : sb.offsetWidth;
+      document.documentElement.style.setProperty('--sidebar-w', w + 'px');
+    };
+    update();
+    // Observe class change on #app for collapse
+    const obs = new MutationObserver(update);
+    obs.observe(app, {attributes: true, attributeFilter: ['class']});
+    // Also on resize of sb
+    if (window.ResizeObserver) {
+      new ResizeObserver(update).observe(sb);
     }
+  }
+
+  function toggleFloatSidebar() {
+    const sb = document.getElementById('sidebar');
+    if (!sb) return;
+    if (sb.classList.contains('floating')) {
+      // Dock it back
+      sb.classList.remove('floating');
+      sb.style.position = '';
+      sb.style.left = '';
+      sb.style.top = '';
+      sb.style.width = '';
+      sb.style.zIndex = '';
+      // Restore original via class or var
+      document.getElementById('app').classList.remove('sidebar-collapsed'); // ensure visible
+    } else {
+      // Float it
+      sb.classList.add('floating');
+      sb.style.position = 'absolute';
+      sb.style.left = '20px';
+      sb.style.top = '60px';
+      sb.style.width = '220px';
+      sb.style.zIndex = '100';
+      sb.style.background = 'var(--s0)';
+      sb.style.border = '1px solid var(--line2)';
+      sb.style.boxShadow = '0 4px 16px rgba(0,0,0,.3)';
+    }
+    saveUILayout({sidebar_floating: sb.classList.contains('floating')});
   }
 
   // Enhance sidebar width sync to CSS var for top bar calc to follow (when resizer runs)
