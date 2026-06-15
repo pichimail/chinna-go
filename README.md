@@ -157,3 +157,5 @@ Local. Private. Powerful. Yours.
 Run the installer. Open the dashboard. Try the Agent. Add a couple of web views.
 
 Then never think about "where do I put that one-off tool" again.
+
+**UI Redesign (v6.8+)**: Floating shadcn-style surfaces (clean borders, subtle elevation, no slop), sleek separators, resizable panels (generalized drag handles with persistence), top floating command bar, pop-to-float for panes (Agent preview, Web views, etc.), #workspace for composable floats. All original features preserved via upgrade/merge. Press ? for shortcuts; drag resizers; use ⤴ to float.

@@ -607,6 +607,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
     <span id="top-model-pill" onclick="go('models')" style="font-size:10px; padding:2px 6px; background:var(--s2); border:1px solid var(--line); border-radius:4px; cursor:pointer; white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis;" title="Click to change model">model</span>
     <button class="bigbtn smallbtn" onclick="if(window.showShortcuts) window.showShortcuts();" title="Shortcuts (?)" style="font-size:11px; padding:2px 6px;">?</button>
     <button class="bigbtn smallbtn" onclick="toggleFloatSidebar()" title="Float/Dock sidebar" aria-label="Toggle floating mode for the sidebar" style="font-size:11px; padding:2px 6px;">⇆</button>
+    <button class="bigbtn smallbtn" onclick="if(window.floatCurrentView) window.floatCurrentView();" title="Float current view as surface" style="font-size:11px; padding:2px 6px;">⤴</button>
   </div>
 <div class="view" id="view-agent">
   <!-- v0.app / emergent style advanced conversational app builder header -->
@@ -1078,7 +1079,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 
       <!-- NETWORK --></div>
 <div class="view" id="view-network"><div class="vhead"><h2>Network</h2><span class="sub">Listening ports &amp; connection</span></div>
-        <div class="vbody"><div class="outbox" id="net-out">Loading…</div></div>
+        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="outbox" id="net-out">Loading…</div></div></div>
       
 
       <!-- FILE MANAGER --></div>
@@ -1105,7 +1106,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <div class="spacer" style="margin-left:auto"></div>
           <button type="button" class="bigbtn" id="dupe-del" style="display:none" onclick="confirmDeleteDupes()">Delete selected</button>
         </div>
-        <div class="vbody"><div class="list" id="dupe-list"><div class="empty"><div class="big">⧉</div>Click "Scan now" to find duplicates</div></div></div>
+        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="list" id="dupe-list"><div class="empty"><div class="big">⧉</div>Click "Scan now" to find duplicates</div></div></div></div>
       
 
       <!-- DISK EXPLORER --></div>
@@ -1117,7 +1118,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <div class="spacer"></div>
           <button type="button" class="bigbtn ghost smallbtn" id="stor-more" style="display:none" onclick="loadMoreStorage()">Load more</button>
         </div>
-        <div class="vbody"><div class="list" id="stor-list"></div></div>
+        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="list" id="stor-list"></div></div></div>
       
 
       <!-- APP UNINSTALLER --></div>
@@ -1126,7 +1127,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <div class="search">🔍<input id="app-q" placeholder="Filter apps…" oninput="renderApps()"></div>
           <span class="count" id="app-count"></span>
         </div>
-        <div class="vbody"><div class="list" id="app-list"></div></div>
+        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="list" id="app-list"></div></div></div>
       
 
       <!-- BATTERY --></div>
@@ -1140,7 +1141,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <button type="button" class="bigbtn" onclick="loadDoctor()">↻ Re-check</button>
           <button type="button" class="bigbtn" onclick="genReport()">📄 Export system report</button>
         </div>
-        <div class="vbody"><div class="outbox" id="doc-out">Loading…</div></div>
+        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="outbox" id="doc-out">Loading…</div></div></div>
       
 
       <!-- AI --></div>
@@ -1359,6 +1360,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
       <!-- MODELS AND AI CONFIG --></div>
 <div class="view" id="view-macos"><div class="vhead"><h2>macOS Tools</h2><span class="sub">Apple Music · System controls · Screen sharing</span></div>
         <div class="vbody">
+          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <div class="navlabel">Apple Music</div>
           <div class="panelgrid" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
             <button type="button" class="bigbtn" onclick="music('play')">▶ Play</button>
@@ -1390,9 +1392,10 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
             <button type="button" class="bigbtn" onclick="runAudit()">Run Audit</button>
           </div>
           <div class="outbox" id="audit-out" style="display:none"></div>
-        </div></div>
+        </div></div></div>
 <div class="view" id="view-models"><div class="vhead"><h2>Models &amp; AI</h2><span class="sub">Switch AI model · Automation mode</span></div>
         <div class="vbody">
+          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <div class="navlabel">Active Model</div>
           <div class="infocard" style="margin-bottom:14px">
             <div class="k">Currently using</div>
@@ -1417,7 +1420,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
             <button type="button" class="bigbtn" id="auto-btn" onclick="toggleAutomation()">Toggle</button>
           </div>
           <div style="font-size:11px;color:var(--t3);line-height:1.6">When ON, AI commands run without confirmation prompts.</div>
-        </div></div>
+        </div></div></div>
 <div class="view" id="view-projects"><div class="vhead">
           <h2>Tracked Projects</h2>
           <span class="sub">From chinna run + registry</span>
@@ -1449,13 +1452,14 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
               <button type="button" class="miniA" onclick="setAgeFilter('older')" id="age-older">Older</button>
             </div>
           </div>
-          <div id="projects-list" class="list" style="padding:0 18px"></div>
+          <div class="surface" style="padding:4px;"><div class="sep"></div><div id="projects-list" class="list" style="padding:0 18px"></div></div>
         </div>
       
 
       <!-- SETTINGS --></div>
 <div class="view" id="view-onboarding"><div class="vhead"><h2>Get Started</h2><span class="sub">Install, menu actions, theme, and first run</span></div>
         <div class="vbody launchpad">
+          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <section class="launch-main">
             <div class="settings-kicker">First run</div>
             <h3>Set up the Mac wrapper and menu actions.</h3>
@@ -1481,7 +1485,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
             <div class="rail-item"><b>Dashboard</b><span>http://localhost:7777</span></div>
             <div class="rail-item"><b>Update command</b><span>chinna update</span></div>
           </aside>
-        </div></div>
+        </div></div></div>
 <div class="view" id="view-settings"><div class="vhead"><h2>Settings</h2><span class="sub">Local keys, installs, and version updates</span></div>
         <div class="vbody">
           <div class="settings-shell pro-settings">
@@ -7491,10 +7495,14 @@ window.chinnaAddWebView = (name, url) => {
 
   function makeResizable(handle, target, {min=120, max=700, axis='x', onChange} = {}) {
     if (!handle || !target) return;
+    handle.setAttribute('role', 'separator');
+    handle.setAttribute('aria-orientation', axis === 'x' ? 'vertical' : 'horizontal');
+    handle.setAttribute('aria-label', 'Resize panel');
     let drag=false, sx=0, ss=0;
     handle.addEventListener('pointerdown', e => {
       drag=true; sx = axis==='x'?e.clientX:e.clientY; ss=axis==='x'?target.offsetWidth:target.offsetHeight;
       handle.classList.add('dragging'); document.body.style.userSelect='none'; document.body.style.cursor=axis==='x'?'col-resize':'row-resize';
+      handle.setAttribute('aria-valuenow', ss);
     });
     window.addEventListener('pointermove', e => {
       if(!drag) return;
@@ -7645,6 +7653,14 @@ window.chinnaAddWebView = (name, url) => {
   (document.readyState==='complete'||document.readyState==='interactive') ? setTimeout(initRedesign,100) : document.addEventListener('DOMContentLoaded',()=>setTimeout(initRedesign,100));
 
   window.initRedesign = initRedesign; // debug
+
+  window.floatCurrentView = function() {
+    const active = document.querySelector('.view.on');
+    if (!active) return;
+    const id = active.id.replace('view-','');
+    const html = active.innerHTML; // clone for float; for live complex use dedicated pop
+    window.createFloatingSurface('float-view-' + id, html, {title: id.charAt(0).toUpperCase() + id.slice(1), x: 80, y: 60, w: 700, h: 500});
+  };
 })();
 </script>
 </body>
