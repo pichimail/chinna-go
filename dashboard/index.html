@@ -598,6 +598,15 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
     </div>
   </aside>
   <main id="center">
+  <!-- Top floating command bar (clean shadcn-style, no slop: subtle border, functional, reuses existing styles/vars) -->
+  <div id="top-command-bar" class="surface" style="position:fixed; top:8px; left:calc(var(--sidebar-w) + 8px); right:8px; z-index:450; display:flex; align-items:center; gap:8px; padding:4px 10px; height:32px; backdrop-filter:blur(8px);">
+    <input id="top-search" placeholder="Search commands or views (Ctrl+K)" style="flex:1; background:var(--s1); border:1px solid var(--line2); border-radius:var(--r); padding:2px 8px; font-size:12px; color:var(--t1);" onfocus="if(window.showCommandPalette) window.showCommandPalette(); this.blur();">
+    <button class="bigbtn smallbtn" onclick="go('agent')" title="New Agent session" style="font-size:11px; padding:2px 8px;">+ Agent</button>
+    <button class="bigbtn smallbtn" onclick="confirmAction('clean')" title="Quick Clean" style="font-size:11px; padding:2px 8px;">🧹 Clean</button>
+    <button class="bigbtn smallbtn" onclick="go('doctor')" title="Doctor" style="font-size:11px; padding:2px 8px;">🩺 Doctor</button>
+    <span id="top-model-pill" onclick="go('models')" style="font-size:10px; padding:2px 6px; background:var(--s2); border:1px solid var(--line); border-radius:4px; cursor:pointer; white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis;" title="Click to change model">model</span>
+    <button class="bigbtn smallbtn" onclick="if(window.showShortcuts) window.showShortcuts();" title="Shortcuts (?)" style="font-size:11px; padding:2px 6px;">?</button>
+  </div>
 <div class="view" id="view-agent">
   <!-- v0.app / emergent style advanced conversational app builder header -->
   <div class="agent-v0-header">
@@ -706,6 +715,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <button class="av0-mini" onclick="agentRefreshPreview()" title="Refresh preview">↻</button>
           <button class="av0-mini" onclick="agentOpenPreviewNewTab()" title="Open in new tab">⤢</button>
           <button class="av0-mini" onclick="agentDownloadCurrent()" title="Download">↓</button>
+          <button class="av0-mini" onclick="if(window.createFloatingSurface){ const p=document.getElementById('wsPreview'); window.createFloatingSurface('agent-preview', p ? p.outerHTML : '', {title:'Agent Preview', x:200, y:100, w:480, h:320}); }" title="Float preview as surface">⤴</button>
           <button class="av0-mini danger" onclick="agentClearCurrentPreview()" title="Clear current">✕</button>
         </div>
       </div>
@@ -912,6 +922,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
       <button class="av0-mini" onclick="addQuickWebView()" title="Add new web view">+ Add</button>
       <button class="av0-mini" onclick="go('settings')" title="Manage all in Settings">Manage</button>
       <button class="av0-mini" onclick="resetToDefaults()" title="Reset to default widgets">↺ Defaults</button>
+      <button class="av0-mini" onclick="if(window.createFloatingSurface && window.customViews && window.customViews[0]){ window.createFloatingSurface('web-'+window.customViews[0].id, '<iframe src=&quot;'+window.customViews[0].url+'&quot; style=&quot;width:100%;height:100%;border:none;&quot;></iframe>', {title:window.customViews[0].name, x:150, y:80, w:600, h:400}); }" title="Float first web view">⤴ Float</button>
     </div>
   </div>
 
@@ -1033,6 +1044,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
   <span class="sub">System vitals at a glance · live</span>
 </div>
 <div class="vbody">
+  <div class="surface" style="padding:8px; margin-bottom:8px;">
   <div class="ov-hero">
     <div class="ov-stat cpu">
       <div class="ov-stat-top"><span class="ov-stat-label">CPU</span><span style="font-size:18px">⚡</span></div>
@@ -1055,6 +1067,8 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
       <canvas class="ov-spark" id="spark-batt"></canvas>
     </div>
   </div>
+  </div>
+  <div class="sep"></div>
   <div id="ov-extra"></div>
 </div></div>
 <div class="view" id="view-processes"><div class="vhead"><h2>Processes</h2><span class="sub">Top memory consumers · live</span></div>
@@ -1079,7 +1093,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           </select>
           <span class="count" id="file-count"></span>
         </div>
-        <div class="vbody"><div class="list" id="file-list"></div></div>
+        <div class="vbody"><div class="surface" style="padding:4px;"><div class="list" id="file-list"></div></div></div>
       
 
       <!-- DUPLICATES --></div>
@@ -7494,7 +7508,7 @@ window.chinnaAddWebView = (name, url) => {
 
   function initRedesignResizers() {
     // Sidebar (complete wiring)
-    makeResizable(document.getElementById('sidebarResize'), document.getElementById('sidebar'), {min:120,max:420,axis:'x'});
+    makeResizable(document.getElementById('sidebarResize'), document.getElementById('sidebar'), {min:120,max:420,axis:'x', onChange: w => document.documentElement.style.setProperty('--sidebar-w', w + 'px') });
     // Agent (enhance)
     makeResizable(document.getElementById('agentResizer'), document.querySelector('#view-agent .av0-chat'), {min:200,max:650,axis:'x', onChange:w=>saveUILayout({agent_chat_w:w})});
     // Chatx if present
@@ -7531,9 +7545,42 @@ window.chinnaAddWebView = (name, url) => {
     }
     initRedesignResizers();
     // Light upgrade: mark existing panes as surfaces (no removal)
-    document.querySelectorAll('#view-agent .av0-chat, #view-agent .av0-workspace, #web-bento .web-card').forEach(el=>el.classList.add('surface'));
+    document.querySelectorAll('#view-agent .av0-chat, #view-agent .av0-workspace, #web-bento .web-card, #sidebar').forEach(el=>el.classList.add('surface'));
+    // Top bar model sync (upgrade, reuse existing model logic)
+    syncTopModelPill();
+    // Auto-apply persisted floats (complete the floats array support)
+    if (currentLayout.floats && Array.isArray(currentLayout.floats)) {
+      currentLayout.floats.forEach(f => {
+        if (window.createFloatingSurface) {
+          // Recreate basic float (title only; complex content re-init on demand)
+          window.createFloatingSurface(f.id || 'restored', '', {title: f.title || 'Restored', x: f.x||120, y:f.y||120, w:f.w||400, h:f.h||280});
+        }
+      });
+    }
     // Auto-apply some floats on demand via createFloatingSurface in future calls
   }
+
+  function syncTopModelPill() {
+    const topPill = document.getElementById('top-model-pill');
+    const sidePill = document.getElementById('sidebarModelName');
+    if (topPill && sidePill) {
+      // Mirror the sidebar model name
+      const observer = new MutationObserver(() => { topPill.textContent = sidePill.textContent || 'model'; });
+      observer.observe(sidePill, { childList: true, characterData: true });
+      topPill.textContent = sidePill.textContent || 'model';
+    }
+    // Also sync on model change if API
+    if (topPill) {
+      // On click already goes to models
+    }
+  }
+
+  // Enhance sidebar width sync to CSS var for top bar calc to follow (when resizer runs)
+  const origMake = window.makeResizable || makeResizable;
+  // (the makeResizable is local in scope, so we update the call site below if needed; for now, in resizer stop we set var)
+  // In practice, the resizer for sidebar will now also:
+  // After the existing, in stop we can add:
+  // document.documentElement.style.setProperty('--sidebar-w', target.offsetWidth + 'px');
 
   (document.readyState==='complete'||document.readyState==='interactive') ? setTimeout(initRedesign,100) : document.addEventListener('DOMContentLoaded',()=>setTimeout(initRedesign,100));
 
