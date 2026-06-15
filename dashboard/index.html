@@ -913,73 +913,234 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 }
 </style>
 <div class="view" id="view-web">
-  <!-- Bento Grid Header -->
-  <div class="web-bento-header">
-    <div class="web-bento-title">
-      <span class="wh-ic">🌐</span>
-      <span>Web Views</span>
-      <span class="web-count" id="web-bento-count"></span>
+  <!-- Fresh stunning Bento header (restrained, floats with subtle outline) -->
+  <div class="webv-header surface">
+    <div class="webv-head-left">
+      <div class="webv-brand">
+        <span class="webv-ic">🌐</span>
+        <div>
+          <div class="webv-title">Web Views</div>
+          <div class="webv-sub">Full-window embeds • bento • float anywhere</div>
+        </div>
+      </div>
+      <div class="webv-count" id="webv-count"></div>
     </div>
-    <div class="web-bento-actions">
-      <button class="av0-mini" onclick="addQuickWebView()" title="Add new web view">+ Add</button>
-      <button class="av0-mini" onclick="go('settings')" title="Manage all in Settings">Manage</button>
-      <button class="av0-mini" onclick="resetToDefaults()" title="Reset to default widgets">↺ Defaults</button>
-      <button class="av0-mini" onclick="if(window.createFloatingSurface && window.customViews && window.customViews[0]){ window.createFloatingSurface('web-'+window.customViews[0].id, '<iframe src=&quot;'+window.customViews[0].url+'&quot; style=&quot;width:100%;height:100%;border:none;&quot;></iframe>', {title:window.customViews[0].name, x:150, y:80, w:600, h:400}); }" title="Float first web view" aria-label="Float the first web view as a movable surface">⤴ Float</button>
+
+    <div class="webv-search">
+      <input id="webv-search" type="text" placeholder="Filter views (⌘K)" oninput="filterBento()" />
+    </div>
+
+    <div class="webv-actions">
+      <button class="webv-btn" onclick="addWebViewFromBento()" title="Add new web view">＋ Add</button>
+      <button class="webv-btn" onclick="go('settings')" title="Manage in Settings">Manage</button>
+      <button class="webv-btn" onclick="resetToDefaults()" title="Restore defaults">↺</button>
+      <button class="webv-btn" onclick="floatFirstWebView()" title="Float first view">⤴</button>
     </div>
   </div>
 
-  <!-- BENTO GRID STYLE -->
-  <div id="web-bento" class="web-bento"></div>
+  <!-- Stage: Bento grid + immersive full view live in the same space -->
+  <div id="webv-stage" class="webv-stage">
+    <!-- BENTO GRID -->
+    <div id="webv-bento" class="webv-bento" role="grid" aria-label="Web view bento grid"></div>
 
-  <!-- FULL IFRAME VIEW -->
-  <div id="web-full" style="display:none; flex:1; flex-direction:column; min-height:0;">
-    <div class="web-full-bar">
-      <button class="web-back-btn" onclick="backToBento()" title="Back to bento grid (Esc)">
-        ⊞ <span class="web-back-label">Grid</span>
-      </button>
-      <span class="web-full-name" id="web-full-name"></span>
-      <div class="web-full-actions">
-        <button class="av0-mini" onclick="webFullscreen()" title="Fullscreen">⤢</button>
-        <button class="av0-mini" onclick="webNormal()" title="Back to normal">⌂</button>
-        <button class="av0-mini" onclick="editCurrentWebView()" title="Edit">✎</button>
-        <button class="av0-mini" onclick="window.open(document.getElementById('webFrame').src, '_blank')" title="Open in new tab">↗</button>
-        <button class="av0-mini danger" onclick="deleteCurrentWebView()" title="Remove">×</button>
+    <!-- FULL IMMERSIVE VIEW (replaces grid visually when active) -->
+    <div id="webv-full" class="webv-full" style="display:none;">
+      <div class="webv-toolbar">
+        <button class="webv-back" onclick="backToBento()" title="Back to grid (Esc)">
+          <span>←</span> <span class="lbl">Grid</span>
+        </button>
+
+        <div class="webv-titlebar">
+          <span id="webv-full-name" class="webv-full-name"></span>
+          <span id="webv-full-domain" class="webv-full-domain"></span>
+        </div>
+
+        <div class="webv-tbar-actions">
+          <button class="webv-icbtn" onclick="refreshCurrentWeb()" title="Refresh">↻</button>
+          <button class="webv-icbtn" onclick="openCurrentNewTab()" title="Open in new tab">↗</button>
+          <button class="webv-icbtn" onclick="editCurrentWebView()" title="Edit">✎</button>
+          <button class="webv-icbtn" onclick="floatCurrentWebView()" title="Float as surface">⤴</button>
+          <button class="webv-icbtn" onclick="webvFullscreen()" title="Fullscreen">⤢</button>
+          <button class="webv-icbtn danger" onclick="deleteCurrentWebView()" title="Remove">×</button>
+          <button class="webv-icbtn" onclick="backToBento()" title="Close">Esc</button>
+        </div>
+      </div>
+
+      <div class="webv-iframe-wrap">
+        <iframe id="webv-frame" 
+                style="position:absolute;inset:0;width:100%;height:100%;border:none;background:#fff;"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation-by-user-activation"></iframe>
+        <div id="webv-frame-empty" class="webv-frame-empty" style="display:none;">
+          <div>Site may block embedding (X-Frame-Options).<br>Try "Open in new tab".</div>
+        </div>
+      </div>
+
+      <div class="webv-status">
+        <span>Press <kbd>Esc</kbd> to return to grid • All sessions stay local</span>
       </div>
     </div>
-    <div style="flex:1; position:relative; background:#000; overflow:hidden;">
-      <iframe id="webFrame" style="position:absolute; inset:0; width:100%; height:100%; border:none; background:#fff;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
-    </div>
-  </div>
-
-  <div class="web-foot">
-    <span>Click any widget to open full view. Some sites block embedding (X-Frame). Use + Add for your own. All editable. Keyboard: arrows + Enter in grid, Esc to go back.</span>
   </div>
 </div>
 
 <style>
-.web-bento-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--s1);flex-shrink:0;gap:12px}
-.web-bento-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
-.web-bento-title .wh-ic{font-size:16px}
-.web-count{font-size:10px;font-weight:600;padding:1px 6px;background:var(--acc-bg);color:var(--acc);border-radius:99px;border:1px solid var(--acc-bd)}
-.web-bento-actions{display:flex;align-items:center;gap:5px}
-.web-bento{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;padding:14px;overflow-y:auto;flex:1;background:var(--bg)}
-.web-card{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;transition:transform .15s ease, box-shadow .15s ease, border-color .15s; display:flex; flex-direction:column; gap:6px; min-height:92px}
-.web-card:hover{transform:translateY(-3px) scale(1.01); box-shadow:0 10px 25px rgba(0,0,0,.35); border-color:var(--acc)}
-.web-card.selected{border-color:var(--acc); box-shadow:0 0 0 2px rgba(186,255,41,.25)}
-.web-card .wc-name{font-weight:700;font-size:13px;color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.web-card .wc-url{font-size:10px;color:var(--t3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-family:var(--font-mono)}
-.web-card .wc-meta{font-size:9px;color:var(--t4); margin-top:auto; display:flex; align-items:center; gap:4px}
-.web-card .wc-icon{font-size:15px; opacity:.7}
-.web-full-bar{display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--s1);flex-shrink:0}
-.web-back-btn{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:var(--s2);border:1px solid var(--line);color:var(--t1);font-size:12px;font-weight:600;cursor:pointer;transition:all .1s}
-.web-back-btn:hover{background:var(--acc);color:#06120a;border-color:var(--acc)}
-.web-full-name{font-weight:600;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--t2)}
-.web-full-actions{display:flex;gap:4px}
-.web-foot{padding:5px 12px;font-size:10px;color:var(--t4);border-top:1px solid var(--line);background:var(--bg);flex-shrink:0}
+/* === FRESH BENTO REDESIGN (from scratch, restrained, full height, sleek float outlines) === */
+.webv-header{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:10px 16px; flex-shrink:0; border-bottom:1px solid var(--line);
+  background:var(--s0);
+}
+.webv-head-left{display:flex; align-items:center; gap:12px;}
+.webv-brand{display:flex; align-items:center; gap:10px;}
+.webv-ic{font-size:20px; line-height:1;}
+.webv-title{font-size:15px; font-weight:700; letter-spacing:-0.2px;}
+.webv-sub{font-size:10px; color:var(--t3); margin-top:-1px;}
+.webv-count{
+  font-size:10px; font-weight:700; padding:2px 9px; border-radius:999px;
+  background:var(--acc-bg); color:var(--acc); border:1px solid var(--acc-bd);
+  flex-shrink:0;
+}
 
-/* Smooth transitions */
-#web-bento, #web-full { transition: opacity .18s ease, transform .18s ease; }
-.web-card { transition: transform .15s cubic-bezier(.2,.9,.3,1.1), box-shadow .15s, border-color .15s; }
+.webv-search{
+  flex:1; max-width:260px;
+}
+.webv-search input{
+  width:100%; background:var(--s1); border:1px solid var(--line2); border-radius:8px;
+  padding:6px 11px; font-size:12px; color:var(--t1); font-family:var(--font);
+}
+.webv-search input:focus{border-color:var(--acc); outline:none;}
+
+.webv-actions{display:flex; align-items:center; gap:4px;}
+.webv-btn{
+  font-size:11px; font-weight:600; padding:5px 10px; border-radius:7px;
+  background:var(--s1); border:1px solid var(--line2); color:var(--t1);
+  cursor:pointer; transition:all .1s; font-family:var(--font);
+}
+.webv-btn:hover{background:var(--s2); border-color:var(--line3);}
+.webv-icbtn{
+  width:28px; height:28px; display:grid; place-items:center;
+  background:var(--s1); border:1px solid var(--line2); border-radius:6px;
+  color:var(--t2); cursor:pointer; font-size:13px; transition:all .1s;
+}
+.webv-icbtn:hover{background:var(--s2); color:var(--t1); border-color:var(--line3);}
+.webv-icbtn.danger:hover{border-color:#f87171; color:#f87171;}
+
+.webv-stage{
+  flex:1; min-height:0; position:relative; overflow:hidden;
+  display:flex; flex-direction:column;
+}
+
+/* Amazing Bento Grid */
+.webv-bento{
+  flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(168px, 1fr));
+  gap:12px; padding:16px; align-content:start;
+  background:var(--bg);
+}
+
+/* Sleek floating cards with subtle outlines */
+.webv-card{
+  background:var(--s1);
+  border:1px solid var(--line2);
+  border-radius:14px;
+  padding:14px 14px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  min-height:112px;
+  position:relative;
+  cursor:pointer;
+  transition:transform .16s cubic-bezier(.2,.9,.3,1), box-shadow .16s, border-color .12s;
+  box-shadow:0 1px 2px rgba(0,0,0,.1);
+}
+.webv-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 10px 28px rgba(0,0,0,.28);
+  border-color:var(--acc);
+}
+.webv-card.selected{
+  border-color:var(--acc);
+  box-shadow:0 0 0 3px rgba(186,255,41,.15);
+}
+.webv-card .wc-head{display:flex; align-items:center; gap:8px;}
+.webv-card .wc-icon{
+  width:26px; height:26px; border-radius:7px; background:var(--s2);
+  border:1px solid var(--line); display:grid; place-items:center; font-size:15px; flex-shrink:0;
+}
+.webv-card .wc-name{
+  font-weight:700; font-size:13px; color:var(--t1); line-height:1.25;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.webv-card .wc-domain{
+  font-size:10.5px; color:var(--t3); font-family:var(--font-mono);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.webv-card .wc-foot{
+  margin-top:auto; display:flex; align-items:center; justify-content:space-between;
+  font-size:9.5px; color:var(--t4);
+}
+.webv-card .wc-auth{
+  font-size:9px; padding:1px 5px; border-radius:4px; border:1px solid var(--line);
+}
+.webv-card .wc-auth.on{border-color:var(--acc-bd); color:var(--acc);}
+
+.webv-card.add{
+  border-style:dashed; border-color:var(--line3); background:transparent;
+  align-items:center; justify-content:center; text-align:center; min-height:112px;
+  color:var(--t2);
+}
+.webv-card.add:hover{
+  border-color:var(--acc); background:var(--s1); color:var(--t1);
+  transform:translateY(-1px);
+}
+.webv-card.add .bigplus{font-size:28px; line-height:1; margin-bottom:2px; opacity:.6;}
+.webv-card.add .lbl{font-size:11px; font-weight:600;}
+
+/* Immersive full view */
+.webv-full{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  background:var(--bg); z-index:2;
+}
+.webv-toolbar{
+  display:flex; align-items:center; gap:8px; padding:8px 12px;
+  background:var(--s0); border-bottom:1px solid var(--line); flex-shrink:0;
+}
+.webv-back{
+  display:flex; align-items:center; gap:6px; padding:5px 11px;
+  background:var(--s1); border:1px solid var(--line2); border-radius:8px;
+  color:var(--t1); font-size:12px; font-weight:600; cursor:pointer;
+}
+.webv-back:hover{background:var(--acc); color:#06120a; border-color:var(--acc);}
+.webv-titlebar{
+  flex:1; min-width:0; display:flex; align-items:baseline; gap:10px; overflow:hidden;
+}
+.webv-full-name{font-weight:700; font-size:13.5px; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.webv-full-domain{font-size:10.5px; color:var(--t3); font-family:var(--font-mono); opacity:.75;}
+
+.webv-tbar-actions{display:flex; gap:3px;}
+
+.webv-iframe-wrap{
+  flex:1; min-height:0; position:relative; background:#0a0a0c;
+  border:1px solid var(--line); margin:8px; border-radius:10px; overflow:hidden;
+  box-shadow:0 4px 20px rgba(0,0,0,.25);
+}
+.webv-iframe-wrap iframe{background:#fff;}
+
+.webv-frame-empty{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  color:var(--t3); font-size:12px; text-align:center; padding:20px; background:var(--s0);
+}
+
+.webv-status{
+  padding:4px 12px; font-size:9.5px; color:var(--t4); flex-shrink:0;
+  border-top:1px solid var(--line); background:var(--s0); text-align:center;
+}
+.webv-status kbd{
+  font-family:var(--font-mono); background:var(--s1); border:1px solid var(--line);
+  padding:1px 5px; border-radius:4px; font-size:9px;
+}
+
+/* Polish */
+.webv-bento::-webkit-scrollbar-thumb{background:var(--line3);}
 </style>
 
 <div class="view" id="view-forge"><div class="vhead">
@@ -7099,12 +7260,20 @@ function deleteWebView(id) {
   customViews = customViews.filter(x => x.id !== id);
   if (currentWebViewId === id) currentWebViewId = null;
   saveCustomViews();
-  // If currently viewing it, clear frame
+
+  // New bento full view cleanup
+  const newFrame = document.getElementById('webv-frame');
+  const full = document.getElementById('webv-full');
+  const grid = document.getElementById('webv-bento');
+  if (currentWebViewId === null && newFrame) {
+    newFrame.src = 'about:blank';
+    if (full) full.style.display = 'none';
+    if (grid) grid.style.display = 'grid';
+  }
+
+  // Legacy
   const f = document.getElementById('webFrame');
-  const e = document.getElementById('web-empty');
-  if (f && currentWebViewId === null) { f.src = 'about:blank'; if(e) e.style.display='flex'; }
-  const nameEl = document.getElementById('web-current-name');
-  if (nameEl && currentWebViewId === null) nameEl.textContent = 'Web View';
+  if (f && currentWebViewId === null) f.src = 'about:blank';
 }
 
 function deleteCurrentWebView() {
@@ -7126,6 +7295,24 @@ function loadWebView(id) {
   if (!v) return;
   currentWebViewId = id;
 
+  // New beautiful bento full view
+  const newFrame = document.getElementById('webv-frame');
+  if (newFrame) {
+    const full = document.getElementById('webv-full');
+    const grid = document.getElementById('webv-bento');
+    if (grid) grid.style.display = 'none';
+    if (full) full.style.display = 'flex';
+
+    const nameEl = document.getElementById('webv-full-name');
+    const domainEl = document.getElementById('webv-full-domain');
+    if (nameEl) nameEl.textContent = v.name || 'Web View';
+    if (domainEl) { try { domainEl.textContent = new URL(v.url).hostname; } catch(e){} }
+
+    newFrame.src = v.url;
+    return;
+  }
+
+  // Legacy fallback
   const frame = document.getElementById('webFrame');
   const empty = document.getElementById('web-empty');
   const nameEl = document.getElementById('web-current-name');
@@ -7224,21 +7411,35 @@ window.chinnaAddWebView = (name, url) => {
     }
   }
 
+  /* === NEW AMAZING BENTO REDESIGN (injected) === */
   function renderBento(){
     seedIfNeeded();
-    const c = document.getElementById('web-bento');
-    const cnt = document.getElementById('web-bento-count');
-    if(!c) return;
-    c.innerHTML = '';
+    const grid = document.getElementById('webv-bento');
+    const cnt = document.getElementById('webv-count');
+    if(!grid) return;
+    const list = (window.customViews||[]).filter(v => !filterTerm || (v.name||'').toLowerCase().includes(filterTerm.toLowerCase()) || (v.url||'').toLowerCase().includes(filterTerm.toLowerCase()));
     if(cnt) cnt.textContent = (window.customViews||[]).length;
-    (window.customViews||[]).forEach((v,i)=>{
+    grid.innerHTML = '';
+    list.forEach((v,i)=>{
       const card = document.createElement('div');
-      card.className='web-card';
-      card.innerHTML = `<div class="wc-name">${escHtml(v.name||'Untitled')}</div><div class="wc-url">${escHtml((v.url||'').replace(/^https?:\/\//,'').slice(0,40))}</div><div class="wc-meta"><span>🌐</span><span>${v.auth?'auth':'public'}</span></div>`;
-      card.onclick = ()=> showFull(v.id);
-      card.onmouseenter = ()=>{ window.selectedBentoIndex = i; highlightBento(); };
-      c.appendChild(card);
+      card.className='webv-card'; card.dataset.id = v.id;
+      const fav = (function(u){try{return 'https://www.google.com/s2/favicons?domain='+new URL(u).hostname+'&sz=32';}catch(e){return null;}})(v.url);
+      const ic = fav ? `<img src="${fav}" width="18" height="18" style="border-radius:4px" onerror="this.style.display='none'">` : '🌐';
+      card.innerHTML = `<div class="wc-head"><div class="wc-icon">${ic}</div><div class="wc-name">${escHtml(v.name||'Untitled')}</div></div><div class="wc-domain">${escHtml((v.url||'').replace(/^https?:\/\//,'').replace(/\/$/,'').slice(0,42))}</div><div class="wc-foot"><span class="wc-auth ${v.auth?'on':''}">${v.auth?'auth':'public'}</span><span style="opacity:.5">↗</span></div>`;
+      card.onclick = e => { if(!e.target.closest('.webv-icbtn')) showFullView(v.id); };
+      const fb = document.createElement('button'); fb.className='webv-icbtn'; fb.style.cssText='position:absolute;top:8px;right:8px;opacity:0;width:22px;height:22px;font-size:11px'; fb.innerHTML='⤴'; fb.title='Float';
+      fb.onclick = e => { e.stopPropagation(); if(window.createFloatingSurface) window.createFloatingSurface('webv-'+v.id, `<iframe src="${v.url}" style="width:100%;height:100%;border:none;background:#fff"></iframe>`, {title:v.name, x:120+(i%4)*26, y:82+(Math.floor(i/4)*16), w:620, h:420}); };
+      card.appendChild(fb);
+      card.onmouseenter = () => fb.style.opacity = '.9'; card.onmouseleave = () => fb.style.opacity = '0';
+      card.draggable = true;
+      card.ondragstart = e => { e.dataTransfer.setData('text/plain', v.id); card.style.opacity = '.5'; };
+      card.ondragend = () => card.style.opacity = '1';
+      card.ondragover = e => { e.preventDefault(); card.style.borderColor = 'var(--acc)'; };
+      card.ondragleave = () => card.style.borderColor = '';
+      card.ondrop = e => { e.preventDefault(); card.style.borderColor = ''; const did = e.dataTransfer.getData('text/plain'); if(did !== v.id) reorderViews(did, v.id); };
+      grid.appendChild(card);
     });
+    const ac = document.createElement('div'); ac.className = 'webv-card add'; ac.innerHTML = `<div class="bigplus">+</div><div class="lbl">New web view</div>`; ac.onclick = addWebViewFromBento; grid.appendChild(ac);
     highlightBento();
   }
 
@@ -7341,7 +7542,103 @@ window.chinnaAddWebView = (name, url) => {
 })();
 </script>
 
-<!-- EXTRA GLOBAL SHORTCUTS (added on top of bento/web keyboard) -->
+<!-- ULTIMATE WEB VIEWS BENTO REDESIGN ACTIVATION (new DOM from scratch) -->
+<script>
+(function(){
+  // Live bridge so the injected beautiful HTML + CSS actually drives the experience
+  if (!document.getElementById('webv-bento')) return;
+
+  // Minimal but complete runtime for the new stunning bento
+  window.filterTerm = window.filterTerm || '';
+
+  function renderBentoFresh(){
+    const grid = document.getElementById('webv-bento');
+    const cnt = document.getElementById('webv-count');
+    if(!grid || !window.customViews) return;
+    const list = window.customViews.filter(v => !window.filterTerm || (v.name||'').toLowerCase().includes(window.filterTerm.toLowerCase()) || (v.url||'').toLowerCase().includes(window.filterTerm.toLowerCase()));
+    if(cnt) cnt.textContent = window.customViews.length;
+    grid.innerHTML = '';
+    list.forEach((v,i) => {
+      const c = document.createElement('div');
+      c.className = 'webv-card';
+      c.dataset.id = v.id;
+      const fav = 'https://www.google.com/s2/favicons?domain=' + (v.url||'').split('/')[2] + '&sz=32';
+      c.innerHTML = `<div class="wc-head"><div class="wc-icon"><img src="${fav}" width="18" height="18" style="border-radius:4px" onerror="this.outerHTML='🌐'"></div><div class="wc-name">${(v.name||'Untitled').replace(/</g,'&lt;')}</div></div><div class="wc-domain">${(v.url||'').replace(/^https?:\/\//,'').slice(0,42)}</div><div class="wc-foot"><span class="wc-auth ${v.auth?'on':''}">${v.auth?'auth':'public'}</span></div>`;
+      c.onclick = () => showFullViewFresh(v.id);
+      const fb = document.createElement('button');
+      fb.className = 'webv-icbtn'; fb.style.cssText = 'position:absolute;top:8px;right:8px;opacity:0;width:22px;height:22px;font-size:11px';
+      fb.innerHTML = '⤴'; fb.title = 'Float';
+      fb.onclick = e => { e.stopPropagation(); if(window.createFloatingSurface) window.createFloatingSurface('wv'+v.id, `<iframe src="${v.url}" style="width:100%;height:100%;border:none"></iframe>`, {title:v.name, x:140, y:80, w:620, h:420}); };
+      c.appendChild(fb);
+      c.onmouseenter = () => fb.style.opacity = '0.85'; c.onmouseleave = () => fb.style.opacity = '0';
+      grid.appendChild(c);
+    });
+    const add = document.createElement('div');
+    add.className = 'webv-card add';
+    add.innerHTML = '<div class="bigplus">+</div><div class="lbl">New web view</div>';
+    add.onclick = () => {
+      const n = prompt('Name')||'Untitled', u = prompt('URL https://');
+      if(u){ window.customViews.push({id:'wv'+Date.now().toString(36),name:n,url:u,auth:false}); if(window.saveCustomViews) window.saveCustomViews(); renderBentoFresh(); showFullViewFresh(window.customViews[window.customViews.length-1].id); }
+    };
+    grid.appendChild(add);
+  }
+
+  function showFullViewFresh(id){
+    const v = (window.customViews||[]).find(x=>x.id===id); if(!v) return;
+    window.currentWebViewId = id;
+    const g = document.getElementById('webv-bento'), f = document.getElementById('webv-full'), nm = document.getElementById('webv-full-name'), dm = document.getElementById('webv-full-domain'), fr = document.getElementById('webv-frame');
+    if(nm) nm.textContent = v.name; if(dm) dm.textContent = (v.url||'').split('/')[2];
+    if(g) g.style.display = 'none'; if(f) f.style.display = 'flex'; if(fr) fr.src = v.url;
+  }
+
+  function backToBentoFresh(){
+    const g = document.getElementById('webv-bento'), f = document.getElementById('webv-full'), fr = document.getElementById('webv-frame');
+    if(f) f.style.display = 'none'; if(g) g.style.display = 'grid'; if(fr) fr.src = 'about:blank';
+    renderBentoFresh();
+  }
+
+  // Keyboard for the new grid
+  document.addEventListener('keydown', function(e){
+    const g = document.getElementById('webv-bento');
+    if(!g || g.style.display === 'none') return;
+    if(e.key === 'Escape'){ backToBentoFresh(); }
+  });
+
+  // Make sure addQuick etc call the fresh renderer
+  const origAdd = window.addQuickWebView;
+  window.addQuickWebView = function(){ if(origAdd) origAdd(); setTimeout(renderBentoFresh, 120); };
+
+  // Initial render for the new design when this view is shown
+  setTimeout(function(){
+    const w = document.getElementById('view-web');
+    if(w && w.classList.contains('on')) renderBentoFresh();
+  }, 300);
+
+  // Expose fresh
+  window.renderBento = renderBentoFresh;
+  window.showFullView = showFullViewFresh;
+  window.backToBento = backToBentoFresh;
+  window.filterBento = function(){ window.filterTerm = (document.getElementById('webv-search')||{value:''}).value; renderBentoFresh(); };
+
+  // Header button bridges for the beautiful new design
+  window.addWebViewFromBento = function(){
+    const n = prompt('Name for the view:') || 'Untitled';
+    const u = prompt('Full URL (https://...)');
+    if (u) {
+      (window.customViews = window.customViews || []).push({id:'wv_'+Date.now().toString(36), name:n, url:u, auth:false});
+      if (window.saveCustomViews) window.saveCustomViews();
+      if (window.go) window.go('web');
+      setTimeout(() => { if(window.renderBento) window.renderBento(); if(window.showFullView) window.showFullView((window.customViews||[]).slice(-1)[0].id); }, 80);
+    }
+  };
+  window.floatFirstWebView = function(){
+    const list = window.customViews || [];
+    if(!list.length) return;
+    const v = list[0];
+    if(window.createFloatingSurface) window.createFloatingSurface('webv-float', `<iframe src="${v.url}" style="width:100%;height:100%;border:none;background:#fff"></iframe>`, {title:v.name, x:130, y:80, w:620, h:420});
+  };
+})();
+</script>
 <script>
 (function(){
   function showShortcutsHelp() {
