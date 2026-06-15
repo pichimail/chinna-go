@@ -216,16 +216,17 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 .resizer.v { height: 4px; cursor: row-resize; left: 0; right: 0; }
 #sidebar{width:var(--sidebar-w)!important;min-width:var(--sidebar-w)!important;max-width:var(--sidebar-w)!important;flex-shrink:0!important;background:var(--s0)!important;border-right:1px solid var(--line)!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;position:relative!important;z-index:10!important}
 #center{flex:1 1 0!important;min-width:0!important;background:var(--bg)!important;overflow:hidden!important;position:relative!important;display:flex!important;flex-direction:column!important;z-index:1!important}
-#workspace { flex: 1 1 0; min-height: 0; position: relative; display: flex; } /* for resizable/floating surfaces inside */
+#workspace { position:absolute; inset:42px 0 0 0; min-height:0; z-index:25; pointer-events:none; } /* absolute float portal only — no impact on main full-height views */
 #right{width:0!important;overflow:hidden!important;flex-shrink:0!important;background:var(--s0)!important;border-left:1px solid var(--line)!important;display:flex!important;flex-direction:column!important;transition:width .18s ease!important}
 #app.right-open #right{width:var(--right-w)!important}
 #app.sidebar-collapsed #sidebar{width:54px!important;min-width:54px!important;max-width:54px!important}
-.view{display:none!important;flex:1 1 0!important;min-height:0!important;flex-direction:column!important;overflow:hidden!important}
+.view{display:none!important;flex:1 1 0!important;min-height:0!important;flex-direction:column!important;overflow:hidden!important;padding-top:42px!important}
 .view.on{display:flex!important}
 .vhead{display:flex!important;align-items:center;gap:12px;padding:14px 20px 12px;border-bottom:1px solid var(--line);flex-shrink:0}
 .vhead h2{font-size:15px;font-weight:700;letter-spacing:-.2px;color:var(--t1);flex-shrink:0}
 .vhead .sub{font-size:11.5px;color:var(--t3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.vbody{flex:1 1 0!important;min-height:0!important;overflow-y:auto!important;padding:16px 20px 90px}
+.vbody{flex:1 1 0!important;min-height:0!important;overflow-y:auto!important;padding:12px 18px 20px}
+.vbody.secure-shell,.vbody.plugin-console,.vbody.launchpad,.vbody.wa-grid{height:100%;min-height:0;display:flex!important}
 #app.sidebar-collapsed .logo-text,#app.sidebar-collapsed .logo-ver,#app.sidebar-collapsed .model-pill .model-name,#app.sidebar-collapsed .model-pill .model-caret,#app.sidebar-collapsed .nav-section,#app.sidebar-collapsed .navitem .nv-label,#app.sidebar-collapsed .navitem .nv-badge,#app.sidebar-collapsed .sidebar-vitals{display:none!important}
 #app.sidebar-collapsed .model-pill{padding:7px;justify-content:center}
 #app.sidebar-collapsed .navitem{padding:9px;justify-content:center;border-left:none;border-bottom:2px solid transparent}
@@ -338,8 +339,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 .ov-stat.disk .ov-stat-val{color:#c084fc}
 .ov-stat.batt .ov-stat-val{color:#fbbf24}
 
-/* Fluid glass polish for cards */
-.card,.infocard,.plugin-card,.forge-card{backdrop-filter:blur(8px)}
+/* Sleek outlined cards (no heavy glass layers per spec) */
 
 /* ═══ SETTINGS — aligned with dashboard language ═══ */
 .settings-shell{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(290px,.9fr);gap:14px}
@@ -992,7 +992,6 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
   </div>
 </div>
 <div class="vbody">
-  <div class="surface" style="padding:4px;"><div class="sep"></div>
   <!-- Project status card -->
   <div class="forge-status card" id="forgeStatus" style="margin-bottom:14px">
     <div class="empty"><div class="big">⚒</div>Enter a project path and hit Scan to begin</div>
@@ -1042,13 +1041,13 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
     </div>
     <div class="fconsole-body" id="forgeConsoleBody"></div>
   </div>
-</div></div></div>
+</div>
+</div>
 <div class="view on" id="view-overview"><div class="vhead">
   <h2>Overview</h2>
   <span class="sub">System vitals at a glance · live</span>
 </div>
 <div class="vbody">
-  <div class="surface" style="padding:8px; margin-bottom:8px;">
   <div class="ov-hero">
     <div class="ov-stat cpu">
       <div class="ov-stat-top"><span class="ov-stat-label">CPU</span><span style="font-size:18px">⚡</span></div>
@@ -1071,17 +1070,16 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
       <canvas class="ov-spark" id="spark-batt"></canvas>
     </div>
   </div>
-  </div>
   <div class="sep"></div>
   <div id="ov-extra"></div>
-</div></div>
+</div>
 <div class="view" id="view-processes"><div class="vhead"><h2>Processes</h2><span class="sub">Top memory consumers · live</span></div>
-        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="list" id="proc-list"></div></div></div>
+        <div class="vbody"><div class="list" id="proc-list"></div></div>
       
 
       <!-- NETWORK --></div>
 <div class="view" id="view-network"><div class="vhead"><h2>Network</h2><span class="sub">Listening ports &amp; connection</span></div>
-        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="outbox" id="net-out">Loading…</div></div></div>
+        <div class="vbody"><div class="outbox" id="net-out">Loading…</div></div>
       
 
       <!-- FILE MANAGER --></div>
@@ -1097,7 +1095,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           </select>
           <span class="count" id="file-count"></span>
         </div>
-        <div class="vbody"><div class="surface" style="padding:4px;"><div class="list" id="file-list"></div></div></div>
+        <div class="vbody"><div class="list" id="file-list"></div></div>
       
 
       <!-- DUPLICATES --></div>
@@ -1108,7 +1106,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <div class="spacer" style="margin-left:auto"></div>
           <button type="button" class="bigbtn" id="dupe-del" style="display:none" onclick="confirmDeleteDupes()">Delete selected</button>
         </div>
-        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="list" id="dupe-list"><div class="empty"><div class="big">⧉</div>Click "Scan now" to find duplicates</div></div></div></div>
+        <div class="vbody"><div class="list" id="dupe-list"><div class="empty"><div class="big">⧉</div>Click "Scan now" to find duplicates</div></div></div>
       
 
       <!-- DISK EXPLORER --></div>
@@ -1120,7 +1118,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <div class="spacer"></div>
           <button type="button" class="bigbtn ghost smallbtn" id="stor-more" style="display:none" onclick="loadMoreStorage()">Load more</button>
         </div>
-        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="list" id="stor-list"></div></div></div>
+        <div class="vbody"><div class="list" id="stor-list"></div></div>
       
 
       <!-- APP UNINSTALLER --></div>
@@ -1129,12 +1127,12 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <div class="search">🔍<input id="app-q" placeholder="Filter apps…" oninput="renderApps()"></div>
           <span class="count" id="app-count"></span>
         </div>
-        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="list" id="app-list"></div></div></div>
+        <div class="vbody"><div class="list" id="app-list"></div></div>
       
 
       <!-- BATTERY --></div>
 <div class="view" id="view-battery"><div class="vhead"><h2>Battery Health</h2><span class="sub">Cycle count &amp; condition</span></div>
-        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="infogrid" id="batt-info"></div></div></div>
+        <div class="vbody"><div class="infogrid" id="batt-info"></div></div>
       
 
       <!-- DOCTOR --></div>
@@ -1143,7 +1141,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <button type="button" class="bigbtn" onclick="loadDoctor()">↻ Re-check</button>
           <button type="button" class="bigbtn" onclick="genReport()">📄 Export system report</button>
         </div>
-        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="outbox" id="doc-out">Loading…</div></div></div>
+        <div class="vbody"><div class="outbox" id="doc-out">Loading…</div></div>
       
 
       <!-- AI --></div>
@@ -1156,7 +1154,6 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           </div>
         </div>
         <div class="vbody ai-stage">
-          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <div class="ai-shell">
             <div class="ux-band">
               <div>
@@ -1207,13 +1204,12 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
             </div>
           </div>
         </div>
-        </div></div>
+      </div>
       
 
-      <!-- SECURE CHAT --></div>
+      </div>
 <div class="view" id="view-chatx"><div class="vhead"><h2>Secure Chat</h2><span class="sub">Encrypted contacts, calls, files, and exports</span></div>
         <div class="vbody secure-shell">
-          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <aside class="chatx-sidebar" id="chatx-sidebar">
             <div class="chatx-identity">
               <canvas id="chatx-avatar" width="44" height="44" style="width:44px;height:44px;border-radius:10px;border:1px solid var(--line)"></canvas>
@@ -1299,10 +1295,9 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
         </div>
       
 
-      <!-- PROJECTS (Full View) --></div>
+      </div>
 <div class="view" id="view-whatsapp"><div class="vhead"><h2>WhatsApp</h2><span class="sub">Baileys QR mode · dashboard messaging</span></div>
         <div class="vbody wa-grid">
-          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <div class="wa-panel">
             <div class="wa-status">
               <div class="wa-qr"><img id="wa-qr-img" alt="WhatsApp QR"></div>
@@ -1341,12 +1336,10 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
             </div>
             <div id="wa-out" class="outbox" style="display:none;margin:10px"></div>
           </div>
-        </div></div>
-      
-      <!-- MACOS TOOLS --></div>
+        </div>
+      </div>
 <div class="view" id="view-plugins"><div class="vhead"><h2>Plugins</h2><span class="sub">Extensions, actions, and execution log</span></div>
         <div class="vbody plugin-console">
-          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <div class="plugin-toolbar">
             <div>
               <div class="ux-panel-title">Plugin Console</div>
@@ -1361,13 +1354,12 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           </div>
           <div class="plugin-grid pro" id="plugin-grid"></div>
           <div class="outbox plugin-log pro" id="plugin-log">Select a plugin action to run it.</div>
-        </div></div>
+        </div>
       
 
-      <!-- MODELS AND AI CONFIG --></div>
+      </div>
 <div class="view" id="view-macos"><div class="vhead"><h2>macOS Tools</h2><span class="sub">Apple Music · System controls · Screen sharing</span></div>
         <div class="vbody">
-          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <div class="navlabel">Apple Music</div>
           <div class="panelgrid" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
             <button type="button" class="bigbtn" onclick="music('play')">▶ Play</button>
@@ -1399,10 +1391,10 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
             <button type="button" class="bigbtn" onclick="runAudit()">Run Audit</button>
           </div>
           <div class="outbox" id="audit-out" style="display:none"></div>
-        </div></div></div>
+        </div>
+      </div>
 <div class="view" id="view-models"><div class="vhead"><h2>Models &amp; AI</h2><span class="sub">Switch AI model · Automation mode</span></div>
         <div class="vbody">
-          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <div class="navlabel">Active Model</div>
           <div class="infocard" style="margin-bottom:14px">
             <div class="k">Currently using</div>
@@ -1427,7 +1419,8 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
             <button type="button" class="bigbtn" id="auto-btn" onclick="toggleAutomation()">Toggle</button>
           </div>
           <div style="font-size:11px;color:var(--t3);line-height:1.6">When ON, AI commands run without confirmation prompts.</div>
-        </div></div></div>
+        </div>
+      </div>
 <div class="view" id="view-projects"><div class="vhead">
           <h2>Tracked Projects</h2>
           <span class="sub">From chinna run + registry</span>
@@ -1459,14 +1452,13 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
               <button type="button" class="miniA" onclick="setAgeFilter('older')" id="age-older">Older</button>
             </div>
           </div>
-          <div class="surface" style="padding:4px;"><div class="sep"></div><div id="projects-list" class="list" style="padding:0 18px"></div></div>
+          <div id="projects-list" class="list" style="padding:0 18px"></div>
         </div>
       
 
-      <!-- SETTINGS --></div>
+      </div>
 <div class="view" id="view-onboarding"><div class="vhead"><h2>Get Started</h2><span class="sub">Install, menu actions, theme, and first run</span></div>
         <div class="vbody launchpad">
-          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <section class="launch-main">
             <div class="settings-kicker">First run</div>
             <h3>Set up the Mac wrapper and menu actions.</h3>
@@ -1487,17 +1479,17 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           </section>
           <aside class="launch-side">
             <div class="ux-panel-title">Setup status</div>
-            <div class="rail-item"><b>Version</b><span>v6.7.0</span></div>
+            <div class="rail-item"><b>Version</b><span>v6.8.0</span></div>
             <div class="rail-item"><b>App home</b><span>~/.chinna</span></div>
             <div class="rail-item"><b>Dashboard</b><span>http://localhost:7777</span></div>
             <div class="rail-item"><b>Update command</b><span>chinna update</span></div>
           </aside>
-        </div></div></div>
+        </div>
+      </div>
 <div class="view" id="view-settings"><div class="vhead"><h2>Settings</h2><span class="sub">Local keys, installs, and version updates</span></div>
         <div class="vbody">
           <div class="settings-shell pro-settings">
             <main class="settings-scroll">
-              <div class="surface" style="padding:4px; margin-bottom:8px;">
               <section class="settings-card settings-main">
                 <div class="settings-card-head">
                   <div>
@@ -1535,7 +1527,6 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
               </section>
 
               <!-- v6.8: Dynamic full-window web embeds / iframes manager (minimal + powerful) -->
-              <div class="surface" style="padding:4px; margin-bottom:8px;">
               <section class="settings-card" id="web-embeds-card">
                 <div class="settings-card-head">
                   <div>
@@ -1556,7 +1547,6 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 
                 <div class="settings-note">Tip: After adding, use the Web Views sidebar entry (or sub menu) to open. Fullscreen and Dock controls are in the view header.</div>
               </section>
-              </div>
               <div class="sep"></div>
 
               <section class="settings-card settings-install">
@@ -1620,7 +1610,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
       
 
 
-      <!-- WHATSAPP --></div>
+      </div>
   </main>
   <div id="right">
     <div class="right-header"><span class="rh-title" id="rightPanelTitle">Panel</span><button class="bigbtn ghost smallbtn" onclick="closeRightPanel()" style="padding:3px 8px">✕</button></div>
@@ -7585,7 +7575,10 @@ window.chinnaAddWebView = (name, url) => {
     await loadUILayout();
     const center = document.getElementById('center');
     if (center && !document.getElementById('workspace')) {
-      const ws=document.createElement('div'); ws.id='workspace'; center.appendChild(ws);
+      const ws=document.createElement('div'); ws.id='workspace';
+      // Absolute portal for floating surfaces only — zero impact on main view flex height / layout
+      ws.style.cssText='position:absolute;inset:42px 0 0 0;pointer-events:none;z-index:25;overflow:visible;';
+      center.appendChild(ws);
     }
     initRedesignResizers();
     // Light upgrade: mark existing panes as surfaces (no removal)
