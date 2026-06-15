@@ -717,7 +717,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <button class="av0-mini" onclick="agentRefreshPreview()" title="Refresh preview">↻</button>
           <button class="av0-mini" onclick="agentOpenPreviewNewTab()" title="Open in new tab">⤢</button>
           <button class="av0-mini" onclick="agentDownloadCurrent()" title="Download">↓</button>
-          <button class="av0-mini" onclick="if(window.createFloatingSurface){ const p=document.getElementById('wsPreview'); window.createFloatingSurface('agent-preview', p ? p.outerHTML : '', {title:'Agent Preview', x:200, y:100, w:480, h:320}); }" title="Float preview as surface" aria-label="Float this preview pane as a movable surface">⤴</button>
+          <button class="av0-mini" onclick="if(window.floatAgentPreviewLive) window.floatAgentPreviewLive(); else if(window.createFloatingSurface){ const p=document.getElementById('wsPreview'); window.createFloatingSurface('agent-preview', p ? p.outerHTML : '', {title:'Agent Preview', x:200, y:100, w:480, h:320}); }" title="Float preview as surface (live)" aria-label="Float this preview pane as a movable surface with live controls">⤴</button>
           <button class="av0-mini danger" onclick="agentClearCurrentPreview()" title="Clear current">✕</button>
         </div>
       </div>
@@ -988,9 +988,11 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
   <div style="margin-left:auto;display:flex;gap:6px">
     <input type="text" id="forgePath" class="field" placeholder="~/your-project" style="width:200px;padding:6px 10px" value=".">
     <button class="bigbtn solid smallbtn" onclick="forgeDetect()">⟳ Scan</button>
+    <button class="av0-mini" onclick="if(window.createFloatingSurface){ window.createFloatingSurface('forge-float', document.getElementById('view-forge').innerHTML, {title:'Forge', x:100, y:80, w:650, h:500}); }" title="Float Forge as surface">⤴</button>
   </div>
 </div>
 <div class="vbody">
+  <div class="surface" style="padding:4px;"><div class="sep"></div>
   <!-- Project status card -->
   <div class="forge-status card" id="forgeStatus" style="margin-bottom:14px">
     <div class="empty"><div class="big">⚒</div>Enter a project path and hit Scan to begin</div>
@@ -1040,7 +1042,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
     </div>
     <div class="fconsole-body" id="forgeConsoleBody"></div>
   </div>
-</div></div>
+</div></div></div>
 <div class="view on" id="view-overview"><div class="vhead">
   <h2>Overview</h2>
   <span class="sub">System vitals at a glance · live</span>
@@ -1154,6 +1156,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           </div>
         </div>
         <div class="vbody ai-stage">
+          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <div class="ai-shell">
             <div class="ux-band">
               <div>
@@ -1204,11 +1207,13 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
             </div>
           </div>
         </div>
+        </div></div>
       
 
       <!-- SECURE CHAT --></div>
 <div class="view" id="view-chatx"><div class="vhead"><h2>Secure Chat</h2><span class="sub">Encrypted contacts, calls, files, and exports</span></div>
         <div class="vbody secure-shell">
+          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <aside class="chatx-sidebar" id="chatx-sidebar">
             <div class="chatx-identity">
               <canvas id="chatx-avatar" width="44" height="44" style="width:44px;height:44px;border-radius:10px;border:1px solid var(--line)"></canvas>
@@ -1297,6 +1302,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
       <!-- PROJECTS (Full View) --></div>
 <div class="view" id="view-whatsapp"><div class="vhead"><h2>WhatsApp</h2><span class="sub">Baileys QR mode · dashboard messaging</span></div>
         <div class="vbody wa-grid">
+          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <div class="wa-panel">
             <div class="wa-status">
               <div class="wa-qr"><img id="wa-qr-img" alt="WhatsApp QR"></div>
@@ -1335,11 +1341,12 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
             </div>
             <div id="wa-out" class="outbox" style="display:none;margin:10px"></div>
           </div>
-        </div>
+        </div></div>
       
       <!-- MACOS TOOLS --></div>
 <div class="view" id="view-plugins"><div class="vhead"><h2>Plugins</h2><span class="sub">Extensions, actions, and execution log</span></div>
         <div class="vbody plugin-console">
+          <div class="surface" style="padding:4px;"><div class="sep"></div>
           <div class="plugin-toolbar">
             <div>
               <div class="ux-panel-title">Plugin Console</div>
@@ -1354,7 +1361,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           </div>
           <div class="plugin-grid pro" id="plugin-grid"></div>
           <div class="outbox plugin-log pro" id="plugin-log">Select a plugin action to run it.</div>
-        </div>
+        </div></div>
       
 
       <!-- MODELS AND AI CONFIG --></div>
@@ -6936,6 +6943,18 @@ window.toast = function(msg, type, dur){
     });
   });
 
+  // Dedicated pop for dock items context (right-click on dapp to float the target view)
+  dock.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+    var dapp = e.target.closest('.dapp');
+    if (dapp && dapp.dataset.v) {
+      go(dapp.dataset.v);
+      setTimeout(function(){ if(window.floatCurrentView) window.floatCurrentView(); }, 60);
+    } else if (window.floatCurrentView) {
+      window.floatCurrentView();
+    }
+  });
+
   /* sync active dot */
   var origGo=window.go;
   if(typeof origGo==='function'){
@@ -7660,6 +7679,28 @@ window.chinnaAddWebView = (name, url) => {
     const id = active.id.replace('view-','');
     const html = active.innerHTML; // clone for float; for live complex use dedicated pop
     window.createFloatingSurface('float-view-' + id, html, {title: id.charAt(0).toUpperCase() + id.slice(1), x: 80, y: 60, w: 700, h: 500});
+  };
+
+  // Fuller interactive re-init for complex like Agent preview (self-contained live controls + iframe)
+  window.floatAgentPreviewLive = function() {
+    if (!window.agentPreviewingId) { if (typeof toast==='function') toast('No preview to float'); return; }
+    const html = `
+      <div class="preview-bar">
+        <div class="preview-label">
+          <span>Live Preview</span>
+          <span class="preview-badge">HTML</span>
+        </div>
+        <div class="preview-controls">
+          <button class="av0-mini" onclick="const f=this.closest('.surface').querySelector('iframe'); f.src = f.src.split('?')[0] + '?t=' + Date.now();">↻</button>
+          <button class="av0-mini" onclick="window.open(this.closest('.surface').querySelector('iframe').src, '_blank')">⤢</button>
+          <button class="av0-mini" onclick="const f=this.closest('.surface').querySelector('iframe'); f.src='about:blank';">✕</button>
+        </div>
+      </div>
+      <div class="preview-frame-wrap">
+        <iframe sandbox="allow-scripts allow-same-origin" style="flex:1;border:none;background:#fff;min-height:200px;width:100%;" src="/api/artifact/${window.agentPreviewingId}/preview"></iframe>
+      </div>
+    `;
+    window.createFloatingSurface('agent-preview-live', html, {title: 'Agent Preview (Live)', x:180, y:90, w:520, h:380});
   };
 })();
 </script>
