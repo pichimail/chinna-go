@@ -2,7 +2,7 @@
 <html lang="en" data-theme="obsidian">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Chinna V6.7</title>
+<title>Chinna v6.8</title>
 <script>
 if (window.location.protocol === 'file:') {
   window.location.replace('http://127.0.0.1:7777/' + (window.location.hash || ''));
@@ -200,8 +200,23 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 
 /* ══ BULLETPROOF FLEX LAYOUT ══ */
 #app{position:fixed!important;inset:0!important;display:flex!important;flex-direction:row!important;overflow:hidden!important}
+
+/* === TIGHTENED + REDESIGN: shadcn-inspired floating surfaces, sleek seps, no AI slop ===
+   Principles: restraint (subtle elevation only, crisp lines, functional), floating (elevated .surface with soft shadow + border),
+   resizable (generalized handles), sleek seps (thin --line with minimal accent).
+   Upgrade only: merge existing (agent splits, web bento, dock auto-hide, all views preserved).
+*/
+.surface { background: var(--s0); border: 1px solid var(--line2); border-radius: var(--r-lg); box-shadow: 0 2px 8px rgba(0,0,0,.2); position: relative; }
+.surface.floating { position: absolute; box-shadow: 0 4px 16px rgba(0,0,0,.3); z-index: 10; }
+.sep { border: none; border-top: 1px solid var(--line); margin: 8px 0; opacity: 0.6; }
+.sep.accent { border-top-color: var(--acc-bd); }
+.resizer { position: absolute; background: transparent; z-index: 20; transition: background .1s; }
+.resizer:hover, .resizer.dragging { background: var(--acc); opacity: 0.3; }
+.resizer.h { width: 4px; cursor: col-resize; top: 0; bottom: 0; }
+.resizer.v { height: 4px; cursor: row-resize; left: 0; right: 0; }
 #sidebar{width:var(--sidebar-w)!important;min-width:var(--sidebar-w)!important;max-width:var(--sidebar-w)!important;flex-shrink:0!important;background:var(--s0)!important;border-right:1px solid var(--line)!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;position:relative!important;z-index:10!important}
 #center{flex:1 1 0!important;min-width:0!important;background:var(--bg)!important;overflow:hidden!important;position:relative!important;display:flex!important;flex-direction:column!important;z-index:1!important}
+#workspace { flex: 1 1 0; min-height: 0; position: relative; display: flex; } /* for resizable/floating surfaces inside */
 #right{width:0!important;overflow:hidden!important;flex-shrink:0!important;background:var(--s0)!important;border-left:1px solid var(--line)!important;display:flex!important;flex-direction:column!important;transition:width .18s ease!important}
 #app.right-open #right{width:var(--right-w)!important}
 #app.sidebar-collapsed #sidebar{width:54px!important;min-width:54px!important;max-width:54px!important}
@@ -7414,6 +7429,115 @@ window.chinnaAddWebView = (name, url) => {
       e.preventDefault();
     }
   }, true);
+})();</script>
+
+<!-- === REDESIGN TIGHTENING: Floating Surfaces + Generalized Resizables + UI Persistence (merge/upgrade only, no feature removal) === -->
+<script>
+(function(){
+  'use strict';
+  const LAYOUT_KEY = 'ui_layout_v1';
+  let currentLayout = {};
+
+  async function loadUILayout() {
+    try {
+      const r = await fetch('/api/ui-layout');
+      const j = await r.json();
+      currentLayout = j.layout || JSON.parse(localStorage.getItem(LAYOUT_KEY) || '{}');
+    } catch(e) {
+      currentLayout = JSON.parse(localStorage.getItem(LAYOUT_KEY) || '{}');
+    }
+    applyUILayout();
+  }
+
+  async function saveUILayout(partial) {
+    currentLayout = { ...currentLayout, ...partial };
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify(currentLayout));
+    try { await fetch('/api/ui-layout', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({layout:currentLayout})}); } catch(e){}
+  }
+
+  function applyUILayout() {
+    if (currentLayout.sidebar_w) {
+      const sb = document.getElementById('sidebar'); if (sb) sb.style.width = currentLayout.sidebar_w + 'px';
+    }
+    if (currentLayout.agent_chat_w) {
+      const chat = document.querySelector('#view-agent .av0-chat'); if (chat) chat.style.flex = `0 0 ${currentLayout.agent_chat_w}px`;
+    }
+    if (currentLayout.web_full_open && currentLayout.current_web_id && window.showBentoThenFull) {
+      setTimeout(() => window.showBentoThenFull(currentLayout.current_web_id), 180);
+    }
+    const dw = document.getElementById('dock-wrap');
+    if (dw && currentLayout.dock_hidden) dw.classList.add('dock-hidden');
+  }
+
+  function makeResizable(handle, target, {min=120, max=700, axis='x', onChange} = {}) {
+    if (!handle || !target) return;
+    let drag=false, sx=0, ss=0;
+    handle.addEventListener('pointerdown', e => {
+      drag=true; sx = axis==='x'?e.clientX:e.clientY; ss=axis==='x'?target.offsetWidth:target.offsetHeight;
+      handle.classList.add('dragging'); document.body.style.userSelect='none'; document.body.style.cursor=axis==='x'?'col-resize':'row-resize';
+    });
+    window.addEventListener('pointermove', e => {
+      if(!drag) return;
+      const d = (axis==='x'?e.clientX:e.clientY) - sx;
+      let ns = Math.max(min, Math.min(max, ss + d));
+      if (axis==='x') target.style.flex = `0 0 ${ns}px`; else target.style.height=ns+'px';
+      if (onChange) onChange(ns);
+    });
+    const stop = () => {
+      if(!drag) return; drag=false; handle.classList.remove('dragging');
+      document.body.style.userSelect=''; document.body.style.cursor='';
+      if (target.id==='sidebar' || target.closest('#sidebar')) saveUILayout({sidebar_w:target.offsetWidth});
+      if (target.closest('.av0-chat')) saveUILayout({agent_chat_w: target.offsetWidth});
+    };
+    window.addEventListener('pointerup', stop); window.addEventListener('pointercancel', stop);
+  }
+
+  function initRedesignResizers() {
+    // Sidebar (complete wiring)
+    makeResizable(document.getElementById('sidebarResize'), document.getElementById('sidebar'), {min:120,max:420,axis:'x'});
+    // Agent (enhance)
+    makeResizable(document.getElementById('agentResizer'), document.querySelector('#view-agent .av0-chat'), {min:200,max:650,axis:'x', onChange:w=>saveUILayout({agent_chat_w:w})});
+    // Chatx if present
+    makeResizable(document.getElementById('chatx-splitter'), document.querySelector('.chatx-sidebar'), {min:180,max:480,axis:'x'});
+  }
+
+  // Floating surface (new for redesign; upgrade agent/web panes)
+  window.createFloatingSurface = (id, html, opts={title:id, x:120,y:120,w:400,h:280}) => {
+    let el = document.getElementById('fs-'+id);
+    if (!el) {
+      el = document.createElement('div');
+      el.id='fs-'+id; el.className='surface floating';
+      el.style.cssText=`left:${opts.x}px;top:${opts.y}px;width:${opts.w}px;height:${opts.h}px;`;
+      el.innerHTML = `<div style="padding:4px 8px;border-bottom:1px solid var(--line);font-size:11px;font-weight:600;display:flex;justify-content:space-between;cursor:move;background:var(--s1);border-radius:var(--r-lg) var(--r-lg) 0 0;">${opts.title} <button onclick="this.closest('.floating').remove()" style="border:0;background:0;color:var(--t3);">×</button></div><div style="padding:8px;overflow:auto;height:calc(100%-28px);">${html}</div>`;
+      const ws = document.getElementById('workspace') || document.body; ws.appendChild(el);
+      // basic drag
+      const h = el.firstChild; let dx,dy,dr=false;
+      h.onpointerdown = ev => {dr=true;dx=ev.clientX-el.offsetLeft;dy=ev.clientY-el.offsetTop; h.setPointerCapture(ev.pointerId);};
+      window.addEventListener('pointermove',ev=>{if(dr){el.style.left=(ev.clientX-dx)+'px';el.style.top=(ev.clientY-dy)+'px';}});
+      window.addEventListener('pointerup',()=>{dr=false; saveUILayout({['fs_'+id]:{x:parseInt(el.style.left),y:parseInt(el.style.top),w:el.offsetWidth,h:el.offsetHeight}});});
+    }
+    return el;
+  };
+
+  // Hook go + init
+  const _g = window.go;
+  window.go = v => { if(_g) _g(v); setTimeout(()=>{ initRedesignResizers(); },50); };
+
+  async function initRedesign() {
+    await loadUILayout();
+    const center = document.getElementById('center');
+    if (center && !document.getElementById('workspace')) {
+      const ws=document.createElement('div'); ws.id='workspace'; center.appendChild(ws);
+    }
+    initRedesignResizers();
+    // Light upgrade: mark existing panes as surfaces (no removal)
+    document.querySelectorAll('#view-agent .av0-chat, #view-agent .av0-workspace, #web-bento .web-card').forEach(el=>el.classList.add('surface'));
+    // Auto-apply some floats on demand via createFloatingSurface in future calls
+  }
+
+  (document.readyState==='complete'||document.readyState==='interactive') ? setTimeout(initRedesign,100) : document.addEventListener('DOMContentLoaded',()=>setTimeout(initRedesign,100));
+
+  window.initRedesign = initRedesign; // debug
 })();
 </script>
 </body>

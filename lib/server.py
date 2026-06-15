@@ -13,7 +13,10 @@ except Exception:
     _forge = None
 
 
-CHINNA_VERSION = "6.7.0"
+try:
+    CHINNA_VERSION = open(os.path.join(REPO_ROOT, 'VERSION')).read().strip()
+except:
+    CHINNA_VERSION = "6.8.0"
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 7777
 CHINNA_HOME = os.environ.get('CHINNA_HOME', os.path.expanduser('~/.chinna'))
 DASHBOARD_DIR = os.path.join(CHINNA_HOME, 'dashboard')
@@ -22,6 +25,7 @@ API_KEYS_FILE = os.path.join(CHINNA_HOME, 'api_keys.json')
 PAIR_STATE_FILE = os.path.join(CHINNA_HOME, 'telegram_pair.json')
 CHAT_DB_FILE = os.path.join(CHINNA_HOME, 'state/chat_db.json')
 CUSTOM_VIEWS_FILE = os.path.join(CHINNA_HOME, 'custom_views.json')
+UI_LAYOUT_FILE = os.path.join(CHINNA_HOME, 'state/ui_layout.json')
 WHATSAPP_DIR = os.path.join(CHINNA_HOME, 'whatsapp')
 WHATSAPP_BRIDGE_DIR = os.path.join(CHINNA_HOME, 'whatsapp_bridge')
 WHATSAPP_BRIDGE_PORT = int(os.environ.get('CHINNA_WHATSAPP_BRIDGE_PORT', str(PORT + 81)))
@@ -95,6 +99,17 @@ def save_custom_views(views):
     if not isinstance(views, list):
         views = []
     write_json(CUSTOM_VIEWS_FILE, views)
+
+def load_ui_layout():
+    data = read_json(UI_LAYOUT_FILE, {})
+    if not isinstance(data, dict):
+        return {}
+    return data
+
+def save_ui_layout(layout):
+    if not isinstance(layout, dict):
+        layout = {}
+    write_json(UI_LAYOUT_FILE, layout)
 
 def _chat_default():
     return {'users': {}, 'messages': [], 'last_id': 0}
@@ -1676,6 +1691,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json(ai_key_status())
         elif p == '/api/custom-views':
             self._json({'views': load_custom_views()})
+        elif p == '/api/ui-layout':
+            self._json({'layout': load_ui_layout()})
         elif p == '/api/forge/detect':
             path = q.get('path', '.') if isinstance(q, dict) else '.'
             self._json(_forge.detect(path) if _forge else {'error': 'forge unavailable'})
@@ -1766,6 +1783,13 @@ class H(http.server.SimpleHTTPRequestHandler):
             if isinstance(views, list):
                 save_custom_views(views)
                 self._json({'ok': True, 'count': len(views)})
+            else:
+                self._json({'error': 'invalid payload'}, 400)
+        elif p == '/api/ui-layout':
+            layout = b.get('layout') if isinstance(b, dict) else {}
+            if isinstance(layout, dict):
+                save_ui_layout(layout)
+                self._json({'ok': True})
             else:
                 self._json({'error': 'invalid payload'}, 400)
         elif p == '/api/turn/generate':
