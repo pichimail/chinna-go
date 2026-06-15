@@ -230,7 +230,9 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 
 /* ══ COLORFUL LIQUID GLASS DOCK ══ */
 #center{padding-bottom:0}
-#dock-wrap{position:fixed;bottom:12px;left:calc(var(--sidebar-w) + (100vw - var(--sidebar-w)) / 2);transform:translateX(-50%);z-index:300;display:flex;justify-content:center;align-items:flex-end;pointer-events:none;transition:left .18s ease}
+#dock-wrap{position:fixed;bottom:12px;left:calc(var(--sidebar-w) + (100vw - var(--sidebar-w)) / 2);transform:translateX(-50%);z-index:300;display:flex;justify-content:center;align-items:flex-end;pointer-events:none;transition:left .18s ease, bottom .22s cubic-bezier(.4,0,.2,1), opacity .2s}
+#dock-wrap.dock-hidden { bottom: -70px; opacity: 0; pointer-events: none; }
+#dock-trigger { position:fixed; bottom:0; left:0; width:100%; height:48px; z-index:299; pointer-events:auto; }
 #dock{display:flex!important;align-items:flex-end;gap:6px;padding:9px 16px;border-radius:24px;pointer-events:all;background:rgba(255,255,255,.07);backdrop-filter:blur(50px) saturate(200%);-webkit-backdrop-filter:blur(50px) saturate(200%);border:1px solid rgba(255,255,255,.15);box-shadow:0 12px 40px rgba(0,0,0,.5),0 1px 0 rgba(255,255,255,.2) inset,0 -1px 0 rgba(0,0,0,.3) inset}
 .dapp{display:flex!important;position:relative;width:46px;height:46px;align-items:center;justify-content:center;font-size:25px;cursor:pointer;border-radius:13px;border:1px solid rgba(255,255,255,.16);box-shadow:0 2px 10px rgba(0,0,0,.32),0 1px 0 rgba(255,255,255,.22) inset;transform-origin:bottom center;will-change:transform;transition:box-shadow .15s ease,filter .15s ease;flex-shrink:0;line-height:1}
 .dapp:hover{box-shadow:0 8px 24px rgba(0,0,0,.42),0 1px 0 rgba(255,255,255,.3) inset,0 0 0 1px rgba(186,255,41,.4);filter:brightness(1.12)}
@@ -884,38 +886,72 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 }
 </style>
 <div class="view" id="view-web">
-  <div class="web-header">
-    <div class="web-title">
+  <!-- Bento Grid Header -->
+  <div class="web-bento-header">
+    <div class="web-bento-title">
       <span class="wh-ic">🌐</span>
-      <span id="web-current-name">Web View</span>
+      <span>Web Views</span>
+      <span class="web-count" id="web-bento-count"></span>
     </div>
-    <div class="web-controls">
-      <select id="web-switcher" onchange="switchWebViewFromSelect(this.value)" style="background:var(--s1);border:1px solid var(--line2);color:var(--t1);font-size:11px;padding:4px 8px;border-radius:6px;max-width:180px"></select>
-      <button class="av0-mini" onclick="editCurrentWebView()">Edit</button>
-      <button class="av0-mini" onclick="webFullscreen()">Fullscreen</button>
-      <button class="av0-mini" onclick="webNormal()">Dock</button>
-      <button class="av0-mini" onclick="addQuickWebView()">+ Add</button>
-      <button class="av0-mini danger" onclick="deleteCurrentWebView()">Delete</button>
+    <div class="web-bento-actions">
+      <button class="av0-mini" onclick="addQuickWebView()" title="Add new web view">+ Add</button>
+      <button class="av0-mini" onclick="go('settings')" title="Manage all in Settings">Manage</button>
+      <button class="av0-mini" onclick="resetToDefaults()" title="Reset to default widgets">↺ Defaults</button>
     </div>
   </div>
-  <div id="web-frame-container" style="flex:1;position:relative;background:#000;overflow:hidden">
-    <iframe id="webFrame" style="position:absolute;inset:0;width:100%;height:100%;border:none;background:#fff" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
-    <div id="web-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#666;font-size:13px;text-align:center;line-height:1.5">
-      No web view selected.<br>
-      Use the + in the header or manage in Settings.
+
+  <!-- BENTO GRID STYLE -->
+  <div id="web-bento" class="web-bento"></div>
+
+  <!-- FULL IFRAME VIEW -->
+  <div id="web-full" style="display:none; flex:1; flex-direction:column; min-height:0;">
+    <div class="web-full-bar">
+      <button class="web-back-btn" onclick="backToBento()" title="Back to bento grid (Esc)">
+        ⊞ <span class="web-back-label">Grid</span>
+      </button>
+      <span class="web-full-name" id="web-full-name"></span>
+      <div class="web-full-actions">
+        <button class="av0-mini" onclick="webFullscreen()" title="Fullscreen">⤢</button>
+        <button class="av0-mini" onclick="webNormal()" title="Back to normal">⌂</button>
+        <button class="av0-mini" onclick="editCurrentWebView()" title="Edit">✎</button>
+        <button class="av0-mini" onclick="window.open(document.getElementById('webFrame').src, '_blank')" title="Open in new tab">↗</button>
+        <button class="av0-mini danger" onclick="deleteCurrentWebView()" title="Remove">×</button>
+      </div>
+    </div>
+    <div style="flex:1; position:relative; background:#000; overflow:hidden;">
+      <iframe id="webFrame" style="position:absolute; inset:0; width:100%; height:100%; border:none; background:#fff;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
     </div>
   </div>
+
   <div class="web-foot">
-    <span>Embeds run inside Chinna. Auth cookies usually persist per-site for the lifetime of your browser session. Mark "auth done" in Settings for your reference.</span>
+    <span>Click any widget to open full view. Some sites block embedding (X-Frame). Use + Add for your own. All editable. Keyboard: arrows + Enter in grid, Esc to go back.</span>
   </div>
 </div>
 
 <style>
-.web-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--s1);flex-shrink:0;gap:12px}
-.web-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
-.web-title .wh-ic{font-size:16px}
-.web-controls{display:flex;align-items:center;gap:5px}
+.web-bento-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--s1);flex-shrink:0;gap:12px}
+.web-bento-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+.web-bento-title .wh-ic{font-size:16px}
+.web-count{font-size:10px;font-weight:600;padding:1px 6px;background:var(--acc-bg);color:var(--acc);border-radius:99px;border:1px solid var(--acc-bd)}
+.web-bento-actions{display:flex;align-items:center;gap:5px}
+.web-bento{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;padding:14px;overflow-y:auto;flex:1;background:var(--bg)}
+.web-card{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;transition:transform .15s ease, box-shadow .15s ease, border-color .15s; display:flex; flex-direction:column; gap:6px; min-height:92px}
+.web-card:hover{transform:translateY(-3px) scale(1.01); box-shadow:0 10px 25px rgba(0,0,0,.35); border-color:var(--acc)}
+.web-card.selected{border-color:var(--acc); box-shadow:0 0 0 2px rgba(186,255,41,.25)}
+.web-card .wc-name{font-weight:700;font-size:13px;color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.web-card .wc-url{font-size:10px;color:var(--t3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-family:var(--font-mono)}
+.web-card .wc-meta{font-size:9px;color:var(--t4); margin-top:auto; display:flex; align-items:center; gap:4px}
+.web-card .wc-icon{font-size:15px; opacity:.7}
+.web-full-bar{display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--s1);flex-shrink:0}
+.web-back-btn{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:var(--s2);border:1px solid var(--line);color:var(--t1);font-size:12px;font-weight:600;cursor:pointer;transition:all .1s}
+.web-back-btn:hover{background:var(--acc);color:#06120a;border-color:var(--acc)}
+.web-full-name{font-weight:600;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--t2)}
+.web-full-actions{display:flex;gap:4px}
 .web-foot{padding:5px 12px;font-size:10px;color:var(--t4);border-top:1px solid var(--line);background:var(--bg);flex-shrink:0}
+
+/* Smooth transitions */
+#web-bento, #web-full { transition: opacity .18s ease, transform .18s ease; }
+.web-card { transition: transform .15s cubic-bezier(.2,.9,.3,1.1), box-shadow .15s, border-color .15s; }
 </style>
 
 <div class="view" id="view-forge"><div class="vhead">
@@ -1596,7 +1632,8 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
     <div class="pv-body" id="chatx-preview-body"></div>
   </div>
 </div>
-<div id="dock-wrap">
+<div id="dock-trigger"></div>
+<div id="dock-wrap" class="dock-hidden">
   <div id="dock">
     <div class="dapp c-overview nav-active" data-v="overview" onclick="go('overview')"><span>◉</span><span class="tip">Overview</span></div>
     <div class="dapp c-agent" data-v="agent" onclick="go('agent')"><span>⬡</span><span class="tip">Agent</span></div>
@@ -6769,8 +6806,66 @@ window.toast = function(msg, type, dur){
 </script>
 <script>(function(){
   'use strict';
-  var dock=document.getElementById('dock');
-  if(!dock) return;
+  var dockWrap = document.getElementById('dock-wrap');
+  var dock = document.getElementById('dock');
+  var trigger = document.getElementById('dock-trigger');
+  if(!dock || !dockWrap) return;
+
+  // Apple-style strict auto-hide dock
+  var hideTimer = null;
+  var isNearBottom = false;
+
+  function showDock() {
+    clearTimeout(hideTimer);
+    dockWrap.classList.remove('dock-hidden');
+    isNearBottom = true;
+  }
+
+  function hideDock() {
+    dockWrap.classList.add('dock-hidden');
+    isNearBottom = false;
+  }
+
+  function checkMouse(y) {
+    var threshold = 55; // pixels from bottom edge
+    if (window.innerHeight - y < threshold) {
+      showDock();
+    } else if (!dock.matches(':hover')) {
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(hideDock, 280);
+    }
+  }
+
+  // Trigger zone (thin bar at very bottom)
+  if (trigger) {
+    trigger.addEventListener('mousemove', function(e){ checkMouse(e.clientY); });
+    trigger.addEventListener('mouseenter', showDock);
+  }
+
+  // Keep visible while hovering the dock itself
+  dock.addEventListener('mouseenter', function(){ 
+    clearTimeout(hideTimer); 
+    dockWrap.classList.remove('dock-hidden'); 
+  });
+  dock.addEventListener('mouseleave', function(){
+    if (!isNearBottom) {
+      hideTimer = setTimeout(hideDock, 220);
+    }
+  });
+
+  // Fallback global mousemove (very cheap)
+  document.addEventListener('mousemove', function(e){
+    if (e.clientY > window.innerHeight - 80) {
+      checkMouse(e.clientY);
+    }
+  }, {passive: true});
+
+  // Initial state: hidden
+  setTimeout(function(){ 
+    if (!dock.matches(':hover')) dockWrap.classList.add('dock-hidden'); 
+  }, 1200);
+
+  // Existing genie magnification (kept strict Apple-like)
   var BASE=46, PEAK=74, RANGE=120;
   var items=[].slice.call(dock.querySelectorAll('.dapp'));
   var raf=null, lastX=null, inside=false;
@@ -6802,6 +6897,7 @@ window.toast = function(msg, type, dur){
       el.classList.remove('show-tip');
     });
   });
+
   /* sync active dot */
   var origGo=window.go;
   if(typeof origGo==='function'){
@@ -6814,11 +6910,22 @@ window.toast = function(msg, type, dur){
   }
 })();</script>
 
-<!-- v6.8 Web Embeds / Iframes feature JS (dynamic sidebar subs, full window views, settings manager, backend sync) -->
+<!-- v6.8 Web Embeds — Bento Grid + Full View with keyboard & transitions -->
 <script>
-/* Custom Web Views (named iframes) */
+/* Custom Web Views — Bento Grid + Full View (enhanced) */
 let customViews = [];
 let currentWebViewId = null;
+let selectedBentoIndex = -1;
+let bentoKeyHandler = null;
+
+const DEFAULT_WEB_VIEWS = [
+  { id: 'def-google', name: 'Google Search', url: 'https://www.google.com', auth: false },
+  { id: 'def-wiki', name: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Main_Page', auth: false },
+  { id: 'def-hn', name: 'Hacker News', url: 'https://news.ycombinator.com', auth: false },
+  { id: 'def-github', name: 'GitHub Trending', url: 'https://github.com/trending', auth: false },
+  { id: 'def-yf', name: 'Yahoo Finance', url: 'https://finance.yahoo.com', auth: false },
+  { id: 'def-weather', name: 'Weather (BBC)', url: 'https://www.bbc.com/weather', auth: false },
+];
 
 async function loadCustomViews() {
   try {
@@ -6828,8 +6935,13 @@ async function loadCustomViews() {
   } catch(e) {
     customViews = JSON.parse(localStorage.getItem('chinna_custom_views') || '[]');
   }
+
+  if (customViews.length === 0) {
+    customViews = [...DEFAULT_WEB_VIEWS];
+    await saveCustomViews();
+  }
+
   renderWebSubNav();
-  renderWebSwitcher();
   if (document.getElementById('web-embeds-list')) renderWebEmbedsInSettings();
 }
 
@@ -6843,7 +6955,6 @@ async function saveCustomViews() {
   } catch(e) {}
   localStorage.setItem('chinna_custom_views', JSON.stringify(customViews));
   renderWebSubNav();
-  renderWebSwitcher();
   if (document.getElementById('web-embeds-list')) renderWebEmbedsInSettings();
 }
 
@@ -7046,6 +7157,264 @@ window.chinnaAddWebView = (name, url) => {
   saveCustomViews();
   return id;
 };
+</script>
+
+<!-- v6.8 Bento Grid Web Views override + keyboard + transitions -->
+<script>
+(function(){
+  const DEFAULTS = [
+    {id:'d1',name:'Google Search',url:'https://www.google.com',auth:false},
+    {id:'d2',name:'Wikipedia',url:'https://en.wikipedia.org/wiki/Main_Page',auth:false},
+    {id:'d3',name:'Hacker News',url:'https://news.ycombinator.com',auth:false},
+    {id:'d4',name:'GitHub Trending',url:'https://github.com/trending',auth:false},
+    {id:'d5',name:'Yahoo Finance',url:'https://finance.yahoo.com',auth:false},
+    {id:'d6',name:'Weather (BBC)',url:'https://www.bbc.com/weather',auth:false}
+  ];
+
+  function seedIfNeeded(){
+    if(!window.customViews || window.customViews.length===0){
+      window.customViews = [...DEFAULTS];
+    }
+  }
+
+  function renderBento(){
+    seedIfNeeded();
+    const c = document.getElementById('web-bento');
+    const cnt = document.getElementById('web-bento-count');
+    if(!c) return;
+    c.innerHTML = '';
+    if(cnt) cnt.textContent = (window.customViews||[]).length;
+    (window.customViews||[]).forEach((v,i)=>{
+      const card = document.createElement('div');
+      card.className='web-card';
+      card.innerHTML = `<div class="wc-name">${escHtml(v.name||'Untitled')}</div><div class="wc-url">${escHtml((v.url||'').replace(/^https?:\/\//,'').slice(0,40))}</div><div class="wc-meta"><span>🌐</span><span>${v.auth?'auth':'public'}</span></div>`;
+      card.onclick = ()=> showFull(v.id);
+      card.onmouseenter = ()=>{ window.selectedBentoIndex = i; highlightBento(); };
+      c.appendChild(card);
+    });
+    highlightBento();
+  }
+
+  function highlightBento(){
+    document.querySelectorAll('#web-bento .web-card').forEach((el,i)=> el.classList.toggle('selected', i === (window.selectedBentoIndex||-1)));
+  }
+
+  function navigateBento(k){
+    const list = window.customViews || [];
+    if(!list.length) return;
+    if((window.selectedBentoIndex||-1) < 0) window.selectedBentoIndex=0;
+    const cols = 4;
+    if(k==='ArrowRight') window.selectedBentoIndex = Math.min(list.length-1, window.selectedBentoIndex+1);
+    else if(k==='ArrowLeft') window.selectedBentoIndex = Math.max(0, window.selectedBentoIndex-1);
+    else if(k==='ArrowDown') window.selectedBentoIndex = Math.min(list.length-1, window.selectedBentoIndex + cols);
+    else if(k==='ArrowUp') window.selectedBentoIndex = Math.max(0, window.selectedBentoIndex - cols);
+    highlightBento();
+  }
+
+  function showFull(id){
+    const v = (window.customViews||[]).find(x=>x.id===id); if(!v) return;
+    window.currentWebViewId = id;
+    const b = document.getElementById('web-bento');
+    const f = document.getElementById('web-full');
+    const nm = document.getElementById('web-full-name');
+    const fr = document.getElementById('webFrame');
+    if(nm) nm.textContent = v.name || v.url;
+    if(b) b.style.display = 'none';
+    if(f) f.style.display = 'flex';
+    if(fr) fr.src = v.url;
+    setupKeys();
+  }
+
+  function backBento(){
+    const b = document.getElementById('web-bento');
+    const f = document.getElementById('web-full');
+    const fr = document.getElementById('webFrame');
+    if(f) f.style.display='none';
+    if(b) b.style.display='grid';
+    if(fr) fr.src = 'about:blank';
+    window.selectedBentoIndex = -1;
+    highlightBento();
+  }
+
+  window.showBentoThenFull = function(id){ 
+    const b=document.getElementById('web-bento'),f=document.getElementById('web-full'); 
+    if(b)b.style.display='grid'; if(f)f.style.display='none'; 
+    renderBento(); 
+    setTimeout(()=>showFull(id),60); 
+  };
+
+  function setupKeys(){
+    document.onkeydown = function(e){
+      if(e.target && e.target.tagName && e.target.tagName.match(/INPUT|TEXTAREA/)) return;
+      const bOn = document.getElementById('web-bento') && document.getElementById('web-bento').style.display !== 'none';
+      const fOn = document.getElementById('web-full') && document.getElementById('web-full').style.display !== 'none';
+      if(!bOn && !fOn) return;
+      if(e.key === 'Escape' && fOn){ backBento(); e.preventDefault(); }
+      if(bOn && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){ navigateBento(e.key); e.preventDefault(); }
+      if(bOn && e.key === 'Enter' && window.selectedBentoIndex >=0 && window.customViews[window.selectedBentoIndex]){ showFull(window.customViews[window.selectedBentoIndex].id); e.preventDefault(); }
+    };
+  }
+
+  // Global app keyboard (light)
+  document.addEventListener('keydown', function(e){
+    if(e.target && e.target.tagName && e.target.tagName.match(/INPUT|TEXTAREA/)) return;
+    if(e.key === '?' ){ toast('Web Views: arrow keys to move • Enter to open • Esc to grid'); e.preventDefault(); }
+    if((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k'){ go('web'); e.preventDefault(); }
+  });
+
+  // Override render on go
+  const _gg = window.go;
+  window.go = function(v){
+    if(typeof _gg === 'function') _gg(v);
+    if(v === 'web'){
+      setTimeout(()=>{
+        const b = document.getElementById('web-bento');
+        const f = document.getElementById('web-full');
+        if(b) b.style.display = 'grid';
+        if(f) f.style.display = 'none';
+        renderBento();
+        window.selectedBentoIndex = 0;
+        highlightBento();
+        setupKeys();
+      }, 50);
+    }
+  };
+
+  // Auto render if web is active
+  setTimeout(function(){
+    const w = document.getElementById('view-web');
+    if(w && w.classList.contains('on')){
+      renderBento();
+    }
+  }, 400);
+
+  // Expose
+  window.renderWebBento = renderBento;
+  window.backToBentoGrid = backBento;
+})();
+</script>
+
+<!-- EXTRA GLOBAL SHORTCUTS (added on top of bento/web keyboard) -->
+<script>
+(function(){
+  function showShortcutsHelp() {
+    let p = document.getElementById('shortcuts-panel');
+    if (p) { p.remove(); return; }
+
+    p = document.createElement('div');
+    p.id = 'shortcuts-panel';
+    p.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;background:var(--s0);border:1px solid var(--line3);border-radius:14px;padding:18px 22px;max-width:480px;box-shadow:0 25px 70px rgba(0,0,0,.65);font-size:12.5px;line-height:1.55;';
+    p.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-weight:700;font-size:14px;">⌨️ Global Shortcuts</div>
+        <div onclick="this.closest('#shortcuts-panel').remove()" style="cursor:pointer;opacity:.6;font-size:18px;">×</div>
+      </div>
+      <div style="display:grid;grid-template-columns:115px 1fr;gap:5px 14px;">
+        <div><b>?</b></div><div>Show / hide this help</div>
+        <div><b>Ctrl/Cmd+K</b></div><div>Jump to Web Views (bento)</div>
+        <div><b>a</b></div><div>Agent</div>
+        <div><b>o</b></div><div>Overview</div>
+        <div><b>f</b></div><div>Files</div>
+        <div><b>c</b></div><div>Chinna AI</div>
+        <div><b>w</b></div><div>WhatsApp</div>
+        <div><b>s</b></div><div>Settings</div>
+        <div><b>g</b> + letter</div><div>g+a=Agent, g+s=Settings, g+w=Web, g+o=Overview</div>
+        <div><b>1</b>–<b>8</b></div><div>Quick nav to common sections</div>
+        <div><b>Esc</b></div><div>Return to bento grid from full iframe</div>
+        <div><b>Arrows+Enter</b></div><div>Navigate bento cards (in Web view)</div>
+      </div>
+      <div style="margin-top:10px;font-size:10.5px;color:var(--t4);">Ignored while typing in inputs. More web-specific keys active when the Web view is open.</div>
+    `;
+    document.body.appendChild(p);
+
+    setTimeout(() => {
+      document.addEventListener('keydown', function h(ev){
+        if (ev.key === 'Escape') { p.remove(); document.removeEventListener('keydown', h); }
+      }, {once:true});
+
+      p.addEventListener('click', function clickH(ev){
+        if (ev.target === p) p.remove();
+        p.removeEventListener('click', clickH);
+      }, {once:true});
+    }, 10);
+  }
+
+  // Extra global key handlers (layered on top of existing listeners)
+  document.addEventListener('keydown', function(e){
+    if (e.target && e.target.tagName && /INPUT|TEXTAREA/i.test(e.target.tagName)) return;
+
+    const k = e.key.toLowerCase();
+
+    // Help
+    if (k === '?' || (e.shiftKey && k === '/')) {
+      showShortcutsHelp();
+      e.preventDefault();
+      return;
+    }
+
+    // Direct nav
+    if (k === 'a') { go('agent'); e.preventDefault(); return; }
+    if (k === 'o') { go('overview'); e.preventDefault(); return; }
+    if (k === 'f') { go('files'); e.preventDefault(); return; }
+    if (k === 'c') { go('ai'); e.preventDefault(); return; }
+    if (k === 'w') { go('whatsapp'); e.preventDefault(); return; }
+    if (k === 's') { go('settings'); e.preventDefault(); return; }
+
+    // g prefix (vim-go style)
+    if (k === 'g') {
+      window.__gPrefix = true;
+      setTimeout(()=>{ window.__gPrefix = false; }, 900);
+      e.preventDefault();
+      return;
+    }
+    if (window.__gPrefix) {
+      window.__gPrefix = false;
+      if (k === 'a') go('agent');
+      else if (k === 's') go('settings');
+      else if (k === 'w') go('web');
+      else if (k === 'o') go('overview');
+      else if (k === 'f') go('files');
+      e.preventDefault();
+      return;
+    }
+
+    // 1-8 quick numbers
+    if (k >= '1' && k <= '8') {
+      const list = ['overview','processes','files','agent','ai','whatsapp','forge','settings'];
+      const idx = parseInt(k, 10) - 1;
+      if (list[idx]) go(list[idx]);
+      e.preventDefault();
+    }
+  }, true);
+
+  // Expose for debugging / console use
+  window.showShortcuts = showShortcutsHelp;
+
+  // Agent-specific keys + quick clean commands (extra global)
+  document.addEventListener('keydown', function(e){
+    if (e.target && e.target.tagName && /INPUT|TEXTAREA/i.test(e.target.tagName)) return;
+    const isAgent = document.getElementById('view-agent') && document.getElementById('view-agent').classList.contains('on');
+    const k = e.key.toLowerCase();
+
+    if (isAgent) {
+      if (k === 'n' && typeof agentClearHistory === 'function') { agentClearHistory(); e.preventDefault(); }
+      if (k === 'p' && typeof agentSetMode === 'function') { agentSetMode('plan'); e.preventDefault(); }
+      if (k === 'b' && typeof agentSetMode === 'function') { agentSetMode('build'); e.preventDefault(); }
+      if (k === 'q' && typeof agentSetMode === 'function') { agentSetMode('ask'); e.preventDefault(); }
+    }
+
+    // Quick clean / doctor (Shift + letter)
+    if (e.shiftKey && k === 'c') {
+      go('overview');
+      setTimeout(function(){ if (typeof toast==='function') toast('Quick Clean triggered — use cards in Overview or run `chinna clean` in terminal'); }, 150);
+      e.preventDefault();
+    }
+    if (e.shiftKey && k === 'd') {
+      go('doctor');
+      e.preventDefault();
+    }
+  }, true);
+})();
 </script>
 </body>
 </html>

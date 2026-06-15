@@ -371,9 +371,10 @@ def provider_chat(messages, model='', tools=None, prefer_openrouter=True):
         candidates = [
             base_model,
             keys.get('ACTIVE_MODEL', ''),
+            'openrouter/auto',
             'openrouter/free',
-            'openai/gpt-oss-120b:free',
-            'qwen/qwen3-next-80b-a3b-instruct:free',
+            'anthropic/claude-3.5-sonnet',
+            'google/gemini-2.5-flash',
         ]
         seen = set()
         for candidate in [c for c in candidates if c]:
@@ -3169,10 +3170,15 @@ async def _run_agent_loop(message: str, history: list, mode: str, model: str, ke
     import asyncio
     import urllib.request, urllib.error
     
-    if keys.get("OPENROUTER_API_KEY"):
+    or_key = keys.get("OPENROUTER_API_KEY")
+    if or_key:
+        if not str(or_key).startswith('sk-or-'):
+            yield _sse_event({"type":"error","content":"OpenRouter key looks invalid (should start with sk-or-). Put the correct OpenRouter key in Settings — the Agent only reads OPENROUTER_API_KEY for OpenRouter calls."})
+            return
         api_url = "https://openrouter.ai/api/v1/chat/completions"
-        api_key = keys.get("OPENROUTER_API_KEY")
-        request_model = model or keys.get("ACTIVE_MODEL") or "meta-llama/llama-3.3-70b-instruct:free"
+        api_key = or_key
+        # Prefer good OpenRouter router/models for reliability in agent (auto is smart, free for no-cost)
+        request_model = model or keys.get("ACTIVE_MODEL") or "openrouter/auto"
         provider_label = "OpenRouter"
         headers = {
             "Content-Type": "application/json",

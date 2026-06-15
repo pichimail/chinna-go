@@ -198,16 +198,17 @@ ENV
     fi
     if [ ! -f "${CHINNA}/models" ]; then
         cat > "${CHINNA}/models" << 'MODELS'
-ACTIVE_MODEL="meta-llama/llama-3.3-70b-instruct:free"
-MODEL_coder="openai/gpt-4o"
+ACTIVE_MODEL="openrouter/auto"
+MODEL_coder="anthropic/claude-3.5-sonnet"
 MODEL_reasoning="anthropic/claude-3.5-sonnet"
-MODEL_small="openai/gpt-4o-mini"
-MODEL_gemma="google/gemma-2-9b-it:free"
-MODEL_llama70="meta-llama/llama-3.3-70b-instruct:free"
-MODEL_free="meta-llama/llama-3.3-70b-instruct:free"
-MODEL_sonnet4="anthropic/claude-3.5-sonnet"
-MODEL_opus4="anthropic/claude-3-opus"
-MODEL_haiku4="anthropic/claude-3-haiku"
+MODEL_small="google/gemini-2.5-flash"
+MODEL_gemma="google/gemini-2.5-flash"
+MODEL_llama70="openrouter/free"
+MODEL_free="openrouter/free"
+MODEL_sonnet="anthropic/claude-3.5-sonnet"
+MODEL_gemini_pro="google/gemini-2.5-pro"
+MODEL_gemini_flash="google/gemini-2.5-flash"
+MODEL_auto="openrouter/auto"
 MODELS
         chmod 600 "${CHINNA}/models"
         echo "    ✓ models file created"
