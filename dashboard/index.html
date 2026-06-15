@@ -1134,7 +1134,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 
       <!-- BATTERY --></div>
 <div class="view" id="view-battery"><div class="vhead"><h2>Battery Health</h2><span class="sub">Cycle count &amp; condition</span></div>
-        <div class="vbody"><div class="infogrid" id="batt-info"></div></div>
+        <div class="vbody"><div class="surface" style="padding:4px;"><div class="sep"></div><div class="infogrid" id="batt-info"></div></div></div>
       
 
       <!-- DOCTOR --></div>
@@ -7603,6 +7603,26 @@ window.chinnaAddWebView = (name, url) => {
       });
     }
     // Auto-apply some floats on demand via createFloatingSurface in future calls
+
+    // Dedicated pop buttons for forge cards (niche spot, upgrade only, no removal of onclick)
+    document.querySelectorAll('.forge-card').forEach(card => {
+      if (card.querySelector('.float-btn')) return;
+      const btn = document.createElement('button');
+      btn.className = 'av0-mini float-btn';
+      btn.style.cssText = 'position:absolute;top:4px;right:4px;font-size:9px;padding:1px 3px;';
+      btn.innerHTML = '⤴';
+      btn.title = 'Float this card';
+      btn.setAttribute('aria-label', 'Float this forge card as a movable surface');
+      btn.onclick = (e) => {
+        e.stopImmediatePropagation();
+        if (window.createFloatingSurface) {
+          const title = card.querySelector('.fc-title') ? card.querySelector('.fc-title').textContent : 'Forge Card';
+          window.createFloatingSurface('forge-card-' + Date.now(), card.outerHTML, {title: title, x:150, y:100, w:320, h:180});
+        }
+      };
+      card.style.position = 'relative';
+      card.appendChild(btn);
+    });
   }
 
   function syncTopModelPill() {
