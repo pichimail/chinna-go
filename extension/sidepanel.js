@@ -14,6 +14,7 @@ let state = {
   chatId: null,
   history: [],                  // current chat messages
   online: false,
+  chatxUsers: [],
 };
 
 // ── Utilities ────────────────────────────────────────────────────────
@@ -320,6 +321,54 @@ async function openTabsPicker() {
   openPanel('tabsPanel');
 }
 
+// ── Secure Chat (live Chinna users) ───────────────────────────────────
+async function refreshChatxUsers() {
+  const el = $('#chatxUsers');
+  if (!state.online) {
+    if (el) el.innerHTML = '<div class="chatx-empty">Chinna offline</div>';
+    $('#chatxLiveDot')?.classList.remove('on');
+    return;
+  }
+  try {
+    const d = await api('/api/chat/users');
+    state.chatxUsers = d.users || [];
+    const online = state.chatxUsers.filter(u => u.online).length;
+    $('#chatxLiveDot')?.classList.toggle('on', online > 0);
+    if (!el) return;
+    if (!state.chatxUsers.length) {
+      el.innerHTML = '<div class="chatx-empty">No users on relay</div>';
+      return;
+    }
+    el.innerHTML = state.chatxUsers.slice(0, 8).map(u => `
+      <div class="chatx-user-row">
+        <div class="chatx-user-meta">
+          <div class="chatx-user-name">${esc(u.display_name || u.id)}</div>
+          <div class="chatx-user-id">${esc(u.id)}</div>
+        </div>
+        <div class="chatx-user-acts">
+          <button class="chatx-act" data-chatx-call="${String(u.id).replace(/"/g,'')}" data-mode="voice">☎</button>
+          <button class="chatx-act" data-chatx-call="${String(u.id).replace(/"/g,'')}" data-mode="video">▣</button>
+        </div>
+      </div>`).join('');
+    el.querySelectorAll('[data-chatx-call]').forEach(btn => {
+      btn.addEventListener('click', () => extCallUser(btn.dataset.chatxCall, btn.dataset.mode));
+    });
+  } catch {
+    if (el) el.innerHTML = '<div class="chatx-empty">Relay unavailable</div>';
+  }
+}
+
+function extCallUser(userId, mode = 'voice') {
+  if (!userId) return;
+  const url = `${API}/?chatx_call=${encodeURIComponent(userId)}&chatx_mode=${encodeURIComponent(mode)}#chatx`;
+  chrome.tabs.create({ url });
+  toast(`${mode === 'video' ? 'Video' : 'Voice'} call opening in dashboard`);
+}
+
+function openSecureChatDashboard() {
+  chrome.tabs.create({ url: API + '/#chatx' });
+}
+
 // ── Toast ──────────────────────────────────────────────────────────────
 function toast(msg) {
   const t = document.createElement('div');
@@ -344,15 +393,19 @@ function handleAction(act) {
     case 'autofill': autofillForm(); break;
     case 'screenshot': screenshot(); break;
     case 'clone': clonePage(); break;
+    case 'secure-chat': openSecureChatDashboard(); break;
     case 'settings': chrome.tabs.create({ url: API }); break;
   }
 }
 
 // ── Wire up events ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  checkConn();
+  checkConn().then(() => refreshChatxUsers());
   setInterval(checkConn, 8000);
+  setInterval(refreshChatxUsers, 10000);
   updateCtxBar();
+  $('#chatxRefreshBtn')?.addEventListener('click', refreshChatxUsers);
+  $('#chatxOpenBtn')?.addEventListener('click', openSecureChatDashboard);
 
   // Send
   const input = $('#input');

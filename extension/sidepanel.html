@@ -40,6 +40,7 @@
           <div class="menu-item" data-act="screenshot"><span class="mi-ic">⛶</span> Screenshot</div>
           <div class="menu-item" data-act="clone"><span class="mi-ic">⧉</span> Clone page</div>
           <div class="menu-sep"></div>
+          <div class="menu-item" data-act="secure-chat"><span class="mi-ic">◫</span> Secure Chat</div>
           <div class="menu-item" data-act="settings"><span class="mi-ic">⚙</span> Open dashboard</div>
         </div>
       </div>
@@ -50,6 +51,17 @@
   <div class="context-bar" id="contextBar">
     <span class="ctx-chip" id="ctxChip"><span class="ctx-ic">◰</span> <span id="ctxLabel">This tab</span></span>
     <span class="ctx-tab-title" id="ctxTabTitle"></span>
+  </div>
+
+  <!-- Secure Chat (Chinna users) -->
+  <div class="chatx-bar" id="chatxBar">
+    <div class="chatx-bar-head">
+      <span class="chatx-bar-title">Secure Chat</span>
+      <span class="chatx-live-dot" id="chatxLiveDot" title="Live users"></span>
+      <button class="icon-btn sm" id="chatxRefreshBtn" title="Refresh users">↻</button>
+      <button class="icon-btn sm" id="chatxOpenBtn" title="Open dashboard">⤢</button>
+    </div>
+    <div class="chatx-users" id="chatxUsers"><div class="chatx-empty">Loading…</div></div>
   </div>
 
   <!-- Music mini-player (hidden until used) -->
@@ -71,7 +83,7 @@
     <div class="welcome" id="welcome">
       <div class="welcome-mark">C</div>
       <div class="welcome-title">Chinna Companion</div>
-      <div class="welcome-sub">Your Mac + browser, one AI. Ask about this page, run terminal commands, control music, autofill forms.</div>
+      <div class="welcome-sub">Mac + browser AI</div>
       <div class="suggest-grid">
         <button class="suggest" data-prompt="Summarize this page in 5 bullet points">⊹ Summarize page</button>
         <button class="suggest" data-prompt="Extract all links and key data from this page">⛓ Extract data</button>

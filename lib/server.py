@@ -1559,6 +1559,24 @@ def execute_tool(name, args):
             results = search_memory(args.get("query", ""), int(args.get("limit", 8)))
             return json.dumps(results), False
 
+        elif name == "search_files_on_mac":
+            q = args.get("query", "")
+            base = args.get("base_path", "~")
+            res = search_files_mac(q, base)
+            return json.dumps(res), False
+
+        elif name == "read_file_on_mac":
+            p = args.get("path", "")
+            content = read_file_content(p)
+            return content, False
+
+        elif name == "play_media_in_chat":
+            p = args.get("path", "")
+            url = serve_media_url(p)
+            if url:
+                return json.dumps({"media_url": url, "name": os.path.basename(p), "type": "media"}), False
+            return "File not playable", False
+
         elif name == "get_job_status":
             jid = args.get("job_id")
             if not jid:
@@ -1689,6 +1707,38 @@ class H(http.server.SimpleHTTPRequestHandler):
             self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6.7'})
         elif p == '/api/ai/status':
             self._json(ai_key_status())
+
+        elif p == '/api/fs/search':
+            q = unquote(self.path.split('?q=')[-1].split('&')[0]) if '?' in self.path else ''
+            base = unquote(self.path.split('base=')[-1].split('&')[0]) if 'base=' in self.path else '~'
+            self._json({'results': search_files_mac(q, base)})
+
+        elif p.startswith('/api/fs/read'):
+            path = unquote(self.path.split('?path=')[-1]) if '?path=' in self.path else '~'
+            self._json({'content': read_file_content(path)})
+
+        elif p.startswith('/api/fs/serve'):
+            # Secure media serve for audio/video play inside the AI chat
+            path = unquote(self.path.split('?path=')[-1].split('&')[0]) if '?path=' in self.path else ''
+            p = os.path.expanduser(path)
+            if not os.path.exists(p) or not os.path.isfile(p):
+                self.send_error(404); return
+            try:
+                mime = mimetypes.guess_type(p)[0] or 'application/octet-stream'
+                self.send_response(200)
+                self.send_header('Content-Type', mime)
+                self.send_header('Content-Length', str(os.path.getsize(p)))
+                self.send_header('Accept-Ranges', 'bytes')
+                self.end_headers()
+                with open(p, 'rb') as f:
+                    while True:
+                        chunk = f.read(8192)
+                        if not chunk: break
+                        self.wfile.write(chunk)
+                return
+            except Exception as e:
+                self.send_error(500, str(e))
+                return
         elif p == '/api/custom-views':
             self._json({'views': load_custom_views()})
         elif p == '/api/ui-layout':
@@ -1744,6 +1794,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.chat_poll(q)
         elif p in ('/api/chat/history', '/chat/api/history'):
             self.chat_history(q)
+        elif p in ('/api/chat/users', '/chat/api/users'):
+            self.chat_list_users(q)
         elif p == '/api/whatsapp/qr':
             self.whatsapp_proxy('GET', '/qr')
         elif p == '/api/whatsapp/chats':
@@ -1878,6 +1930,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.chat_add_contact(b)
         elif p in ('/api/chat/send', '/chat/api/send'):
             self.chat_send(b)
+        elif p in ('/api/chat/presence', '/chat/api/presence'):
+            self.chat_presence(b)
         elif p == '/api/uploaded-file':
             self.serve_uploaded_file(q.get('id'))
         elif p == '/api/projects':
@@ -2327,6 +2381,41 @@ fi
                 out.append(m)
         out.sort(key=lambda x: x.get('id', 0))
         self._json({'messages': out[-max(1, min(1000, lim)):], 'count': len(out)})
+
+    def chat_list_users(self, q):
+        uid = safe_id(q.get('user_id', ''))
+        db = load_chat_db()
+        now = int(time.time())
+        users = []
+        for user_id, u in db.get('users', {}).items():
+            if uid and user_id == uid:
+                continue
+            updated = int(u.get('updated', 0))
+            users.append({
+                'id': user_id,
+                'display_name': u.get('display_name', user_id),
+                'fingerprint': u.get('fingerprint', ''),
+                'relay_url': u.get('relay_url', ''),
+                'online': (now - updated) < 90,
+                'updated': updated,
+            })
+        users.sort(key=lambda x: (-int(x.get('online', False)), -int(x.get('updated', 0))))
+        self._json({'users': users, 'count': len(users), 'server_time': now})
+
+    def chat_presence(self, b):
+        uid = safe_id(b.get('user_id'))
+        if not uid:
+            self._json({'error': 'user_id required'}, 400)
+            return
+        with chat_lock:
+            db = load_chat_db()
+            users = db.setdefault('users', {})
+            if uid not in users:
+                self._json({'error': 'user not registered'}, 404)
+                return
+            users[uid]['updated'] = int(time.time())
+            save_chat_db(db)
+        self._json({'ok': True, 'user_id': uid, 'updated': int(time.time())})
 
     def chat(self, b):
         """New dynamic Chinna AI with full conversation history + real tool calling loop + attachments."""
