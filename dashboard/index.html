@@ -19,7 +19,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--t1);font-size:13px
 *::-webkit-scrollbar-thumb{background:var(--line3);border-radius:2px}
 *::-webkit-scrollbar-track{background:transparent}
 ::selection{background:rgba(186,255,41,.28)}
-:focus-visible{outline:1px solid var(--acc);outline-offset:1px;border-radius:var(--r-sm)}
+:focus-visible{outline:1px solid var(--line3);outline-offset:1px;border-radius:var(--r-sm)}
 button,input,textarea,select,label,h1,h2,h3,h4,h5,h6,p,span,div{font-family:var(--font)!important}
 button{cursor:pointer}
 input,textarea,select{color-scheme:dark}
@@ -86,7 +86,8 @@ input,textarea,select{color-scheme:dark}
 .bigbtn:disabled{opacity:.4;cursor:not-allowed}
 .smallbtn{padding:4px 9px;font-size:11px}
 .field,input[type=text],input[type=password],input[type=number],textarea,select{background:var(--s1);border:1px solid var(--line2);border-radius:var(--r);padding:8px 10px;color:var(--t1);font-size:13px;font-family:var(--font);outline:none;transition:border-color .12s,box-shadow .12s;width:100%}
-.field:focus,input:focus,textarea:focus{border-color:var(--acc);box-shadow:0 0 0 2px rgba(186,255,41,.12)}
+.field:focus,input:focus,textarea:focus,select:focus{border-color:var(--line3);box-shadow:none}
+input:focus-visible,textarea:focus-visible,select:focus-visible,.field:focus-visible{outline:none!important}
 .field::placeholder,input::placeholder,textarea::placeholder{color:var(--t3)}
 textarea{resize:vertical;line-height:1.5}
 hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
@@ -696,8 +697,9 @@ html,body{overflow:hidden!important}
 .bigbtn:hover,.miniA:hover,.ux-iconbtn:hover,.av0-send:hover{background:transparent!important;border-color:var(--line3)!important;color:var(--t1)!important;filter:none!important}
 .bigbtn.solid,.ux-iconbtn.primary,.av0-send{color:var(--acc)!important;border-color:var(--acc-bd)!important}
 .field,input[type=text],input[type=password],input[type=number],textarea,select{background:transparent!important;border-color:var(--line)!important;box-shadow:none!important}
-.field:focus,input:focus,textarea:focus,select:focus{border-color:var(--acc)!important;box-shadow:0 0 0 2px rgba(var(--accr),.18)!important}
-button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[role="separator"]:focus-visible{outline:2px solid var(--acc)!important;outline-offset:2px!important}
+.field:focus,input:focus,textarea:focus,select:focus{border-color:var(--line3)!important;box-shadow:none!important}
+button:focus-visible,[role="separator"]:focus-visible{outline:1px solid var(--line3)!important;outline-offset:2px!important}
+input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-visible{outline:none!important;box-shadow:none!important}
 @media(max-width:760px){
   #top-command-bar{gap:4px!important;padding-inline:6px!important}
   #top-command-bar input{min-width:96px}
@@ -1014,7 +1016,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 .av0-composer{padding:10px 12px;border-top:1px solid var(--line);background:transparent;flex-shrink:0}
 .av0-composer-inner{display:flex;align-items:flex-end;gap:8px;background:transparent;border:1px solid var(--line);border-radius:var(--r);padding:6px 8px}
-.av0-composer-inner:focus-within{border-color:var(--acc)}
+.av0-composer-inner:focus-within{border-color:var(--line3);box-shadow:none}
 .av0-attach{width:30px;height:30px;border-radius:999px;border:1px solid var(--line);background:var(--s2);color:var(--t2);font-size:18px;line-height:1;display:grid;place-items:center;cursor:pointer;flex-shrink:0}
 .av0-attach:hover{border-color:var(--acc);color:var(--acc)}
 .av0-ta{flex:1;background:none;border:none;outline:none;color:var(--t1);font-size:13.5px;font-family:var(--font);resize:none;line-height:1.45;max-height:180px;padding:4px 2px;min-height:22px}
@@ -1190,7 +1192,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   width:100%; background:var(--s1); border:1px solid var(--line2); border-radius:8px;
   padding:6px 11px; font-size:12px; color:var(--t1); font-family:var(--font);
 }
-.webv-search input:focus{border-color:var(--acc); outline:none;}
+.webv-search input:focus{border-color:var(--line3);outline:none;box-shadow:none;}
 
 .webv-actions{display:flex; align-items:center; gap:4px;}
 .webv-btn{
@@ -1717,8 +1719,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   transition: border-color .12s, box-shadow .12s;
 }
 .grok-input-row:focus-within {
-  border-color: var(--acc);
-  box-shadow: 0 0 0 3px rgba(186,255,41,.08);
+  border-color: var(--line3);
+  box-shadow: none;
 }
 
 .grok-attach, .grok-voice, .grok-send {
@@ -6305,7 +6307,7 @@ async function loadModels(){
   const auto=document.getElementById('auto-val');
   try{
     const d=await api('models');
-    if(act) act.textContent=d.active||'—';
+    syncModelLabels(d.active||'—');
     if(pres && d.presets){
       const entries=Object.entries(d.presets);
       pres.innerHTML=entries.length ? entries.map(([k,v])=>
@@ -6319,11 +6321,19 @@ async function loadModels(){
     if(pres) pres.innerHTML='<button type="button" class="bigbtn" disabled>Offline</button>';
   }
 }
+function syncModelLabels(active){
+  const label = active || '—';
+  const act=document.getElementById('model-active');
+  const side=document.getElementById('sidebarModelName');
+  const top=document.getElementById('top-model-pill');
+  if(act) act.textContent=label;
+  if(side) side.textContent=label;
+  if(top) top.textContent=label;
+}
 async function setModelPreset(preset){
   const d=await api('model-set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preset})});
   if(d.ok){
-    const act=document.getElementById('model-active');
-    if(act) act.textContent=d.active;
+    syncModelLabels(d.active);
     toast('Model: '+d.active);
   } else {
     toast('Error: '+d.error);
@@ -6333,7 +6343,7 @@ async function setCustomModel(){
   const m=document.getElementById('model-custom')?.value?.trim();
   if(!m){toast('Enter a model string');return;}
   const d=await api('model-set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({custom:m})});
-  if(d.ok){const act=document.getElementById('model-active');if(act)act.textContent=d.active;toast('Model set: '+d.active);}
+  if(d.ok){ syncModelLabels(d.active); toast('Model set: '+d.active); }
   else toast('Error: '+d.error);
 }
 async function toggleAutomation(){
@@ -7311,7 +7321,6 @@ async function agentSend() {
   if (inp) { inp.value = ''; inp.style.height = 'auto'; }
 
   agentAddMsg('user', message);
-  agentHistory.push({ role: 'user', content: message });
 
   agentSetStatus(true, 'thinking…');
 
@@ -7329,6 +7338,7 @@ async function agentSend() {
         model: ''
       })
     });
+    agentHistory.push({ role: 'user', content: message });
 
     if (!resp.ok) {
       const errTxt = await resp.text().catch(()=>(''));
