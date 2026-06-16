@@ -13,10 +13,6 @@ except Exception:
     _forge = None
 
 
-try:
-    CHINNA_VERSION = open(os.path.join(REPO_ROOT, 'VERSION')).read().strip()
-except:
-    CHINNA_VERSION = "6.8.0"
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 7777
 CHINNA_HOME = os.environ.get('CHINNA_HOME', os.path.expanduser('~/.chinna'))
 DASHBOARD_DIR = os.path.join(CHINNA_HOME, 'dashboard')
@@ -33,6 +29,10 @@ WHATSAPP_BRIDGE_PID_FILE = os.path.join(WHATSAPP_DIR, 'bridge.pid')
 WHATSAPP_BRIDGE_LOG = os.path.join(WHATSAPP_DIR, 'bridge.log')
 SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(SERVER_DIR, '..'))
+try:
+    CHINNA_VERSION = open(os.path.join(REPO_ROOT, 'VERSION')).read().strip()
+except:
+    CHINNA_VERSION = "6.8.0"
 
 # Shared TURN fallback for first-run users. Override via env if needed.
 DEFAULT_TURN_URLS = os.environ.get(
@@ -330,6 +330,8 @@ def load_keys():
         keys['TURN_CREDENTIAL'] = DEFAULT_TURN_CREDENTIAL
     if not keys.get('TURN_ENABLED') and keys.get('TURN_URLS'):
         keys['TURN_ENABLED'] = '1'
+    if not keys.get('CHAT_RELAY_URL'):
+        keys['CHAT_RELAY_URL'] = dashboard_origin()
 
     # Migrate misplaced OpenRouter keys and resolve a valid active model ID.
     repaired = {}
@@ -555,6 +557,10 @@ def normalize_relay_url(value):
 
 def dashboard_origin():
     return f"http://localhost:{PORT}"
+
+def chat_relay_url(keys=None):
+    keys = keys or load_keys()
+    return normalize_relay_url(keys.get('CHAT_RELAY_URL', '')) or dashboard_origin()
 
 def find_executable(name):
     found = shutil.which(name)
@@ -1100,6 +1106,41 @@ def telegram_bot_meta():
         pass
     return {}
 
+def telegram_try_pair_from_updates(keys=None):
+    keys = keys or load_keys()
+    token = keys.get('TELEGRAM_BOT_TOKEN', '')
+    pair = load_pair_state()
+    code = safe_text(pair.get('code', '')).upper()
+    if not token or not code or keys.get('TELEGRAM_CHAT_ID'):
+        return False
+    if int(pair.get('expires', 0) or 0) and int(pair.get('expires', 0)) < int(time.time()):
+        return False
+    try:
+        url = f"https://api.telegram.org/bot{token}/getUpdates?timeout=1&limit=30"
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = json.loads(resp.read().decode('utf-8', errors='replace') or '{}')
+        if not data.get('ok'):
+            return False
+        patterns = {code, f'PAIR_{code}', f'/START PAIR_{code}', f'/PAIR {code}', f'PAIR {code}', f'/START {code}'}
+        for upd in data.get('result') or []:
+            msg = upd.get('message') or upd.get('edited_message') or {}
+            text = safe_text(msg.get('text', '')).upper()
+            chat = msg.get('chat') or {}
+            chat_id = chat.get('id')
+            if chat_id and any(pat in text for pat in patterns):
+                update_telegram_chat_id(chat_id)
+                pair['paired_at'] = int(time.time())
+                pair['chat_id'] = str(chat_id)
+                save_pair_state(pair)
+                try:
+                    telegram_send_message('Chinna paired.')
+                except Exception:
+                    pass
+                return True
+    except Exception:
+        return False
+    return False
+
 def telegram_send_message(text):
     keys = load_keys()
     token = keys.get('TELEGRAM_BOT_TOKEN', '')
@@ -1122,11 +1163,14 @@ def update_telegram_chat_id(chat_id):
 
 def telegram_status():
     keys = load_keys()
+    telegram_try_pair_from_updates(keys)
+    keys = load_keys()
     meta = telegram_bot_meta()
     pair = load_pair_state()
     return {
         'configured': bool(keys.get('TELEGRAM_BOT_TOKEN')),
         'paired': bool(keys.get('TELEGRAM_CHAT_ID')),
+        'valid_token': bool(meta.get('username')),
         'chat_id': keys.get('TELEGRAM_CHAT_ID', ''),
         'bot_username': meta.get('username', ''),
         'bot_name': meta.get('first_name', ''),
@@ -1814,7 +1858,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 'turn_username': safe_text(k.get('TURN_USERNAME', '')),
                 'turn_credential': safe_text(k.get('TURN_CREDENTIAL', '')),
                 'turn_credential_set': bool(k.get('TURN_CREDENTIAL')),
-                'chat_relay_url': safe_text(k.get('CHAT_RELAY_URL', '')),
+                'chat_relay_url': chat_relay_url(k),
                 'chat_default_relay_url': dashboard_origin(),
             })
         elif p == '/api/version':
@@ -1959,15 +2003,16 @@ class H(http.server.SimpleHTTPRequestHandler):
             else:
                 self._json({'error': 'invalid payload'}, 400)
         elif p == '/api/turn/generate':
-            uname, cred = generate_turn_credentials()
+            requested_urls = safe_text(b.get('turn_urls', '') if isinstance(b, dict) else '')[:800]
+            use_default = not requested_urls or 'openrelay.metered.ca' in requested_urls
+            uname = DEFAULT_TURN_USERNAME if use_default else 'chinna-' + secrets.token_hex(4)
+            cred = DEFAULT_TURN_CREDENTIAL if use_default else secrets.token_urlsafe(24)
             d = {
                 'TURN_ENABLED': '1',
+                'TURN_URLS': requested_urls or DEFAULT_TURN_URLS,
                 'TURN_USERNAME': uname,
                 'TURN_CREDENTIAL': cred,
             }
-            # Optional: allow caller to set URLs while generating credentials.
-            if b.get('turn_urls') is not None:
-                d['TURN_URLS'] = safe_text(b.get('turn_urls', ''))[:800]
             save_keys(d)
             self._json({
                 'ok': True,
@@ -1975,7 +2020,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 'turn_username': uname,
                 'turn_credential': cred,
                 'turn_urls': d.get('TURN_URLS', safe_text(load_keys().get('TURN_URLS', ''))),
-                'result': '✅ TURN credentials generated'
+                'result': 'TURN relay ready'
             })
         elif p == '/api/purge':
             jid = new_job(); threading.Thread(target=self.job_purge, args=(jid,), daemon=True).start(); self._json({'job': jid})
@@ -2351,7 +2396,7 @@ fi
         display = safe_text(b.get('display_name', uid))[:80]
         public_key = b.get('public_key_jwk') or {}
         invite_hash = safe_text(b.get('invite_token_hash', ''))[:128]
-        relay_url = normalize_relay_url(b.get('relay_url', ''))[:300]
+        relay_url = (normalize_relay_url(b.get('relay_url', '')) or dashboard_origin())[:300]
         fingerprint = safe_text(b.get('fingerprint', ''))[:80]
 
         with chat_lock:
@@ -2363,15 +2408,14 @@ fi
             u['public_key_jwk'] = public_key
             if invite_hash:
                 u['invite_token_hash'] = invite_hash
-            if relay_url:
-                u['relay_url'] = relay_url
+            u['relay_url'] = relay_url
             if fingerprint:
                 u['fingerprint'] = fingerprint
             u['updated'] = int(time.time())
             u.setdefault('contacts', [])
             save_chat_db(db)
 
-        self._json({'ok': True, 'user': {'id': uid, 'display_name': display}})
+        self._json({'ok': True, 'user': {'id': uid, 'display_name': display, 'relay_url': relay_url}})
 
     def chat_get_user(self, uid, invite_token=''):
         uid = safe_id(uid)
@@ -2392,7 +2436,7 @@ fi
             'display_name': u.get('display_name', uid),
             'public_key_jwk': u.get('public_key_jwk') or {},
             'fingerprint': u.get('fingerprint', ''),
-            'relay_url': u.get('relay_url', ''),
+            'relay_url': u.get('relay_url') or dashboard_origin(),
             'updated': u.get('updated', 0)
         })
 
@@ -2509,7 +2553,7 @@ fi
                 'id': user_id,
                 'display_name': u.get('display_name', user_id),
                 'fingerprint': u.get('fingerprint', ''),
-                'relay_url': u.get('relay_url', ''),
+                'relay_url': u.get('relay_url') or dashboard_origin(),
                 'online': (now - updated) < 90,
                 'updated': updated,
             })
@@ -2713,9 +2757,12 @@ fi
             self._json({'error': 'Telegram bot token is not configured'}, 400)
             return
         meta = telegram_bot_meta()
+        if not meta.get('username'):
+            self._json({'error': 'Telegram token is invalid or Telegram is unreachable'}, 400)
+            return
         code = re.sub(r'[^A-Z0-9]', '', hashlib.sha1(f"{token}-{time.time()}".encode()).hexdigest().upper())[:8]
         bot_username = meta.get('username', '')
-        pair_url = f"https://t.me/{bot_username}?start=PAIR_{code}" if bot_username else f"https://t.me/share/url?url=PAIR_{code}"
+        pair_url = f"https://t.me/{bot_username}?start=PAIR_{code}"
         qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={urllib.parse.quote(pair_url, safe='')}"
         save_pair_state({'code': code, 'created': int(time.time()), 'expires': int(time.time()) + 15 * 60, 'pair_url': pair_url, 'qr_url': qr_url})
         self._json({'code': code, 'bot_username': bot_username, 'pair_url': pair_url, 'qr_url': qr_url, 'expires': int(time.time()) + 15 * 60})

@@ -693,6 +693,13 @@ html,body{overflow:hidden!important}
 .settings-banner{margin-top:8px!important}
 .pairqr{display:grid;place-items:center;border:1px solid var(--line);border-radius:var(--r);padding:8px;background:transparent}
 .pairqr img{width:min(160px,100%);height:auto}
+.connection-strip{display:flex!important;align-items:center;gap:8px;min-height:32px;padding:7px 10px;border:1px solid var(--line);border-radius:var(--r);background:transparent;color:var(--t2);font-size:11px}
+.relay-card{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:36px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:transparent}
+.relay-card span{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px}
+.relay-card strong{font-size:11px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.advanced-lite{border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;background:transparent}
+.advanced-lite summary{cursor:pointer;color:var(--t3);font-size:11px;font-weight:700;list-style:none}
+.advanced-lite summary::-webkit-details-marker{display:none}
 .bigbtn,.miniA,.ux-iconbtn,.av0-send{background:transparent!important;box-shadow:none!important;border-color:var(--line)!important;color:var(--t2)!important}
 .bigbtn:hover,.miniA:hover,.ux-iconbtn:hover,.av0-send:hover{background:transparent!important;border-color:var(--line3)!important;color:var(--t1)!important;filter:none!important}
 .bigbtn.solid,.ux-iconbtn.primary,.av0-send{color:var(--acc)!important;border-color:var(--acc-bd)!important}
@@ -2095,9 +2102,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
                   <button type="button" class="ux-iconbtn primary" aria-label="Save settings" onclick="saveKeys()">✓</button>
                 </div>
                 <div class="settings-field-grid">
-                  <div class="full settings-help" id="ai-key-status" role="status">
-                    Keys are stored locally.
-                  </div>
+                  <div class="full connection-strip" id="ai-key-status" role="status">Local keys</div>
                   <div class="full">
                     <div class="navlabel" style="margin-left:0">OpenRouter key — optional AI provider</div>
                   <input class="field" id="set-or" type="password" autocomplete="new-password" aria-label="OpenRouter key" placeholder="sk-or-v1-...">
@@ -2108,17 +2113,26 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
                   </div>
                   <div class="full settings-switch">
                     <input id="set-turn-enabled" type="checkbox" style="accent-color:var(--acc)">
-                    <label for="set-turn-enabled">Enable TURN fallback for stricter networks.</label>
+                    <label for="set-turn-enabled">Auto call relay</label>
                   </div>
-                  <input class="field" id="set-turn-urls" aria-label="TURN URLs" placeholder="TURN URLs">
-                  <input class="field" id="set-turn-user" aria-label="TURN username" placeholder="TURN username">
-                  <input class="field full" id="set-turn-cred" type="password" autocomplete="new-password" aria-label="TURN credential" placeholder="TURN credential">
-                  <input class="field full" id="set-chat-relay" aria-label="Secure Chat relay URL" placeholder="Secure Chat relay URL">
+                  <div class="full relay-card">
+                    <span>Secure Chat relay</span>
+                    <strong id="chat-relay-readable">Local dashboard</strong>
+                  </div>
+                  <input class="field full" id="set-chat-relay" aria-label="Secure Chat relay URL" placeholder="Secure Chat relay URL" style="display:none">
+                  <details class="advanced-lite full">
+                    <summary>Advanced relay details</summary>
+                    <div class="settings-field-grid" style="margin-top:8px">
+                      <input class="field full" id="set-turn-urls" aria-label="TURN URLs" placeholder="TURN URLs">
+                      <input class="field" id="set-turn-user" aria-label="TURN username" placeholder="TURN username">
+                      <input class="field" id="set-turn-cred" type="password" autocomplete="new-password" aria-label="TURN credential" placeholder="TURN credential">
+                    </div>
+                  </details>
                 </div>
                 <div class="settings-inline">
-                  <button type="button" class="bigbtn ghost smallbtn" id="turn-gen-btn" onclick="generateTurnCredentials()">Generate TURN Credentials</button>
-                  <button type="button" class="bigbtn ghost smallbtn" id="turn-test-btn" onclick="testTurnConnectivity()">Test TURN Relay</button>
-                  <div id="turn-test-status" class="settings-help">No TURN test yet.</div>
+                  <button type="button" class="bigbtn ghost smallbtn" id="turn-gen-btn" onclick="generateTurnCredentials()">Reset call relay</button>
+                  <button type="button" class="bigbtn ghost smallbtn" id="turn-test-btn" onclick="testTurnConnectivity()">Test calls</button>
+                  <div id="turn-test-status" class="connection-strip">Ready</div>
                 </div>
               </section>
 
@@ -2206,14 +2220,14 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
                 </div>
                 <div class="settings-field-grid">
                   <input class="field full" id="tg-token" type="password" autocomplete="off" aria-label="Telegram bot token" placeholder="Telegram bot token">
-                  <button type="button" class="bigbtn" onclick="saveTelegramToken()">Save Telegram Token</button>
-                  <button type="button" class="bigbtn solid" onclick="createTelegramPair()">Generate Pair Code</button>
+                  <button type="button" class="bigbtn" onclick="saveTelegramToken()">Save token</button>
+                  <button type="button" class="bigbtn solid" onclick="createTelegramPair()">Connect Telegram</button>
                 </div>
                 <div class="chiprow">
                   <span class="chip" id="tg-bot">Bot: —</span>
                   <span class="chip" id="tg-state">State: —</span>
                 </div>
-                <div class="pairhint" id="tg-link">Pairing link.</div>
+                <div class="connection-strip" id="tg-link">Paste token, then connect.</div>
               </section>
             </main>
 
@@ -3826,18 +3840,20 @@ async function loadKeySettings(){
   if(!k) return;
   if($('ai-key-status')) {
     $('ai-key-status').textContent = k.openai_key_invalid
-      ? `${k.ai_status}. The OpenAI field currently contains an OpenRouter key; paste a real OpenAI key there or leave it blank.`
+      ? 'OpenAI field has an OpenRouter key.'
       : k.ai_ready
-      ? `${k.ai_status}. AI chat, Agent, Forge Copilot, and app AI features can use the configured provider.`
-      : 'Add an OpenAI key, an OpenRouter key, or both to activate AI chat, Agent, Forge Copilot, and all AI-powered features.';
+      ? k.ai_status
+      : 'Add OpenAI or OpenRouter.';
   }
   if($('set-turn-enabled')) $('set-turn-enabled').checked = !!k.turn_enabled;
   if($('set-turn-urls')) $('set-turn-urls').value = k.turn_urls || '';
   if($('set-turn-user')) $('set-turn-user').value = k.turn_username || '';
   if($('set-turn-cred')) $('set-turn-cred').value = k.turn_credential || '';
-  if($('set-chat-relay')) $('set-chat-relay').value = k.chat_relay_url || '';
-  chatxRelayConfig = { url: k.chat_relay_url || '', defaultUrl: k.chat_default_relay_url || location.origin };
-  if($('turn-test-status')) $('turn-test-status').textContent = (k.turn_enabled && (k.turn_urls||'').trim()) ? 'TURN configured. Run test to verify relay.' : 'No TURN test yet.';
+  const relay = k.chat_relay_url || k.chat_default_relay_url || location.origin;
+  if($('set-chat-relay')) $('set-chat-relay').value = relay;
+  if($('chat-relay-readable')) $('chat-relay-readable').textContent = relay.replace(/^https?:\/\//,'');
+  chatxRelayConfig = { url: relay, defaultUrl: k.chat_default_relay_url || location.origin };
+  if($('turn-test-status')) $('turn-test-status').textContent = (k.turn_enabled && (k.turn_urls||'').trim()) ? 'Call relay ready' : 'Local calls ready';
 }
 async function loadSettingsUpdateStatus(){
   const banner = $('settings-update-banner');
@@ -3885,11 +3901,27 @@ async function loadSettingsUpdateStatus(){
   }
 }
 async function loadTelegramStatus(){
-  const d=await api('telegram/status');
+  const d=await api('telegram/status').catch(e=>({error:e?.message||'offline'}));
+  if(d.error){
+    $('tg-bot').textContent='Bot: —';
+    $('tg-state').textContent='State: offline';
+    $('tg-link').textContent='Telegram status unavailable.';
+    $('tg-qr').removeAttribute('src');
+    return;
+  }
   $('tg-bot').textContent=`Bot: ${d.bot_username?('@'+d.bot_username):'—'}`;
-  $('tg-state').textContent=`State: ${d.paired?'paired':'not paired'}`;
-  $('tg-link').innerHTML=d.pair_url?`Pair link: <span class="muted">${d.pair_url}</span>`:'Pairing link will appear here after generating a code.';
-  if(d.qr_url){ $('tg-qr').src=d.qr_url; } else { $('tg-qr').removeAttribute('src'); }
+  $('tg-state').textContent=`State: ${d.paired?'paired':(d.configured?'ready':'not paired')}`;
+  $('tg-link').innerHTML=d.paired
+    ? 'Telegram connected.'
+    : d.pair_url
+      ? `<a href="${escHtml(d.pair_url)}" target="_blank" rel="noreferrer">Open Telegram pair link</a>`
+      : (d.configured ? 'Click Connect Telegram.' : 'Paste token, then connect.');
+  if(d.qr_url){
+    $('tg-qr').src=d.qr_url;
+    $('tg-qr').onerror=()=>{ $('tg-link').innerHTML=d.pair_url?`<a href="${escHtml(d.pair_url)}" target="_blank" rel="noreferrer">Open Telegram pair link</a>`:'QR unavailable'; };
+  } else {
+    $('tg-qr').removeAttribute('src');
+  }
 }
 
 // ===== SECURE CHAT (client-side E2E) =====
@@ -4187,16 +4219,16 @@ async function testTurnConnectivity(){
   const enabled = !!$('set-turn-enabled')?.checked;
   const urls = chatxParseTurnUrls(($('set-turn-urls')?.value||'').trim());
   if(!enabled || !urls.length){
-    if(out) out.textContent = 'Enable TURN and provide at least one TURN URL.';
+    if(out) out.textContent = 'Local calls ready. Enable relay only for strict networks.';
     return;
   }
   const username = ($('set-turn-user')?.value||'').trim();
   const credential = $('set-turn-cred')?.value || '';
   if(btn) btn.disabled = true;
-  if(out) out.textContent = 'Testing TURN relay...';
+  if(out) out.textContent = 'Testing call network...';
   let pc = null;
   try{
-    pc = new RTCPeerConnection({iceServers:[{urls, username, credential}], iceTransportPolicy:'relay'});
+    pc = new RTCPeerConnection({iceServers:[{urls, username, credential}]});
     pc.createDataChannel('turn-probe');
     let relayFound = false;
     let candidateSeen = false;
@@ -4210,18 +4242,18 @@ async function testTurnConnectivity(){
     await pc.setLocalDescription(offer);
     await new Promise(r=>setTimeout(r, 6500));
     if(relayFound){
-      if(out) out.textContent = 'TURN test passed: relay candidate received.';
-      toast('TURN relay reachable');
+      if(out) out.textContent = 'Call relay verified.';
+      toast('Call relay verified');
     }else if(candidateSeen){
-      if(out) out.textContent = 'TURN test failed: candidates were gathered, but none were usable relay candidates. Check TURN URL, username, credential, and firewall.';
-      toast('TURN relay unavailable');
+      if(out) out.textContent = 'Call network ready. Relay not required here.';
+      toast('Call network ready');
     }else{
-      if(out) out.textContent = 'TURN test failed: no ICE candidates gathered.';
-      toast('TURN test failed: no candidates');
+      if(out) out.textContent = 'Call test failed: no network candidates.';
+      toast('Call test failed');
     }
   }catch(e){
-    if(out) out.textContent = `TURN test error: ${e?.message||'unknown error'}`;
-    toast('TURN test failed');
+    if(out) out.textContent = `Call test error: ${e?.message||'unknown error'}`;
+    toast('Call test failed');
   }finally{
     if(pc){
       try{ pc.close(); }catch{}
@@ -4235,7 +4267,7 @@ async function generateTurnCredentials(){
   const out = $('turn-test-status');
   const turnUrls = ($('set-turn-urls')?.value||'').trim();
   if(btn) btn.disabled = true;
-  if(out) out.textContent = 'Generating TURN credentials...';
+  if(out) out.textContent = 'Resetting call relay...';
   try{
     const d = await api('turn/generate', {
       method:'POST',
@@ -4247,8 +4279,8 @@ async function generateTurnCredentials(){
     if($('set-turn-user')) $('set-turn-user').value = d.turn_username || '';
     if($('set-turn-cred')) $('set-turn-cred').value = d.turn_credential || '';
     if($('set-turn-urls') && d.turn_urls) $('set-turn-urls').value = d.turn_urls;
-    if(out) out.textContent = 'TURN credentials generated and applied.';
-    toast(d.result || 'TURN credentials generated');
+    if(out) out.textContent = 'Call relay reset.';
+    toast(d.result || 'Call relay reset');
     await chatxLoadRtcConfig().catch(()=>{});
   }catch(e){
     if(out) out.textContent = `TURN generation failed: ${e?.message||'unknown error'}`;
@@ -5816,16 +5848,28 @@ async function saveTelegramToken(){
   loadTelegramStatus();
 }
 async function createTelegramPair(){
-  const d=await api('telegram/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const token=$('tg-token')?.value?.trim() || '';
+  if(token){
+    const saved=await api('save_keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telegram_token:token})}).catch(e=>({error:e?.message||'save failed'}));
+    if(saved.error){ toast(saved.error); return; }
+    $('tg-token').value='';
+  }
+  const d=await api('telegram/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(e=>({error:e?.message||'pair failed'}));
   if(d.error){ toast(d.error); return; }
   $('tg-qr').src=d.qr_url||'';
-  $('tg-link').innerHTML=`Pair link: <span class="muted">${d.pair_url}</span><div class="paircode" style="margin-top:6px">${d.code}</div>`;
-  toast('Pair code generated');
-  loadTelegramStatus();
+  $('tg-link').innerHTML=`<a href="${escHtml(d.pair_url)}" target="_blank" rel="noreferrer">Open Telegram pair link</a><div class="paircode" style="margin-top:6px">${escHtml(d.code)}</div>`;
+  if(d.pair_url) window.open(d.pair_url, '_blank', 'noopener,noreferrer');
+  toast('Telegram pair link ready');
+  let checks=0;
+  const poll=setInterval(async()=>{
+    checks++;
+    await loadTelegramStatus().catch(()=>{});
+    if(($('tg-state')?.textContent||'').includes('paired') || checks>20) clearInterval(poll);
+  }, 2500);
 }
 async function testTelegram(){
-  const d=await api('telegram/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'✅ Chinna dashboard test'})});
-  toast(d.result||d.error||'Test sent');
+  const d=await api('telegram/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'Chinna dashboard test'})}).catch(e=>({error:e?.message||'failed'}));
+  toast(d.ok ? 'Telegram test sent' : (d.result||d.error||'Telegram not paired'));
 }
 
 /* simple actions */
