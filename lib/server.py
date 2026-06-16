@@ -34,6 +34,10 @@ try:
 except:
     CHINNA_VERSION = "6.8.0"
 
+VERSION_LOG_LOCAL = os.path.join(REPO_ROOT, 'version-log.json')
+VERSION_LOG_REMOTE = 'https://raw.githubusercontent.com/pichimail/chinna-go/main/version-log.json'
+VERSION_HISTORY_FILE = os.path.join(CHINNA_HOME, 'version_history.json')
+
 # Shared TURN fallback for first-run users. Override via env if needed.
 DEFAULT_TURN_URLS = os.environ.get(
     'CHINNA_DEFAULT_TURN_URLS',
@@ -1784,6 +1788,94 @@ def execute_tool(name, args):
     except Exception as e:
         return f"Tool error: {safe_text(str(e))}", False
 
+def version_key(ver):
+    parts = []
+    for piece in safe_text(ver).replace('v', '').split('.'):
+        try:
+            parts.append(int(re.sub(r'[^0-9]', '', piece) or 0))
+        except Exception:
+            parts.append(0)
+    while len(parts) < 3:
+        parts.append(0)
+    return tuple(parts)
+
+def version_gt(a, b):
+    return version_key(a) > version_key(b)
+
+def read_installed_version():
+    for path in (
+        os.path.join(CHINNA_HOME, 'VERSION'),
+        os.path.join(REPO_ROOT, 'VERSION'),
+    ):
+        if os.path.exists(path):
+            try:
+                with open(path) as f:
+                    ver = f.read().strip()
+                    if ver:
+                        return ver
+            except Exception:
+                pass
+    return CHINNA_VERSION
+
+def load_version_history():
+    return read_json(VERSION_HISTORY_FILE, {'upgrades': []})
+
+def save_version_history(data):
+    write_json(VERSION_HISTORY_FILE, data)
+
+def record_version_upgrade(old_ver, new_ver):
+    hist = load_version_history()
+    upgrades = hist.get('upgrades') or []
+    upgrades.insert(0, {
+        'from': safe_text(old_ver),
+        'to': safe_text(new_ver),
+        'at': datetime.now(timezone.utc).isoformat(),
+    })
+    hist['upgrades'] = upgrades[:40]
+    save_version_history(hist)
+
+def _load_version_log_entries():
+    by_ver = {}
+    for path in (VERSION_LOG_LOCAL, os.path.join(CHINNA_HOME, 'version-log.json')):
+        if not os.path.exists(path):
+            continue
+        try:
+            data = json.load(open(path))
+            for entry in data.get('versions') or []:
+                ver = safe_text(entry.get('version'))
+                if ver:
+                    by_ver[ver] = entry
+        except Exception:
+            pass
+    try:
+        raw = urllib.request.urlopen(VERSION_LOG_REMOTE, timeout=6).read()
+        remote = json.loads(raw.decode('utf-8', errors='replace'))
+        for entry in remote.get('versions') or []:
+            ver = safe_text(entry.get('version'))
+            if ver:
+                by_ver[ver] = entry
+    except Exception:
+        pass
+    entries = sorted(by_ver.values(), key=lambda x: version_key(x.get('version', '0')), reverse=True)
+    return entries
+
+def version_log_entry(ver):
+    ver = safe_text(ver)
+    for entry in _load_version_log_entries():
+        if safe_text(entry.get('version')) == ver:
+            return entry
+    return {'version': ver, 'title': f'Chinna v{ver}', 'improved': [], 'resolved': []}
+
+def fetch_version_log_payload():
+    current = read_installed_version()
+    entries = _load_version_log_entries()
+    history = load_version_history()
+    return {
+        'current': current,
+        'versions': entries,
+        'history': history.get('upgrades') or [],
+    }
+
 class H(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k): super().__init__(*a, directory=DASHBOARD_DIR, **k)
     def log_message(self, *a): pass
@@ -1924,6 +2016,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.serve_artifact_content(p.split('/')[3])
         elif p == '/api/check-update':
             self._json(self.check_update())
+        elif p == '/api/version-log':
+            self.serve_version_log()
         elif p == '/api/models':
             self._json(self.list_models())
         elif p == '/api/projects':
@@ -2022,6 +2116,10 @@ class H(http.server.SimpleHTTPRequestHandler):
                 'turn_urls': d.get('TURN_URLS', safe_text(load_keys().get('TURN_URLS', ''))),
                 'result': 'TURN relay ready'
             })
+        elif p == '/api/update':
+            jid = new_job()
+            threading.Thread(target=self.job_update, args=(jid,), daemon=True).start()
+            self._json({'job': jid, 'message': 'Opening Terminal to upgrade Chinna'})
         elif p == '/api/purge':
             jid = new_job(); threading.Thread(target=self.job_purge, args=(jid,), daemon=True).start(); self._json({'job': jid})
         elif p == '/api/clean':
@@ -2939,13 +3037,67 @@ fi
 
 
     def check_update(self):
+        current = read_installed_version()
         try:
-            import urllib.request
             url = "https://raw.githubusercontent.com/pichimail/chinna-go/main/VERSION"
             latest = urllib.request.urlopen(url, timeout=5).read().decode().strip()
-            return {"current": CHINNA_VERSION, "latest": latest, "update_available": latest != CHINNA_VERSION}
-        except:
-            return {"current": CHINNA_VERSION, "latest": CHINNA_VERSION, "update_available": False, "error": "offline"}
+            update_available = version_gt(latest, current)
+            entry = version_log_entry(latest) if update_available else version_log_entry(current)
+            return {
+                "current": current,
+                "latest": latest,
+                "update_available": update_available,
+                "latest_changelog": entry,
+            }
+        except Exception:
+            return {
+                "current": current,
+                "latest": current,
+                "update_available": False,
+                "error": "offline",
+                "latest_changelog": version_log_entry(current),
+            }
+
+    def serve_version_log(self):
+        self._json(fetch_version_log_payload())
+
+    def job_update(self, jid):
+        start_ver = read_installed_version()
+        check = self.check_update()
+        latest = safe_text(check.get('latest') or start_ver)
+        job_log(jid, f'Installed: v{start_ver}')
+        job_log(jid, f'Latest available: v{latest}')
+        chinna_bin = shutil.which('chinna') or os.path.join(CHINNA_HOME, 'bin', 'chinna')
+        if not os.path.isfile(chinna_bin):
+            job_log(jid, 'chinna CLI not found — using installer fallback')
+            cmd = 'curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash'
+        else:
+            cmd = f'"{chinna_bin}" update --apply'
+        job_log(jid, 'Opening Terminal to run upgrade in the background...')
+        esc = cmd.replace('\\', '\\\\').replace('"', '\\"')
+        sh(
+            "osascript "
+            f"-e 'tell application \"Terminal\" to activate' "
+            f"-e 'tell application \"Terminal\" to do script \"{esc}\"'"
+        )
+        job_log(jid, 'Terminal opened — upgrade running. Watching for new version...')
+        for _ in range(150):
+            time.sleep(4)
+            new_ver = read_installed_version()
+            if version_gt(new_ver, start_ver) or (new_ver != start_ver and new_ver == latest):
+                record_version_upgrade(start_ver, new_ver)
+                entry = version_log_entry(new_ver)
+                job_log(jid, f'✅ Upgrade complete: v{start_ver} → v{new_ver}')
+                if entry.get('title'):
+                    job_log(jid, f"What's new: {entry.get('title')}")
+                for item in (entry.get('improved') or [])[:4]:
+                    job_log(jid, f"  + {item}")
+                for item in (entry.get('resolved') or [])[:4]:
+                    job_log(jid, f"  ✓ {item}")
+                job_done(jid, True)
+                return
+        job_log(jid, 'Upgrade may still be running in Terminal. Refresh Settings when it finishes.')
+        job_done(jid, True)
 
     def list_models(self):
         models_file = os.path.join(CHINNA_HOME, "models")

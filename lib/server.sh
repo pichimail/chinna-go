@@ -24,6 +24,9 @@ start_dashboard() {
     if [ -f "$SCRIPT_DIR/../dashboard/index.html" ]; then
         cp "$SCRIPT_DIR/../dashboard/index.html" "$CHINNA_HOME/dashboard/index.html" 2>/dev/null || true
     fi
+    if [ -f "$SCRIPT_DIR/../version-log.json" ]; then
+        cp "$SCRIPT_DIR/../version-log.json" "$CHINNA_HOME/version-log.json" 2>/dev/null || true
+    fi
 
     if [ -d "$SCRIPT_DIR/../dashboard/assets" ]; then
         mkdir -p "$CHINNA_HOME/dashboard/assets"

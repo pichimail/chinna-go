@@ -360,10 +360,43 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 .settings-kicker{font-size:9.5px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--acc);margin-bottom:10px}
 .settings-hero h3{font-size:22px;line-height:1.1;font-weight:800;letter-spacing:-.4px;margin-bottom:8px;max-width:22ch}
 .settings-hero p{font-size:12.5px;line-height:1.6;color:var(--t2);max-width:56ch}
-.settings-version{min-width:160px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.18);display:flex;flex-direction:column;gap:4px}
+.settings-version{min-width:160px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.18);display:flex;flex-direction:column;gap:8px;position:relative}
 .settings-version .label{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3)}
 .settings-version strong{font-size:20px;font-weight:800;letter-spacing:-.3px}
 .settings-version span{font-size:11px;color:var(--t3);line-height:1.45}
+.settings-version.available{border-color:rgba(186,255,41,.35);box-shadow:0 0 0 1px rgba(186,255,41,.12),0 0 28px rgba(186,255,41,.08)}
+.settings-upgrade-btn{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:11px 12px;border-radius:12px;border:1px solid var(--line2);background:var(--s1);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;transition:transform .12s,border-color .12s,background .12s,box-shadow .12s;font-family:var(--font)}
+.settings-upgrade-btn .upgrade-kicker{font-size:9px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--t3)}
+.settings-upgrade-btn .upgrade-target{font-size:11px;font-weight:600;color:var(--acc)}
+.settings-upgrade-btn:hover:not(:disabled){transform:translateY(-1px);border-color:var(--line3);background:var(--s2)}
+.settings-upgrade-btn:disabled{opacity:.55;cursor:not-allowed}
+.settings-upgrade-btn.available{border-color:var(--acc);background:linear-gradient(180deg,rgba(186,255,41,.16),rgba(186,255,41,.06));color:var(--t1);animation:upgradeGlow 2.4s ease-in-out infinite}
+.settings-upgrade-btn.available .upgrade-kicker{color:var(--acc)}
+@keyframes upgradeGlow{0%,100%{box-shadow:0 0 0 0 rgba(186,255,41,0),0 0 18px rgba(186,255,41,.12)}50%{box-shadow:0 0 0 4px rgba(186,255,41,.14),0 0 28px rgba(186,255,41,.28)}}
+.settings-version-log-btn{width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--t2);font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;font-family:var(--font)}
+.settings-version-log-btn:hover{border-color:var(--line3);color:var(--t1);background:var(--s1)}
+.version-log-overlay{position:fixed;inset:0;z-index:700;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.72);backdrop-filter:blur(6px)}
+.version-log-overlay.on{display:flex}
+.version-log-card{width:min(720px,94vw);max-height:86vh;display:flex;flex-direction:column;background:var(--s0);border:1px solid var(--line3);border-radius:16px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+.version-log-head{padding:16px 18px 12px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.version-log-head h3{font-size:16px;font-weight:800;letter-spacing:-.2px}
+.version-log-head p{font-size:11.5px;color:var(--t3);margin-top:4px;line-height:1.5}
+.version-log-body{flex:1;overflow-y:auto;padding:14px 18px 18px;display:flex;flex-direction:column;gap:10px}
+.version-log-entry{border:1px solid var(--line2);border-radius:12px;padding:12px 14px;background:var(--s1)}
+.version-log-entry.current{border-color:rgba(186,255,41,.35);background:rgba(186,255,41,.05)}
+.version-log-entry.upgraded{border-color:rgba(96,165,250,.28)}
+.version-log-entry-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.version-log-entry-head strong{font-size:14px;font-weight:800}
+.version-log-entry-head span{font-size:10px;color:var(--t3)}
+.version-log-badges{display:flex;gap:6px;flex-wrap:wrap}
+.version-log-badge{font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;padding:3px 7px;border-radius:999px;border:1px solid var(--line)}
+.version-log-badge.installed{color:var(--acc);border-color:var(--acc-bd);background:var(--acc-bg)}
+.version-log-badge.upgraded{color:#60a5fa;border-color:rgba(96,165,250,.35);background:rgba(96,165,250,.1)}
+.version-log-section{margin-top:6px}
+.version-log-section h4{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:4px}
+.version-log-section ul{margin:0;padding-left:16px;display:grid;gap:3px}
+.version-log-section li{font-size:11.5px;color:var(--t2);line-height:1.45}
+@media(max-width:720px){.settings-upgrade-btn{padding:12px 10px}}
 .settings-badges{display:flex;flex-wrap:wrap;gap:8px}
 .settings-banner{padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03);display:flex;gap:12px;align-items:flex-start}
 .settings-banner.warn{border-color:rgba(251,191,36,.32);background:rgba(251,191,36,.08)}
@@ -2232,10 +2265,16 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
             </main>
 
             <aside class="settings-rail">
-              <div class="settings-version">
+              <div class="settings-version" id="settings-version-card">
                 <span class="label">Installed</span>
                 <strong id="settings-current-version">v6.8.0</strong>
                 <span id="settings-update-summary">Checking update status...</span>
+                <button type="button" id="settings-upgrade-btn" class="settings-upgrade-btn" onclick="startChinnaUpgrade()" disabled aria-live="polite">
+                  <span class="upgrade-kicker" id="settings-upgrade-kicker">Status</span>
+                  <span id="settings-upgrade-label">Checking for updates…</span>
+                  <span class="upgrade-target" id="settings-upgrade-target"></span>
+                </button>
+                <button type="button" class="settings-version-log-btn" onclick="openVersionLog()">Version history &amp; changelog</button>
               </div>
               <div class="settings-banner" id="settings-update-banner" style="margin-top:12px">
                 <div class="banner-icon">↻</div>
@@ -2264,6 +2303,20 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
   </div>
 </div>
 <div id="toasts" aria-live="polite"></div>
+<div id="version-log-overlay" class="version-log-overlay" onclick="if(event.target.id==='version-log-overlay')closeVersionLog()">
+  <div class="version-log-card" role="dialog" aria-labelledby="version-log-title" aria-modal="true">
+    <div class="version-log-head">
+      <div>
+        <h3 id="version-log-title">Chinna version history</h3>
+        <p id="version-log-sub">Every release — what improved and what was resolved.</p>
+      </div>
+      <button type="button" class="bigbtn ghost smallbtn" onclick="closeVersionLog()">Close</button>
+    </div>
+    <div class="version-log-body" id="version-log-body">
+      <div class="chatx-empty">Loading version log…</div>
+    </div>
+  </div>
+</div>
 <div id="scrim">
   <div class="modal glass">
     <div class="mh"><h3 id="m-title">Confirm</h3><p id="m-desc"></p></div>
@@ -3855,49 +3908,229 @@ async function loadKeySettings(){
   chatxRelayConfig = { url: relay, defaultUrl: k.chat_default_relay_url || location.origin };
   if($('turn-test-status')) $('turn-test-status').textContent = (k.turn_enabled && (k.turn_urls||'').trim()) ? 'Call relay ready' : 'Local calls ready';
 }
+let settingsUpdateState = { current: '', latest: '', update_available: false, changelog: null };
+
+function setUpgradeButtonState({ available, latest, current, offline }) {
+  const btn = $('settings-upgrade-btn');
+  const card = $('settings-version-card');
+  const kicker = $('settings-upgrade-kicker');
+  const label = $('settings-upgrade-label');
+  const target = $('settings-upgrade-target');
+  if (!btn) return;
+  btn.classList.toggle('available', !!available);
+  card?.classList.toggle('available', !!available);
+  if (offline) {
+    btn.disabled = false;
+    if (kicker) kicker.textContent = 'Offline';
+    if (label) label.textContent = 'Retry upgrade check';
+    if (target) target.textContent = 'Opens Terminal when online';
+    return;
+  }
+  if (available) {
+    btn.disabled = false;
+    if (kicker) kicker.textContent = 'Update available';
+    if (label) label.textContent = `Upgrade to v${latest}`;
+    if (target) target.textContent = 'One click · Terminal runs in background';
+  } else {
+    btn.disabled = true;
+    if (kicker) kicker.textContent = 'Up to date';
+    if (label) label.textContent = `Installed v${current || '—'}`;
+    if (target) target.textContent = 'You have the latest build';
+  }
+}
+
+function renderVersionLogEntries(data) {
+  const body = $('version-log-body');
+  if (!body) return;
+  const current = String(data?.current || '').trim();
+  const history = Array.isArray(data?.history) ? data.history : [];
+  const upgradedTo = new Set(history.map(h => String(h?.to || '').trim()));
+  const versions = Array.isArray(data?.versions) ? data.versions : [];
+  if (!versions.length) {
+    body.innerHTML = '<div class="chatx-empty">No version log entries yet.</div>';
+    return;
+  }
+  body.innerHTML = versions.map(entry => {
+    const ver = String(entry.version || '').trim();
+    const isCurrent = ver === current;
+    const wasUpgraded = upgradedTo.has(ver);
+    const cls = ['version-log-entry', isCurrent ? 'current' : '', wasUpgraded ? 'upgraded' : ''].filter(Boolean).join(' ');
+    const improved = (entry.improved || []).map(i => `<li>${escHtml(i)}</li>`).join('') || '<li>No notes recorded.</li>';
+    const resolved = (entry.resolved || []).map(i => `<li>${escHtml(i)}</li>`).join('') || '<li>No fixes recorded.</li>';
+    const badges = [
+      isCurrent ? '<span class="version-log-badge installed">Installed</span>' : '',
+      wasUpgraded ? '<span class="version-log-badge upgraded">Upgraded here</span>' : ''
+    ].filter(Boolean).join('');
+    return `<article class="${cls}">
+      <div class="version-log-entry-head">
+        <div><strong>v${escHtml(ver)}</strong> · ${escHtml(entry.title || 'Release')}</div>
+        <span>${escHtml(entry.date || '')}</span>
+      </div>
+      <div class="version-log-badges">${badges}</div>
+      <div class="version-log-section"><h4>Improved</h4><ul>${improved}</ul></div>
+      <div class="version-log-section"><h4>Resolved</h4><ul>${resolved}</ul></div>
+    </article>`;
+  }).join('');
+}
+
+async function openVersionLog() {
+  const overlay = $('version-log-overlay');
+  if (!overlay) return;
+  overlay.classList.add('on');
+  try {
+    const data = await api('version-log');
+    renderVersionLogEntries(data);
+  } catch (e) {
+    const body = $('version-log-body');
+    if (body) body.innerHTML = '<div class="chatx-empty">Could not load version log.</div>';
+  }
+}
+
+function closeVersionLog() {
+  $('version-log-overlay')?.classList.remove('on');
+}
+
+function showUpgradeSuccessModal(fromVer, toVer, changelog) {
+  const improved = (changelog?.improved || []).slice(0, 6).map(i => `<li>${escHtml(i)}</li>`).join('') || '<li>General stability and dashboard improvements</li>';
+  const resolved = (changelog?.resolved || []).slice(0, 6).map(i => `<li>${escHtml(i)}</li>`).join('') || '<li>Bug fixes from the previous release</li>';
+  openModal(
+    `Upgraded to v${toVer}`,
+    changelog?.title || 'Chinna was updated successfully.',
+    `<div style="font-size:12px;line-height:1.6;color:var(--t2)">
+      <div style="margin-bottom:10px"><strong style="color:var(--t1)">Improved</strong><ul style="margin:6px 0 0 16px;padding:0">${improved}</ul></div>
+      <div><strong style="color:var(--t1)">Resolved</strong><ul style="margin:6px 0 0 16px;padding:0">${resolved}</ul></div>
+    </div>`,
+    null,
+    'Done'
+  );
+  $('m-go').style.display = 'none';
+  $('m-foot').innerHTML = '<button type="button" class="btn-cancel" onclick="closeModal(); loadSettingsUpdateStatus();">Great</button>';
+  toast(`Chinna upgraded v${fromVer} → v${toVer}`);
+}
+
+async function startChinnaUpgrade() {
+  if (settingsUpdateState.upgradeRunning) return;
+  const latest = settingsUpdateState.latest;
+  const current = settingsUpdateState.current;
+  if (!settingsUpdateState.update_available && !settingsUpdateState.offline) {
+    toast('Already on the latest version');
+    return;
+  }
+  const targetVer = latest || current;
+  openModal(
+    'Upgrade Chinna',
+    settingsUpdateState.offline
+      ? `Force-refresh Chinna from Terminal? Your API keys and data stay intact.`
+      : `Upgrade from v${current} to v${targetVer}? Terminal will open and run the update in the background. Your API keys and data stay intact.`,
+    'The installer preserves ~/.chinna config, keys, and chat history.',
+    async () => {
+      settingsUpdateState.upgradeRunning = true;
+      const btn = $('settings-upgrade-btn');
+      if (btn) { btn.disabled = true; $('settings-upgrade-label').textContent = 'Upgrading in Terminal…'; }
+      showProgress('Upgrading Chinna', 'Terminal is running the update. Live status below.');
+      try {
+        const start = await api('update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        settingsUpdateState.lastJob = start?.job || '';
+        const logEl = $('m-log');
+        const poll = setInterval(async () => {
+          if (!settingsUpdateState.lastJob) return;
+          const j = await api('job?id=' + settingsUpdateState.lastJob).catch(() => null);
+          if (!j) return;
+          if (logEl) {
+            logEl.innerHTML = (j.lines || []).map(line => {
+              const isDone = line.includes('Upgrade complete') || line.includes('✅');
+              return isDone ? `<div class="done">${escHtml(line)}</div>` : `<div>${escHtml(line)}</div>`;
+            }).join('');
+            logEl.scrollTop = logEl.scrollHeight;
+          }
+          if (!j.done) return;
+          clearInterval(poll);
+          settingsUpdateState.upgradeRunning = false;
+          $('m-foot').style.display = '';
+          $('m-foot').innerHTML = '<button type="button" class="btn-cancel" onclick="closeModal(); loadSettingsUpdateStatus();">Done</button>';
+          const line = (j.lines || []).find(l => l.includes('Upgrade complete'));
+          if (line) {
+            const m = line.match(/v([\d.]+)\s*→\s*v([\d.]+)/);
+            const toVer = m ? m[2] : latest;
+            const fromVer = m ? m[1] : current;
+            const logData = await api('version-log').catch(() => null);
+            const entry = (logData?.versions || []).find(v => String(v.version) === String(toVer)) || settingsUpdateState.changelog;
+            setTimeout(() => {
+              closeModal();
+              showUpgradeSuccessModal(fromVer, toVer, entry);
+              loadSettingsUpdateStatus();
+            }, 400);
+          } else {
+            toast('Upgrade launched in Terminal — refresh Settings when finished');
+            loadSettingsUpdateStatus();
+          }
+        }, 1200);
+      } catch (err) {
+        settingsUpdateState.upgradeRunning = false;
+        toast('Could not start upgrade: ' + (err?.message || err));
+        loadSettingsUpdateStatus();
+      }
+    },
+    settingsUpdateState.offline ? 'Force refresh' : `Upgrade to v${targetVer}`
+  );
+}
+
 async function loadSettingsUpdateStatus(){
   const banner = $('settings-update-banner');
   const version = $('settings-current-version');
   const summary = $('settings-update-summary');
   if(!banner || !version || !summary) return;
-  version.textContent = 'v6.8.0';
   summary.textContent = 'Checking update status…';
+  setUpgradeButtonState({ available: false, current: '', latest: '', offline: false });
   try{
     const d = await api('check-update');
-    const current = d?.current ? `v${d.current}` : 'v6.8.0';
-    const latest = d?.latest ? `v${d.latest}` : 'v6.8.0';
-    version.textContent = current;
+    const current = d?.current || '6.8.0';
+    const latest = d?.latest || current;
+    settingsUpdateState = {
+      current,
+      latest,
+      update_available: !!d?.update_available,
+      changelog: d?.latest_changelog || null,
+      offline: false,
+      upgradeRunning: false,
+      lastJob: settingsUpdateState.lastJob || '',
+    };
+    version.textContent = `v${current}`;
     if(d?.update_available){
       banner.className = 'settings-banner warn';
       banner.innerHTML = `
         <div class="banner-icon">⬆</div>
         <div class="settings-banner-copy">
-          <strong>Update ready: ${latest}</strong>
-          <span>Install the latest build to keep the dashboard, daemon, and launcher aligned. Use <code>chinna update</code> or the one-touch installer.</span>
+          <strong>v${escHtml(latest)} is available</strong>
+          <span>${escHtml(d?.latest_changelog?.title || 'A new Chinna build is ready.')}</span>
         </div>
       `;
-      summary.textContent = `Update available to ${latest}`;
+      summary.textContent = `Update available · v${current} → v${latest}`;
+      setUpgradeButtonState({ available: true, latest, current, offline: false });
     }else{
       banner.className = 'settings-banner';
       banner.innerHTML = `
         <div class="banner-icon">✓</div>
         <div class="settings-banner-copy">
           <strong>You are on the latest build.</strong>
-          <span>Remote version matches the installed dashboard. Nothing else needs to be done.</span>
+          <span>Installed v${escHtml(current)} matches the remote release.</span>
         </div>
       `;
-      summary.textContent = `Latest release: ${latest}`;
+      summary.textContent = `Latest release: v${latest}`;
+      setUpgradeButtonState({ available: false, latest, current, offline: false });
     }
   }catch(e){
+    settingsUpdateState.offline = true;
     banner.className = 'settings-banner';
     banner.innerHTML = `
       <div class="banner-icon">!</div>
       <div class="settings-banner-copy">
         <strong>Unable to verify updates right now.</strong>
-        <span>Open the terminal install URL below or run <code>chinna update</code> later when the network is available.</span>
+        <span>You can still run a force-refresh upgrade from Terminal.</span>
       </div>
     `;
     summary.textContent = 'Update check unavailable';
+    setUpgradeButtonState({ available: false, latest: '', current: '', offline: true });
   }
 }
 async function loadTelegramStatus(){

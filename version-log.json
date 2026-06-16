@@ -1,0 +1,73 @@
+{
+  "versions": [
+    {
+      "version": "6.8.0",
+      "date": "2026-06-16",
+      "title": "Agent reliability & AI polish",
+      "improved": [
+        "One-click upgrade panel in Settings with live update detection",
+        "Dynamic version history overlay with per-release improvements",
+        "Chinna AI composer cleaned up — leaner UI, fixed tooltips",
+        "Agent uses validated model IDs with automatic OpenRouter fallbacks",
+        "Model picker syncs real provider/model ids across the dashboard"
+      ],
+      "resolved": [
+        "Agent OpenRouter HTTP 400 errors from corrupted ACTIVE_MODEL values",
+        "Tooltips clipped behind grey overlay panels",
+        "Invalid model labels saved into api_keys.json",
+        "Duplicate user messages in Agent history causing provider errors"
+      ]
+    },
+    {
+      "version": "6.7.0",
+      "date": "2026-05-20",
+      "title": "Major V6.7 platform upgrade",
+      "improved": [
+        "Model switcher — change AI model from the dashboard",
+        "macOS Tools — Apple Music, lock screen, screen share, kill ports",
+        "Project Audit — full project report saved to Desktop",
+        "Automation mode — toggle AI command prompts",
+        "Smarter Projects registry with history",
+        "Godspeed features — stack runner, plugin system, config sync"
+      ],
+      "resolved": [
+        "Blank system pages in several dashboard views",
+        "Secure Chat live-user mesh connectivity issues",
+        "Settings layout inconsistencies across panels"
+      ]
+    },
+    {
+      "version": "6.6.0",
+      "date": "2026-04-10",
+      "title": "Dashboard UI overhaul",
+      "improved": [
+        "macOS-style auto-hide dock with magnification",
+        "Centered Agent chat composer with universal file upload",
+        "Rebuilt Chinna AI chat with cleaner message layout",
+        "Command palette (⌘K) for fast navigation",
+        "Hallmark operational console design language"
+      ],
+      "resolved": [
+        "Dock blocking content at bottom of views",
+        "AI chat toolbar overlapping message thread",
+        "Inconsistent spacing and typography across views"
+      ]
+    },
+    {
+      "version": "6.5.0",
+      "date": "2026-03-01",
+      "title": "Secure Chat & integrations",
+      "improved": [
+        "End-to-end Secure Chat with voice and video calls",
+        "WhatsApp bridge integration in dashboard",
+        "Telegram remote control pairing",
+        "Plugin system with macOS action cards"
+      ],
+      "resolved": [
+        "WebRTC call quality reporting inaccuracies",
+        "Relay URL normalization edge cases",
+        "Plugin action timeout handling"
+      ]
+    }
+  ]
+}
