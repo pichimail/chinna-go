@@ -32,7 +32,7 @@ REPO_ROOT = os.path.abspath(os.path.join(SERVER_DIR, '..'))
 try:
     CHINNA_VERSION = open(os.path.join(REPO_ROOT, 'VERSION')).read().strip()
 except:
-    CHINNA_VERSION = "6.8.0"
+    CHINNA_VERSION = "6.9.0"
 
 VERSION_LOG_LOCAL = os.path.join(REPO_ROOT, 'version-log.json')
 VERSION_LOG_REMOTE = 'https://raw.githubusercontent.com/pichimail/chinna-go/main/version-log.json'
@@ -1954,7 +1954,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 'chat_default_relay_url': dashboard_origin(),
             })
         elif p == '/api/version':
-            self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6.7'})
+            self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6.9'})
         elif p == '/api/ai/status':
             self._json(ai_key_status())
 
@@ -4006,7 +4006,7 @@ H.delete_artifact = delete_artifact
 H.exec_shell_direct = exec_shell_direct
 
 if __name__ == '__main__':
-    print(f"Chinna V6.7 -> http://localhost:{PORT}")
+    print(f"Chinna V6.9 -> http://localhost:{PORT}")
     print(f"serving {DASHBOARD_DIR}")
     threading.Thread(target=stats_loop, daemon=True).start()
     try:

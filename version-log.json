@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "version": "6.9.0",
+      "date": "2026-06-17",
+      "title": "Direct terminal upgrade panel",
+      "improved": [
+        "New `chinna upgrade` terminal panel launches immediately with no extra npx or dev commands",
+        "Upgrade flow now shows release notes, current version, and the latest version in one screen",
+        "Installer and CLI version markers are synced to v6.9.0"
+      ],
+      "resolved": [
+        "Upgrade entrypoint split between prompt-based update and terminal navigation",
+        "Version badge drift between the CLI, installer, and server"
+      ]
+    },
+    {
       "version": "6.8.0",
       "date": "2026-06-16",
       "title": "Agent reliability & AI polish",

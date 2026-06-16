@@ -2,7 +2,7 @@
 <html lang="en" data-theme="obsidian">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Chinna v6.8</title>
+<title>Chinna v6.9</title>
 <script>
 if (window.location.protocol === 'file:') {
   window.location.replace('http://127.0.0.1:7777/' + (window.location.hash || ''));
@@ -780,7 +780,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
   <aside id="sidebar">
     <div class="sidebar-logo">
       <div class="logo-mark">C</div>
-      <div><div class="logo-text">CHINNA <span class="logo-ver">V6.8</span></div></div>
+      <div><div class="logo-text">CHINNA <span class="logo-ver">V6.9</span></div></div>
       <button id="sidebarToggle" class="sidebar-toggle" title="Toggle sidebar">⇐</button>
     </div>
     <div id="sidebarResize"></div>
@@ -2115,7 +2115,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
           </section>
           <aside class="launch-side">
             <div class="ux-panel-title">Setup status</div>
-            <div class="rail-item"><b>Version</b><span>v6.8.0</span></div>
+            <div class="rail-item"><b>Version</b><span>v6.9.0</span></div>
             <div class="rail-item"><b>App home</b><span>~/.chinna</span></div>
             <div class="rail-item"><b>Dashboard</b><span>http://localhost:7777</span></div>
             <div class="rail-item"><b>Update command</b><span>chinna update</span></div>
@@ -2267,7 +2267,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
             <aside class="settings-rail">
               <div class="settings-version" id="settings-version-card">
                 <span class="label">Installed</span>
-                <strong id="settings-current-version">v6.8.0</strong>
+                <strong id="settings-current-version">v6.9.0</strong>
                 <span id="settings-update-summary">Checking update status...</span>
                 <button type="button" id="settings-upgrade-btn" class="settings-upgrade-btn" onclick="startChinnaUpgrade()" disabled aria-live="polite">
                   <span class="upgrade-kicker" id="settings-upgrade-kicker">Status</span>
@@ -2335,11 +2335,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
     <div class="v6-head">
       <div class="v6-title-row">
         <span class="v6-rocket">🚀</span>
-        <div><div class="v6-title">Chinna V6.7 is here!</div><div class="v6-subtitle">A major upgrade from V6</div></div>
+        <div><div class="v6-title">Chinna V6.9 is here!</div><div class="v6-subtitle">A direct terminal upgrade with cleaner flow</div></div>
       </div>
     </div>
     <div class="v6-body">
-      <b>What's new in V6.7:</b>
+      <b>What's new in V6.9:</b>
       🤖 Model switcher — change AI model from the dashboard<br>
       🍎 macOS Tools — Apple Music, lock screen, screen share, kill ports<br>
       🔍 Project Audit — full project report saved to Desktop<br>
@@ -4084,7 +4084,7 @@ async function loadSettingsUpdateStatus(){
   setUpgradeButtonState({ available: false, current: '', latest: '', offline: false });
   try{
     const d = await api('check-update');
-    const current = d?.current || '6.8.0';
+    const current = d?.current || '6.9.0';
     const latest = d?.latest || current;
     settingsUpdateState = {
       current,
@@ -8510,7 +8510,7 @@ function webNormal() {
 
 function updateWebVersionInSettings() {
   const el = document.getElementById('settings-current-version');
-  if (el) el.textContent = 'v6.8.0';
+  if (el) el.textContent = 'v6.9.0';
 }
 
 // Hook into existing go() and init

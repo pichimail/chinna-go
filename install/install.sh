@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════╗
-# ║  CHINNA V6.8 — Always-Fresh installer                   ║
+# ║  CHINNA V6.9 — Always-Fresh installer                   ║
 # ║  curl -fsSL https://raw.githubusercontent.com/          ║
 # ║    pichimail/chinna-go/main/install/install.sh | bash   ║
 # ╚══════════════════════════════════════════════════════════╝
@@ -21,7 +21,7 @@ fi
 
 echo ""
 echo "  ╔══════════════════════════════════════════════════╗"
-echo "  ║   C H I N N A   V6.8    —  Mac Sidekick         ║"
+echo "  ║   C H I N N A   V6.9    —  Mac Sidekick         ║"
 echo "  ║   Always-Fresh · Models · Music · WhatsApp · More║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo ""
@@ -147,7 +147,7 @@ step_write_whatsapp_bridge() {
 
 step_write_libs() {
     echo "    ↻ Force-refreshing lib files..."
-    for lib in config clean stack registry notify daemon server plugins swiftbar voice lang; do
+    for lib in config clean stack registry notify daemon server plugins swiftbar voice lang upgrade; do
         copy_or_fetch "lib/${lib}.sh" "${CHINNA}/lib/${lib}.sh" 2>/dev/null && \
             echo "      ✓ lib/${lib}.sh" || \
             echo "      ⚠ lib/${lib}.sh (skipped)"
@@ -181,10 +181,11 @@ step_write_bin() {
 }
 
 step_write_defaults() {
-    echo "6.8.0" > "${CHINNA}/VERSION"
+    echo "6.9.0" > "${CHINNA}/VERSION"
+    copy_or_fetch "version-log.json" "${CHINNA}/version-log.json" 2>/dev/null || true
     if [ ! -f "${CHINNA}/env" ]; then
         cat > "${CHINNA}/env" << 'ENV'
-# Chinna V6.8 Environment (chmod 600 — never share this file)
+# Chinna V6.9 Environment (chmod 600 — never share this file)
 # OPENROUTER_API_KEY=
 # ANTHROPIC_API_KEY=
 # OPENAI_API_KEY=
@@ -216,13 +217,13 @@ MODELS
 }
 
 step_zshrc_block() {
-    local BLOCK='# ── Chinna V6.8 ────────────────────────────────────────
+    local BLOCK='# ── Chinna V6.9 ────────────────────────────────────────
 export PATH="$HOME/.local/bin:$PATH"
 export CHINNA_HOME="$HOME/.chinna"
 [ -f "$CHINNA_HOME/env" ]    && source "$CHINNA_HOME/env"
 [ -f "$CHINNA_HOME/models" ] && source "$CHINNA_HOME/models"
 alias chinna="$HOME/.local/bin/chinna"'
-    if ! grep -q 'Chinna V6.8' "$HOME/.zshrc" 2>/dev/null; then
+    if ! grep -q 'Chinna V6.9' "$HOME/.zshrc" 2>/dev/null; then
         echo "" >> "$HOME/.zshrc"
         echo "$BLOCK" >> "$HOME/.zshrc"
         echo "    ✓ Chinna block added to ~/.zshrc"
@@ -239,7 +240,7 @@ step_start_server() {
     sleep 3
     if curl -sf "http://localhost:${PORT}/api/version" >/dev/null 2>&1; then
         VER=$(curl -sf "http://localhost:${PORT}/api/version" | \
-              python3 -c "import json,sys;print(json.load(sys.stdin).get('name','Chinna V6.8'))" 2>/dev/null || echo "Chinna V6.8")
+              python3 -c "import json,sys;print(json.load(sys.stdin).get('name','Chinna V6.9'))" 2>/dev/null || echo "Chinna V6.9")
         echo "    ✓ ${VER} running on port ${PORT}"
     else
         echo "    ⚠ Server warming up — check: curl http://localhost:${PORT}/api/version"
@@ -261,7 +262,7 @@ run_step "zshrc_block"        step_zshrc_block
 # ALWAYS FORCE-REFRESHED  (new + existing users get latest code)
 # ──────────────────────────────────────────────────────────────
 echo ""
-echo "  ↻ Pulling latest V6.8 app files from GitHub..."
+echo "  ↻ Pulling latest V6.9 app files from GitHub..."
 step_write_server
 step_write_dashboard
 step_write_whatsapp_bridge
@@ -276,11 +277,11 @@ step_write_extension
 step_start_server
 
 # ── macOS notification ─────────────────────────────────────
-osascript -e 'display notification "Models, Music, WhatsApp & 15 Godspeed features ready!" with title "🟢 Chinna V6.8 installed"' 2>/dev/null || true
+osascript -e 'display notification "Models, Music, WhatsApp & 15 Godspeed features ready!" with title "🟢 Chinna V6.9 installed"' 2>/dev/null || true
 
 echo ""
 echo "  ══════════════════════════════════════════════════════"
-echo "  ✅  CHINNA V6.8 READY!"
+echo "  ✅  CHINNA V6.9 READY!"
 echo "  ══════════════════════════════════════════════════════"
 echo ""
 echo "  🌐  Dashboard   →  http://localhost:${PORT}"

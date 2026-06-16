@@ -78,9 +78,9 @@ def main():
     if os.path.isdir(local_assets):
         shutil.copytree(local_assets, os.path.join(DASH, "assets"), dirs_exist_ok=True)
 
-    step("Writing VERSION = 6.7.0...")
+    step("Writing VERSION = 6.9.0...")
     with open(os.path.join(CHINNA, "VERSION"), "w") as f:
-        f.write("6.7.0")
+        f.write("6.9.0")
 
     # Migrate V4/V5 api_keys.json → env file
     old_keys = os.path.join(CHINNA, "api_keys.json")
@@ -128,11 +128,11 @@ MODEL_haiku4="anthropic/claude-3-haiku"
         print(f"  ⚠ Server warming up ({e})")
 
     # macOS notification
-    os.system('''osascript -e 'display notification "All 15 Godspeed features active!" with title "🟢 Chinna V6.7 ready"' 2>/dev/null''')
+    os.system('''osascript -e 'display notification "All 15 Godspeed features active!" with title "🟢 Chinna V6.9 ready"' 2>/dev/null''')
 
     print()
     print("  " + "═"*54)
-    print(f"  ✅  CHINNA V6.7 READY  →  http://localhost:{PORT}")
+    print(f"  ✅  CHINNA V6.9 READY  →  http://localhost:{PORT}")
     print("  " + "═"*54)
     print()
     print("  Share with friends:")

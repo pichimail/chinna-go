@@ -6,11 +6,13 @@
 # ╚══════════════════════════════════════════════════════════════╝
 set -uo pipefail
 
-CHINNA_VERSION="6.8.0"
+CHINNA_VERSION="6.9.0"
 CHINNA_REPO="pichimail/chinna-go"
 CHINNA_HOME="${CHINNA_HOME:-$HOME/.chinna}"
 CHINNA_CONFIG="$CHINNA_HOME/config"
 CHINNA_LIB="$CHINNA_HOME/lib"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 mkdir -p "$CHINNA_HOME" "$CHINNA_LIB"
 if [ -f "$CHINNA_HOME/VERSION" ]; then
@@ -28,6 +30,9 @@ safe_source_lib() {
     local lib_path="$1"
     local lib_name
     lib_name="$(basename "$lib_path")"
+    if [ ! -f "$lib_path" ] && [ -f "$REPO_ROOT/lib/$lib_name" ]; then
+        lib_path="$REPO_ROOT/lib/$lib_name"
+    fi
     [ -f "$lib_path" ] || return 0
 
     if ! bash -n "$lib_path" >/dev/null 2>&1; then
@@ -39,7 +44,7 @@ safe_source_lib() {
     source "$lib_path"
 }
 
-for lib in notify lang stack voice daemon config clean registry plugins swiftbar; do
+for lib in notify lang stack voice daemon config clean registry plugins swiftbar upgrade; do
     safe_source_lib "$CHINNA_LIB/${lib}.sh"
 done
 
@@ -1497,6 +1502,7 @@ show_help() {
      ${ACID}forge${RESET} [sub]            Dev shell: detect/fix/tools/scan/build/search
      ${C}doctor${RESET}                 Health check
      ${C}update${RESET}                 Self-update Chinna
+     ${C}upgrade${RESET}                Terminal upgrade panel
     ${C}app-install${RESET}            Install Chinna as a 1-click Mac app
     ${C}notch${RESET}                  Install menu-bar quick actions (Purge/Clean/Update)
      ${C}uninstall${RESET} [--purge]    Remove Chinna app or fully purge everything
@@ -1618,7 +1624,8 @@ main() {
         forge|dev|shell)            shift; cmd_forge "$@" ;;
         projects)                   shift; cmd_projects "$@" ;;
         plugin|plugins)             shift; cmd_plugins "$@" ;;
-        update|upgrade)             shift; cmd_update "$@" ;;
+        update)                     shift; cmd_update "$@" ;;
+        upgrade)                    shift; cmd_upgrade "$@" ;;
         app-install|install-app)    cmd_app_install ;;
         app)                        shift; cmd_app "$@" ;;
         notch|quickbar|menubar)     cmd_notch ;;
