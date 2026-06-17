@@ -6,7 +6,7 @@
 # ╚══════════════════════════════════════════════════════════════╝
 set -uo pipefail
 
-CHINNA_VERSION="6.9.0"
+CHINNA_VERSION="7.0.0"
 CHINNA_REPO="pichimail/chinna-go"
 CHINNA_HOME="${CHINNA_HOME:-$HOME/.chinna}"
 CHINNA_CONFIG="$CHINNA_HOME/config"
@@ -44,7 +44,7 @@ safe_source_lib() {
     source "$lib_path"
 }
 
-for lib in notify lang stack voice daemon config clean registry plugins swiftbar upgrade; do
+for lib in notify lang stack voice daemon config clean registry plugins swiftbar upgrade cli-ui cli-hub; do
     safe_source_lib "$CHINNA_LIB/${lib}.sh"
 done
 
@@ -1378,88 +1378,8 @@ dispatch_intent() {
     esac
 }
 
-# ═══════════════════════════════════════════════════════════════
-# INTERACTIVE MENU
-# ═══════════════════════════════════════════════════════════════
-show_menu() {
-    banner
-    echo -e "   ${BOLD}What do you need? (type anything, I understand)${RESET}"
-    echo ""
-    echo -e "   ${ORANGE}1${RESET})  🧹  ${BOLD}Deep Clean${RESET}        ${D}Heavy cleanup (current powerful version)${RESET}"
-    echo -e "   ${ORANGE}1a${RESET}) 🧼  ${BOLD}Clean Mac${RESET}         ${D}Godspeed-style full system clean${RESET}"
-    echo -e "   ${ORANGE}1b${RESET}) 📦  ${BOLD}Clean Nodes${RESET}       ${D}Nuke all node_modules in ~/Documents & Downloads${RESET}"
-    echo -e "   ${ORANGE}1c${RESET}) 🐳  ${BOLD}Clean Docker${RESET}      ${D}Prune everything${RESET}"
-    echo -e "   ${ORANGE}1d${RESET}) 📁  ${BOLD}Clean Project${RESET}     ${D}Clean current dir build artifacts${RESET}"
-    echo -e "   ${ORANGE}2${RESET})  🧠  ${BOLD}Purge RAM${RESET}         ${D}Free inactive memory${RESET}"
-    echo -e "   ${ORANGE}3${RESET})  🔬  ${BOLD}Scan${RESET}              ${D}What's eating your disk${RESET}"
-    echo -e "   ${ORANGE}4${RESET})  🔍  ${BOLD}Find Duplicates${RESET}   ${D}Hunt & kill duplicate files${RESET}"
-    echo -e "   ${ORANGE}5${RESET})  🍺  ${BOLD}Dev Setup${RESET}         ${D}Homebrew + node + python + tools${RESET}"
-    echo -e "   ${ORANGE}6${RESET})  🚀  ${BOLD}Run Project${RESET}       ${D}Auto-detect stack & run${RESET}"
-    echo -e "   ${ORANGE}7${RESET})  🌐  ${BOLD}Deploy${RESET}            ${D}Vercel / Netlify / Railway${RESET}"
-    echo -e "   ${ORANGE}8${RESET})  🤖  ${BOLD}Free AI Chat${RESET}      ${D}Llama 3.3 via OpenRouter${RESET}"
-    echo -e "   ${ORANGE}9${RESET})  💎  ${BOLD}Pro AI Chat${RESET}       ${D}Claude / GPT via OpenRouter${RESET}"
-    echo -e "   ${ORANGE}10${RESET}) 🎤  ${BOLD}Voice Mode${RESET}        ${D}Double-space=toggle, ENTER=record${RESET}"
-    echo -e "   ${ORANGE}11${RESET}) 📡  ${BOLD}Telegram Bot${RESET}      ${D}Control Mac from phone${RESET}"
-    echo -e "   ${ORANGE}12${RESET}) 📊  ${BOLD}Status${RESET}            ${D}Live disk/RAM/CPU dashboard${RESET}"
-    echo -e "   ${ORANGE}13${RESET}) 💀  ${BOLD}Kill RAM Hogs${RESET}     ${D}Find & kill memory eaters${RESET}"
-    echo -e "   ${ORANGE}14${RESET}) 🔌  ${BOLD}Ports${RESET}             ${D}What's running where${RESET}"
-    echo -e "   ${ORANGE}15${RESET}) 📶  ${BOLD}WiFi Check${RESET}        ${D}Diagnostics + speed test${RESET}"
-    echo -e "   ${ORANGE}16${RESET}) 🌿  ${BOLD}Git Commit${RESET}        ${D}AI-generated commit message${RESET}"
-    echo -e "   ${ORANGE}17${RESET}) 🌐  ${BOLD}Preview HTML${RESET}      ${D}Local preview server${RESET}"
-    echo -e "   ${ORANGE}18${RESET}) ⚙️   ${BOLD}Config${RESET}            ${D}API keys & settings${RESET}"
-    echo -e "   ${ORANGE}19${RESET}) 🩺  ${BOLD}Doctor${RESET}            ${D}Health check${RESET}"
-    echo -e "   ${ORANGE}20${RESET}) 🚀  ${BOLD}Start Daemon${RESET}      ${D}Run Chinna in background${RESET}"
-    echo -e "   ${ORANGE}21${RESET}) 🌐  ${BOLD}Dashboard${RESET}         ${D}Premium web UI in browser${RESET}"
-    echo -e "   ${ORANGE}22${RESET}) 🧩  ${BOLD}Plugins${RESET}           ${D}List / load / bootstrap plugins${RESET}"
-    echo -e "   ${ORANGE}23${RESET}) 📍  ${BOLD}Notch Actions${RESET}     ${D}Menu-bar quick icons near camera area${RESET}"
-    echo -e "   ${ORANGE}q${RESET})  ${D}Quit${RESET}"
-    echo ""
-    echo -ne "   ${BOLD}>${RESET} "
-    if ! read -r input; then
-        echo ""
-        info "No interactive input available. Use: chinna help"
-        return 0
-    fi
-
-    # Try numeric menu first
-    case "$input" in
-        1) cmd_clean ;;
-        1a) cmd_clean_mac ;;
-        1b) cmd_clean_nodes ;;
-        1c) cmd_clean_docker ;;
-        1d) cmd_clean_project ;;
-        2) cmd_purge ;;
-        3) cmd_scan ;;
-        4) cmd_dupes ;;
-        5) cmd_brew ;;
-        6) run_project ;;
-        7) deploy_project ;;
-        8) echo -ne "  ${C}Prompt:${RESET} "; read -r p; cmd_free "$p" ;;
-        9) echo -ne "  ${C}Prompt:${RESET} "; read -r p; cmd_pro "$p" ;;
-        10) cmd_listen ;;
-        11) cmd_bot ;;
-        12) cmd_status ;;
-        13) cmd_kill ;;
-        14) cmd_ports ;;
-        15) cmd_wifi ;;
-        16) cmd_git ;;
-        17) echo -ne "  File/dir (ENTER for pwd): "; read -r f; cmd_preview "$f" ;;
-        18) cmd_config ;;
-        19) cmd_doctor ;;
-        20) cmd_start ;;
-        21) cmd_dashboard ;;
-        22) cmd_plugins ;;
-        23) cmd_notch ;;
-        q|Q) echo -e "  ${ORANGE}Later 👋${RESET}"; exit 0 ;;
-        "")  show_menu ;;
-        *)
-            # Not a number — try intent engine
-            local intent
-            intent=$(resolve_intent "$input" 2>/dev/null || echo "unknown")
-            dispatch_intent "$intent" "$input"
-            ;;
-    esac
-}
+# Legacy alias — interactive hub replaced the numbered menu
+show_menu() { chinna_hub; }
 
 # ═══════════════════════════════════════════════════════════════
 # HELP
@@ -1467,53 +1387,31 @@ show_menu() {
 show_help() {
     banner
     cat <<HELP
-   ${BOLD}USAGE${RESET}
-     chinna                   Interactive menu
-     chinna <command>         Direct command
-     chinna "anything"        Natural language — I understand Telugu/Hindi/Tinglish
+   ${BOLD}CHINNA v7 — Grok-style CLI${RESET}
+     chinna                   Interactive hub (mouse + keyboard)
+     chinna <command>         Run directly
+     chinna "anything"        Telugu · Hindi · English · Tinglish
 
-   ${BOLD}COMMANDS${RESET}
-     ${C}clean${RESET}                  Deep clean (current powerful version)
-     ${C}clean mac${RESET}              Godspeed-style full Mac cleanup
-     ${C}clean nodes${RESET}            Nuke all node_modules in Documents/Downloads
-     ${C}clean project${RESET}          Clean build artifacts in current dir
-     ${C}purge${RESET}                  Purge inactive RAM
-     ${C}scan${RESET}                   Show disk usage breakdown
-     ${C}dupes${RESET} [path]           Find & delete duplicate files
-     ${C}status${RESET}                 Live disk/RAM/CPU dashboard
-     ${C}kill${RESET}                   Kill RAM-hogging processes
-     ${C}ports${RESET}                  Show active ports
-     ${C}wifi${RESET}                   WiFi diagnostics + speed test
-     ${C}brew${RESET}                   Install Homebrew + dev tools
-     ${C}run${RESET} [dir]              Auto-detect stack & run project
-     ${C}deploy${RESET} [dir]           Deploy to Vercel/Netlify/Railway
-     ${C}git${RESET}                    AI-generated git commit + push
-     ${C}free${RESET} <prompt>          Free AI chat (Llama 3.3)
-     ${C}pro${RESET} <prompt>           Paid AI chat (Claude/GPT)
-     ${C}listen${RESET}                 Voice mode
-     ${C}bot${RESET}                    Telegram remote control
-     ${C}preview${RESET} [file/dir]     HTML preview server
-     ${C}remind${RESET} <time> <msg>    Set reminder (5m, 2h, 30s)
-     ${C}notify${RESET} <title> <msg>   Send Mac notification
-     ${C}start${RESET}                  Start background daemon
-     ${C}stop${RESET}                   Stop background daemon
-     ${C}config${RESET}                 Set API keys
-     ${C}publish${RESET}                Push update to GitHub
-     ${ACID}forge${RESET} [sub]            Dev shell: detect/fix/tools/scan/build/search
-     ${C}doctor${RESET}                 Health check
-     ${C}update${RESET}                 Self-update Chinna
-     ${C}upgrade${RESET}                Terminal upgrade panel
-    ${C}app-install${RESET}            Install Chinna as a 1-click Mac app
-    ${C}notch${RESET}                  Install menu-bar quick actions (Purge/Clean/Update)
-     ${C}uninstall${RESET} [--purge]    Remove Chinna app or fully purge everything
+   ${BOLD}PRIMARY${RESET}
+     ${ACCENT}dashboard${RESET}              Open web UI
+     ${ACCENT}ai${RESET} / ${ACCENT}pro${RESET} <prompt>       AI chat (free / pro)
+     ${ACCENT}run${RESET} [dir]              Auto-detect stack & run
+     ${ACCENT}doctor${RESET}                 System health check
+     ${ACCENT}audit${RESET}                  Project audit report
+     ${ACCENT}forge${RESET} [sub]            Dev shell (detect/fix/build/scan)
+     ${ACCENT}upgrade${RESET}                Terminal upgrade panel
 
-   ${BOLD}NATURAL LANGUAGE EXAMPLES${RESET}
-     chinna "na mac slow aindhi"         → purge RAM + diagnostics
-     chinna "stack build chei"           → detect stack + run project
-     chinna "git lo pettu"               → AI commit + push
-     chinna "deploy cheyyi"              → deploy to Vercel/Netlify
-     chinna "duplicate files unnaya"     → find & delete dupes
-     chinna "disk full aindhi"           → scan + clean options
+   ${BOLD}SYSTEM${RESET}
+     ${C}clean${RESET} · ${C}clean mac${RESET} · ${C}clean nodes${RESET} · ${C}clean project${RESET}
+     ${C}purge${RESET} · ${C}scan${RESET} · ${C}status${RESET} · ${C}dupes${RESET} · ${C}kill${RESET} · ${C}ports${RESET} · ${C}wifi${RESET}
+
+   ${BOLD}DEV${RESET}
+     ${C}deploy${RESET} · ${C}git${RESET} · ${C}projects${RESET} · ${C}plugins${RESET} · ${C}brew${RESET}
+
+   ${BOLD}SETTINGS${RESET}
+     ${C}config${RESET} · ${C}update${RESET} · ${C}model-set${RESET} · ${C}uninstall${RESET}
+
+   ${DIM}Advanced (direct only): listen, bot, preview, remind, publish, notch, start/stop${RESET}
 
    ${D}github.com/pichimail/chinna-go${RESET}
 
@@ -1577,12 +1475,12 @@ main() {
     [ "$cmd" = "_daemon_loop" ] && { daemon_loop; exit 0; }
 
     case "$cmd" in
-        ""|menu)
+        ""|menu|hub|tui)
             if [ ! -t 0 ]; then
                 show_help
                 return 0
             fi
-            show_menu
+            chinna_hub
             ;;
         clean|cleanmymac)           cmd_clean ;;
         "clean mac"|"clean-mac")    cmd_clean_mac ;;

@@ -1,6 +1,6 @@
 {
   "name": "chinna-go",
-  "version": "6.9.0",
+  "version": "7.0.0",
   "private": true,
   "description": "Chinna - Local Mac Sidekick with full Playwright E2E testing",
   "scripts": {

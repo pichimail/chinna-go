@@ -147,7 +147,7 @@ step_write_whatsapp_bridge() {
 
 step_write_libs() {
     echo "    ↻ Force-refreshing lib files..."
-    for lib in config clean stack registry notify daemon server plugins swiftbar voice lang upgrade; do
+    for lib in config clean stack registry notify daemon server plugins swiftbar voice lang upgrade cli-ui cli-hub; do
         copy_or_fetch "lib/${lib}.sh" "${CHINNA}/lib/${lib}.sh" 2>/dev/null && \
             echo "      ✓ lib/${lib}.sh" || \
             echo "      ⚠ lib/${lib}.sh (skipped)"
@@ -185,7 +185,7 @@ step_write_bin() {
 }
 
 step_write_defaults() {
-    echo "6.9.0" > "${CHINNA}/VERSION"
+    echo "7.0.0" > "${CHINNA}/VERSION"
     copy_or_fetch "version-log.json" "${CHINNA}/version-log.json" 2>/dev/null || true
     if [ ! -f "${CHINNA}/env" ]; then
         cat > "${CHINNA}/env" << 'ENV'
