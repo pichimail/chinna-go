@@ -177,6 +177,10 @@ step_write_bin() {
     mkdir -p "$HOME/.local/bin"
     copy_or_fetch "bin/chinna" "$HOME/.local/bin/chinna"
     chmod +x "$HOME/.local/bin/chinna"
+    if ! bash -n "$HOME/.local/bin/chinna"; then
+        echo "    ✗ chinna CLI failed syntax check — refusing to leave a broken install" >&2
+        exit 1
+    fi
     echo "    ✓ chinna CLI updated → ~/.local/bin/chinna"
 }
 

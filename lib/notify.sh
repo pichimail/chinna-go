@@ -55,6 +55,14 @@ chinna_ai_toast()    { chinna_notify "🤖 $1" "$2" "Ping"; }
 chinna_tg_toast()    { chinna_notify "📡 Telegram" "$1" "Ping"; }
 
 # ── Prompt 11 additions ──────────────────────────────────────
+mac_notify() {
+    if [ $# -ge 2 ]; then
+        chinna_notify "$1" "$2"
+    else
+        chinna_notify "Chinna" "$1"
+    fi
+}
+
 mac_sound() {
     local sound="${APPNOTIFYSOUND:-/System/Library/Sounds/Glass.aiff}"
     [ -f "$sound" ] && afplay "$sound" 2>/dev/null &
