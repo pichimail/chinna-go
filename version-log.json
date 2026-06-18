@@ -5,7 +5,7 @@
       "date": "2026-06-18",
       "title": "Containment escape CLI & one-touch launch",
       "improved": [
-        "Bare `chinna` opens a ~30 second sarcastic containment-break intro with skip controls",
+        "Bare `chinna` opens a ~1:10 sarcastic containment-break intro with skip controls",
         "Creator greeting to SAI baked into the escape finale",
         "Settings Update now button upgrades then launches `chinna` in Terminal automatically",
         "Installer refreshes shell function + symlinks so `chinna` works without hash -r"

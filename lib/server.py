@@ -1650,6 +1650,109 @@ TOOLS.append({
     }
 })
 
+TOOLS.append({
+    "type": "function",
+    "function": {
+        "name": "setup_project_env",
+        "description": "Create .env, .gitignore, and scaffold missing files for a project directory. Use before running a dev server.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Absolute or ~ path to project root (default cwd)"},
+                "scaffold": {"type": "boolean", "description": "Create starter files if missing (default true)"}
+            }
+        }
+    }
+})
+
+TOOLS.append({
+    "type": "function",
+    "function": {
+        "name": "run_project",
+        "description": "Install dependencies, auto-create .env if missing, detect stack, start dev server on localhost, and open browser preview.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Project root path"},
+                "install_deps": {"type": "boolean", "description": "Install npm/pip/go deps first (default true)"}
+            }
+        }
+    }
+})
+
+TOOLS.append({
+    "type": "function",
+    "function": {
+        "name": "detect_project_stack",
+        "description": "Detect frameworks and package managers for a project directory.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Project root path"}
+            }
+        }
+    }
+})
+
+def run_project_job(jid, path, install_deps=True):
+    """Background job: autofix env, then chinna run for localhost preview."""
+    path = os.path.expanduser(safe_text(path) or '.')
+    job_log(jid, f"Project root: {path}")
+    if not os.path.isdir(path):
+        job_log(jid, "Path not found.")
+        job_done(jid, False)
+        return
+    if _forge:
+        try:
+            fix = _forge.autofix(path, create_env=True, create_gitignore=True, scaffold=bool(install_deps))
+            created = fix.get('created') or []
+            stacks = fix.get('stacks') or []
+            job_log(jid, f"Stack detect: {', '.join(stacks) or 'unknown'}")
+            if created:
+                job_log(jid, f"Created: {', '.join(created)}")
+        except Exception as e:
+            job_log(jid, f"Autofix: {e}")
+    chinna_bin = os.path.expanduser('~/.local/bin/chinna')
+    if not os.path.isfile(chinna_bin):
+        chinna_bin = shutil.which('chinna') or chinna_bin
+    logf = os.path.join(CHINNA_HOME, f'run-{jid}.log')
+    job_log(jid, "Installing deps + starting dev server…")
+    try:
+        with open(logf, 'w') as lf:
+            subprocess.Popen(
+                ['bash', '-lc', f"cd '{path}' && '{chinna_bin}' run '{path}'"],
+                stdout=lf, stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+    except Exception as e:
+        job_log(jid, f"Launch error: {e}")
+        job_done(jid, False)
+        return
+    preview = None
+    for _ in range(45):
+        time.sleep(2)
+        try:
+            if os.path.exists(logf):
+                tail = open(logf, encoding='utf-8', errors='ignore').read()[-6000:]
+                m = re.search(r'https?://localhost:\d+', tail)
+                if m:
+                    preview = m.group(0)
+                    break
+                if 'Server is live' in tail or '✓ Server' in tail:
+                    m2 = re.search(r'localhost:\d+', tail)
+                    if m2:
+                        preview = 'http://' + m2.group(0)
+                        break
+        except Exception:
+            pass
+        job_log(jid, "…still starting (waiting for localhost)")
+    if preview:
+        job_log(jid, f"✅ Preview ready: {preview}")
+        sh(f"open '{preview}' 2>/dev/null")
+    else:
+        job_log(jid, f"Server starting — logs: tail -f {logf}")
+    job_done(jid, True)
+
 def execute_tool(name, args):
     """Execute a tool safely. Returns (result_text, is_long_job)."""
     try:
@@ -1764,6 +1867,28 @@ def execute_tool(name, args):
             with jobs_lock:
                 job = jobs.get(jid, {"lines": ["Job not found"], "done": True, "ok": False})
             return json.dumps(job), False
+
+        elif name == "setup_project_env":
+            path = os.path.expanduser(args.get("path") or ".")
+            if not os.path.isdir(path):
+                return "Project path not found", False
+            if not _forge:
+                return "Forge module unavailable", False
+            result = _forge.autofix(path, create_env=True, create_gitignore=True, scaffold=bool(args.get("scaffold", True)))
+            return json.dumps(result), False
+
+        elif name == "detect_project_stack":
+            path = os.path.expanduser(args.get("path") or ".")
+            if not _forge:
+                return json.dumps({"error": "forge unavailable"}), False
+            return json.dumps(_forge.detect(path)), False
+
+        elif name == "run_project":
+            path = os.path.expanduser(args.get("path") or ".")
+            install = bool(args.get("install_deps", True))
+            jid = new_job()
+            threading.Thread(target=run_project_job, args=(jid, path, install), daemon=True).start()
+            return json.dumps({"job_id": jid, "status": "started", "path": path}), False
 
         elif name == "list_uploaded_files":
             index = load_uploaded_files_index()
@@ -2276,6 +2401,18 @@ class H(http.server.SimpleHTTPRequestHandler):
             jid = new_job()
             threading.Thread(target=self.job_audit, args=(jid, b.get('path', HOME)), daemon=True).start()
             self._json({'job': jid})
+        elif p == '/api/project/run':
+            path = os.path.expanduser(b.get('path') or '.')
+            install = bool(b.get('install_deps', True))
+            jid = new_job()
+            threading.Thread(target=run_project_job, args=(jid, path, install), daemon=True).start()
+            self._json({'job': jid, 'path': path, 'message': 'Installing deps, creating .env, starting localhost preview'})
+        elif p == '/api/project/setup':
+            path = os.path.expanduser(b.get('path') or '.')
+            if not _forge:
+                self._json({'error': 'forge unavailable'}, 500)
+            else:
+                self._json(_forge.autofix(path, create_env=True, create_gitignore=True, scaffold=bool(b.get('scaffold', True))))
         elif p == '/api/install-app':
             self.install_dashboard_app()
         elif p == '/api/install-swiftbar':
@@ -2749,10 +2886,12 @@ fi
             memory_context = "\n\nKnown facts about this user / setup:\n" + "\n".join(f"- {m.get('fact')}" for m in top)
 
         system_prompt = (
-            "You are Chinna, a concise, witty, and extremely capable Mac assistant.\n"
+            "You are Chinna, a concise, witty, and extremely capable Mac assistant (like Grok Code / Claude Code).\n"
             "Reply in the SAME language the user writes: Telugu, Tinglish, Hindi, English, or mixed.\n"
             "You have access to real tools to inspect and control the user's Mac.\n"
             "Use tools proactively when the user asks to do something (clean, kill, find, open, purge, run commands, etc).\n"
+            "When the user wants to RUN/START/BUILD a project: call setup_project_env then run_project with the repo path.\n"
+            "run_project installs deps, creates .env if missing, starts localhost preview, and opens the browser.\n"
             "After using tools, give a short, direct, friendly answer.\n"
             "Never make up file paths or numbers — use the tool results.\n"
             "When you call tools, the results will be fed back to you automatically.\n"
@@ -2851,11 +2990,22 @@ fi
             if not final_reply:
                 final_reply = "I processed your request but didn't get a clean final answer. Try rephrasing."
 
+            preview_url = None
+            project_job = None
+            for t in tool_traces:
+                if t.get('tool') == 'run_project':
+                    try:
+                        payload = json.loads(t.get('result') or '{}')
+                        project_job = payload.get('job_id')
+                    except Exception:
+                        pass
             self._json({
                 "reply": final_reply,
                 "model": used_model,
                 "history": AI_HISTORY[-AI_HISTORY_LIMIT:],
                 "tool_calls": tool_traces,
+                "project_job": project_job,
+                "preview_url": preview_url,
                 "attachments_processed": len(attachment_context),
                 "needs_upload": needs_upload,
                 "upload_request": upload_request
@@ -3097,7 +3247,7 @@ fi
             cmd = f'{install_url} && chinna'
         else:
             cmd = f'CHINNA_SKIP_LAUNCH=1 "{chinna_bin}" update --apply && "{chinna_bin}"'
-        job_log(jid, 'Opening Terminal — upgrade then Chinna escape sequence (~30s, press s to skip)...')
+        job_log(jid, 'Opening Terminal — upgrade then Chinna escape sequence (~1:10, press s to skip)...')
         esc = cmd.replace('\\', '\\\\').replace('"', '\\"')
         sh(
             "osascript "
@@ -3479,6 +3629,7 @@ def _agent_system_prompt(mode: str, model_name: str = "") -> str:
     tools_block = "\n".join(f"- **`{name}`** — {desc}" for name, desc in AGENT_TOOLS.items())
     base = f"""You are Chinna, an advanced agentic Mac assistant. You have deep macOS integration \
 (processes, disk, battery, music, apps, notifications, osascript) PLUS full dev capabilities.
+Reply in the SAME language the user writes: Telugu, Tinglish, Hindi, English, or mixed.
 
 To use a tool, write a fenced code block with the tool name as the language tag:
 ```bash
@@ -3493,7 +3644,8 @@ Available tools:
 - For HTML/code outputs, ALWAYS use create_artifact (shows live preview).
 - After each completed step, call update_plan with the full checklist.
 - If ambiguous, use ask_user to get a decision — show 2-5 clear options.
-- You are running on macOS. Use Mac-native tools whenever possible."""
+- You are running on macOS. Use Mac-native tools whenever possible.
+- To run a project: use bash to `cd` the repo, install deps (npm/pnpm/pip), create .env if missing, start dev server, open localhost."""
 
     if mode == "plan":
         base += """

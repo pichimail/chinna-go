@@ -188,9 +188,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				m.aiLoading = true
 				cmds = append(cmds, sendAIMessage(m.apiClient, input, m.messages[:len(m.messages)-1]))
-				if label, args, ok := detectMacAction(input); ok {
-					cmds = append(cmds, runMacAction(label, args))
-				}
 			}
 
 			m.input.Reset()
@@ -251,6 +248,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, Message{Role: "assistant", Content: msg.Content, Timestamp: time.Now()})
 		m.viewport.SetContent(renderMessages(m.messages))
 		m.viewport.GotoBottom()
+
+	case aiDoneMsg:
+		m.aiLoading = false
+		m.messages = append(m.messages, Message{Role: "assistant", Content: formatAIReply(msg.Result), Timestamp: time.Now()})
+		m.viewport.SetContent(renderMessages(m.messages))
+		m.viewport.GotoBottom()
+		if msg.Result.ProjectJob != "" {
+			cmds = append(cmds, pollProjectJob(msg.Result.ProjectJob))
+		}
+
+	case projectJobStartMsg:
+		m = m.appendAssistant(fmt.Sprintf("⚡ Project run started (job %s) — polling…", msg.JobID))
+		cmds = append(cmds, pollProjectJob(msg.JobID))
 
 	case aiErrorMsg:
 		m.aiLoading = false
@@ -383,12 +393,7 @@ func (m Model) submitHomePrompt(text string) (tea.Model, tea.Cmd) {
 	m.viewport.GotoBottom()
 	m.input.Focus()
 	m.aiLoading = true
-	var cmds []tea.Cmd
-	cmds = append(cmds, sendAIMessage(m.apiClient, text, m.messages[:len(m.messages)-1]))
-	if label, args, ok := detectMacAction(text); ok {
-		cmds = append(cmds, runMacAction(label, args))
-	}
-	return m, tea.Batch(cmds...)
+	return m, sendAIMessage(m.apiClient, text, m.messages[:len(m.messages)-1])
 }
 
 func isPrintableKey(msg tea.KeyMsg) bool {
@@ -453,13 +458,19 @@ func (m Model) activateSelected() (tea.Model, tea.Cmd) {
 		m = m.appendAssistant("AI Pro selected. Configure OpenRouter keys in settings, then type your prompt.")
 	case 3:
 		m.viewMode = "chat"
-		m = m.appendAssistant("Run Project selected. Use the legacy command from another tab: chinna run")
+		m = m.appendAssistant("Run Project — detecting stack, scaffolding .env, installing deps, starting localhost…")
+		m.input.Focus()
+		return m, startProjectRunAPI(".")
 	case 4:
 		m.viewMode = "chat"
-		m = m.appendAssistant("Doctor selected. Use: chinna doctor")
+		m = m.appendAssistant("Doctor selected. Running health check…")
+		m.input.Focus()
+		return m, runMacAction("chinna doctor", []string{"doctor"})
 	case 5:
 		m.viewMode = "chat"
-		m = m.appendAssistant("Project Audit selected. Use: chinna audit")
+		m = m.appendAssistant("Project Audit selected. Scanning…")
+		m.input.Focus()
+		return m, runMacAction("chinna audit", []string{"audit"})
 	}
 	m.input.Focus()
 	return m, nil

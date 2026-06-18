@@ -227,7 +227,7 @@ step_write_defaults() {
     copy_or_fetch "version-log.json" "${CHINNA}/version-log.json" 2>/dev/null || true
     if [ ! -f "${CHINNA}/env" ]; then
         cat > "${CHINNA}/env" << 'ENV'
-# Chinna V6.9 Environment (chmod 600 — never share this file)
+# Chinna V7.0 Environment (chmod 600 — never share this file)
 # OPENROUTER_API_KEY=
 # ANTHROPIC_API_KEY=
 # OPENAI_API_KEY=
@@ -329,7 +329,7 @@ step_start_server() {
     sleep 3
     if curl -sf "http://localhost:${PORT}/api/version" >/dev/null 2>&1; then
         VER=$(curl -sf "http://localhost:${PORT}/api/version" | \
-              python3 -c "import json,sys;print(json.load(sys.stdin).get('name','Chinna V6.9'))" 2>/dev/null || echo "Chinna V6.9")
+              python3 -c "import json,sys;print(json.load(sys.stdin).get('name','Chinna V7.0'))" 2>/dev/null || echo "Chinna V7.0")
         echo "    ✓ ${VER} running on port ${PORT}"
     else
         echo "    ⚠ Server warming up — check: curl http://localhost:${PORT}/api/version"

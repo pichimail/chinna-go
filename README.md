@@ -28,7 +28,7 @@ After install, open a new terminal tab (or `source ~/.zshrc`) and run:
 chinna
 ```
 
-That launches the **~30 second containment escape intro** (press `s`, `enter`, or `space` to skip) and then the Bubble Tea CLI.
+That launches the **~1:10 containment escape intro** (press `s`, `enter`, or `space` to skip) and then the Bubble Tea CLI.
 
 ## Auto-Update (built-in)
 
@@ -56,7 +56,7 @@ We rebuilt the entire terminal experience to feel exactly like a premium Grok-st
 - Perfect progress, spinners, and sectioning
 
 ```bash
-chinna                # escape intro (~30s) + interactive TUI
+chinna                # escape intro (~1:10) + interactive TUI
 chinna escape         # standalone escape animation only
 chinna --version
 chinna dashboard
