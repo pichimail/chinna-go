@@ -61,7 +61,7 @@ func (m Model) homeMenuIndexAt(x, y int) (int, bool) {
 	h := max(8, m.height)
 	panelW := max(40, w-4)
 	itemCount := len(menuItems())
-	panelH := 4 + 2 + 1 + itemCount + 5
+	panelH := 4 + 2 + 1 + itemCount + 9
 	panelX := max(0, (w-panelW)/2)
 	panelY := max(0, (h-panelH)/2)
 

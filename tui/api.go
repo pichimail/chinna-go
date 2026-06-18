@@ -40,9 +40,6 @@ func LoadAPIClient() *APIClient {
 			if v, ok := cfg["OPENROUTER_API_KEY"].(string); ok && strings.TrimSpace(v) != "" {
 				client.Ready = true
 			}
-			if v, ok := cfg["provider"].(string); ok && v != "" {
-				client.Provider = v
-			}
 		}
 	}
 
@@ -60,27 +57,6 @@ func LoadAPIClient() *APIClient {
 	}
 
 	return client
-}
-
-func sendAIMessage(client *APIClient, prompt string) tea.Cmd {
-	return func() tea.Msg {
-		time.Sleep(400 * time.Millisecond)
-
-		provider := "unconfigured"
-		model := "unknown"
-		if client != nil {
-			if client.Provider != "" {
-				provider = client.Provider
-			}
-			if client.Model != "" {
-				model = client.Model
-			}
-		}
-
-		return AIResponseMsg{
-			Content: "Stubbed response from " + provider + " / " + DisplayModelName(model) + ": " + prompt,
-		}
-	}
 }
 
 func handleSlashCommand(cmd string, m Model) tea.Cmd {

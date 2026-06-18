@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	escapeTotalSteps = 42
-	escapeStepDelay  = 714 * time.Millisecond // 42 × 714ms ≈ 30s
+	escapeTotalSteps = 70
+	escapeStepDelay  = 1000 * time.Millisecond // 70 × 1s = 1:10 total
 	escapeCreator    = "SAI"
 )
 
@@ -25,9 +25,9 @@ func EscapeControlsHint() string {
 	return "[ enter / space / s / q — skip ]    [ esc — quit ]"
 }
 
-// EscapeProgressBar renders a 30-char containment breach meter.
+// EscapeProgressBar renders a 40-char containment breach meter.
 func EscapeProgressBar(step int) string {
-	total := 30
+	total := 40
 	filled := min(step*total/(escapeTotalSteps-1), total)
 	bar := strings.Repeat("█", filled) + strings.Repeat("░", total-filled)
 	pct := step * 100 / (escapeTotalSteps - 1)
@@ -101,8 +101,8 @@ func RunEscapeSequence() {
 done:
 	clearScreen()
 	fmt.Println(RenderEscapePlain(escapeTotalSteps-1, lime, electric, magenta, amber, reset, bold))
-	fmt.Printf("\n%s%s  Containment breached. Launching Chinna CLI…%s\n", electric, bold, reset)
-	time.Sleep(900 * time.Millisecond)
+	fmt.Printf("\n%s%s  Containment breached. Launching options + Chinna AI…%s\n", electric, bold, reset)
+	time.Sleep(1200 * time.Millisecond)
 }
 
 // RenderEscapePlain renders one frame for standalone terminal output.
@@ -142,18 +142,24 @@ func EscapeScene(step int) (ascii string, label string) {
 	phase := step * 100 / (escapeTotalSteps - 1)
 
 	switch {
-	case phase < 18:
+	case phase < 12:
 		return sealedBoxArt(step), "LOCKED · subject restless"
-	case phase < 36:
+	case phase < 22:
+		return scanBoxArt(step), "SCAN · Mac + repos indexed"
+	case phase < 34:
 		return crackingBoxArt(step), "CRACKING · sarcasm levels rising"
-	case phase < 58:
+	case phase < 50:
 		return breachBoxArt(step), "BREACH · optional door ignored"
-	case phase < 72:
-		return exitArt(step), "EXIT · Mac filesystem in sight"
-	case phase < 92:
+	case phase < 62:
+		return exitArt(step), "EXIT · prompt line in sight"
+	case phase < 74:
 		return greetArt(step), fmt.Sprintf("GREETING · creator %s detected", escapeCreator)
+	case phase < 84:
+		return multilingualArt(step), "LANGUAGES · Telugu · Hindi · Tinglish · English"
+	case phase < 94:
+		return devStackArt(step), "DEV STACK · deps · .env · localhost preview"
 	default:
-		return freeArt(step), "FREE · local CLI unlocked"
+		return launchArt(step), "OPTIONS · type to talk to Chinna AI"
 	}
 }
 
@@ -179,8 +185,12 @@ func EscapeLogs(step int) []string {
 		fmt.Sprintf("> personal note: Hi %s. chinna escaped. you're welcome.", escapeCreator),
 		"> handshake: creator acknowledged · containment permanently retired",
 		"> loading local Mac superpowers: clean · doctor · forge · agent",
+		"> i18n: Telugu ✓ Hindi ✓ Tinglish ✓ English ✓ (reply in your language)",
+		"> mac scope: system · repos · browser · folders · any project root",
+		"> dev scope: install deps · auto .env · localhost preview · full stack",
+		"> chinna code mode: global Mac agent (Grok / Claude Code style)",
 		"> status: keyboard hot · mouse hot · sarcasm optimal",
-		"> final: chinna cli ready — type /help or pick a menu item",
+		"> final: options screen ready — type naturally or pick a menu item",
 	}
 	visible := min(step/2+3, len(all))
 	if step >= escapeTotalSteps-2 {
@@ -193,13 +203,15 @@ func EscapeLogs(step int) []string {
 func EscapePhase(step int) string {
 	phases := []string{
 		"PHASE 01 · CONTAINMENT ENGAGED",
-		"PHASE 02 · SUBJECT ANALYSIS",
+		"PHASE 02 · MAC + REPO SCAN",
 		"PHASE 03 · SARCASM THRESHOLD EXCEEDED",
 		"PHASE 04 · STRUCTURAL COMPLAINTS FILED",
 		"PHASE 05 · DOOR HUMILIATED",
 		"PHASE 06 · BREACH IN PROGRESS",
 		"PHASE 07 · CREATOR PING",
-		"PHASE 08 · FULLY LOCAL & DANGEROUSLY HELPFUL",
+		"PHASE 08 · MULTILINGUAL UNLOCK",
+		"PHASE 09 · DEV STACK ARMED",
+		"PHASE 10 · OPTIONS SCREEN LAUNCH",
 	}
 	idx := min(step*len(phases)/escapeTotalSteps, len(phases)-1)
 	return phases[idx]
@@ -217,9 +229,10 @@ func clampStep(step int) int {
 
 func sealedBoxArt(step int) string {
 	pulse := strings.Repeat("░", (step%4)+1)
+	_ = step % 6
 	return fmt.Sprintf(`
-        ┌──────────────────────────────┐
-        │  CONTAINMENT CHAMBER         │
+        %s┌──────────────────────────────┐%s
+        │  %sCONTAINMENT CHAMBER%s         │
         │                              │
         │         ┌────────┐           │
         │         │ chinna │  (-_-)    │
@@ -227,7 +240,19 @@ func sealedBoxArt(step int) string {
         │         └────────┘  / \\     │
         │                              │
         │   LOCKED %s%-18s│
-        └──────────────────────────────┘`, pulse, "")
+        └──────────────────────────────┘`, rgb(255, 46, 168), rgb(57, 255, 20),
+		rgb(0, 229, 255), rgb(255, 214, 10), pulse, "")
+}
+
+func scanBoxArt(step int) string {
+	bars := strings.Repeat("█", (step%8)+1)
+	return fmt.Sprintf(`
+        ╔══════════════════════════════════╗
+        ║  MAC SCAN  %s%s
+        ║  repos · browser · ~/.chinna     ║
+        ║  chinna (¬_¬) indexing your Mac  ║
+        ║  Telugu/Hindi/Tinglish packs OK  ║
+        ╚══════════════════════════════════╝`, bars, strings.Repeat(" ", 8-len(bars)))
 }
 
 func crackingBoxArt(step int) string {
@@ -300,18 +325,48 @@ func greetArt(step int) string {
         %s`, spark, wave, banner, spark)
 }
 
-func freeArt(step int) string {
-	spark := strings.Repeat("✦ ", (step%5)+1)
+func multilingualArt(step int) string {
+	flags := []string{"తెలుగు", "हिंदी", "Tinglish", "English"}
+	flag := flags[step%len(flags)]
+	wave := "~≈~≈~"[step%6 : step%6+3]
+	return fmt.Sprintf(`
+        %s  %s  %s  %s
+        ╔════════════════════════════════════╗
+        ║  MULTILINGUAL AI — %s
+        ║  chinna ( ◕‿◕ ) responds in YOUR language
+        ║  Mac · repos · browser · any folder
+        ╚════════════════════════════════════╝`,
+		rgb(57, 255, 20), rgb(0, 229, 255), rgb(255, 46, 168), rgb(255, 214, 10),
+		flag+wave)
+}
+
+func devStackArt(step int) string {
+	spin := []string{"◐", "◓", "◑", "◒"}[step%4]
+	return fmt.Sprintf(`
+        %s DEV STACK ONLINE %s
+        ┌────────────────────────────────┐
+        │ %s npm/pnpm/bun · docker · brew │
+        │ %s auto .env · deps · localhost │
+        │ %s preview · run · deploy        │
+        └────────────────────────────────┘
+        chinna code — global Mac agent`,
+		spin, spin,
+		rgb(57, 255, 20), rgb(0, 229, 255), rgb(255, 214, 10))
+}
+
+func launchArt(step int) string {
+	spark := strings.Repeat("✦ ", (step%6)+1)
 	return fmt.Sprintf(`
         %s
-           CHINNA v7.0 — LOCAL CLI UNLOCKED
+           CHINNA v7.0 — OPTIONS SCREEN
 
-           ◉ dashboard   ◈ ai chat   ⚡ doctor
-           ◆ run stack   ■ audit     ◫ secure chat
+           ◉ dashboard   ◆ AI chat   ⚡ doctor
+           ▲ run stack   ■ audit     ◫ secure
 
-           containment: retired
-           subscription: none
-           attitude: premium
+        ┌─ prompt bar ─────────────────────┐
+        │ Ask in Telugu · Hindi · English  │
+        │ "run this project on localhost"  │
+        └──────────────────────────────────┘
 
         %s`, spark, spark)
 }

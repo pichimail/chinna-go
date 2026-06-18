@@ -200,16 +200,20 @@ step_write_bin() {
 
 step_link_chinna_path() {
     local canonical="$HOME/.local/bin/chinna"
+    ln -sf "$canonical" "$HOME/.local/bin/chinna-code" 2>/dev/null || true
+    echo "    ✓ linked ~/.local/bin/chinna-code → chinna code"
     local linked=0
     for dir in /usr/local/bin /opt/homebrew/bin; do
         [ -d "$dir" ] || continue
         if ln -sf "$canonical" "$dir/chinna" 2>/dev/null; then
             linked=1
+            ln -sf "$canonical" "$dir/chinna-code" 2>/dev/null || true
             echo "    ✓ linked $dir/chinna → ~/.local/bin/chinna"
             continue
         fi
         if command -v sudo >/dev/null 2>&1 && sudo -n ln -sf "$canonical" "$dir/chinna" 2>/dev/null; then
             linked=1
+            sudo -n ln -sf "$canonical" "$dir/chinna-code" 2>/dev/null || true
             echo "    ✓ linked $dir/chinna → ~/.local/bin/chinna (sudo)"
         fi
     done
@@ -303,6 +307,9 @@ unalias chinna 2>/dev/null || true
 chinna() {{
   "$HOME/.local/bin/chinna" "$@"
 }}
+chinna-code() {{
+  CHINNA_CODE_MODE=1 "$HOME/.local/bin/chinna" code "$@"
+}}
 {end}
 """
 
@@ -372,7 +379,8 @@ echo "  🌐  Dashboard   →  http://localhost:${PORT}"
 echo "  📦  Install URL  →  curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash"
 echo ""
 echo "  Quick commands:"
-echo "    chinna                  → ~30s containment escape intro + TUI (s to skip)"
+echo "    chinna                  → ~1:10 escape intro + options + AI chat (s to skip)"
+echo "    chinna code             → global Mac agent, skip intro (Grok/Claude Code style)"
 echo "    source ~/.zshrc         → activate chinna in this terminal (once)"
 echo "    chinna escape           → standalone escape animation in Terminal"
 echo "    chinna doctor           → full system health check"

@@ -2,9 +2,11 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
+	"unicode"
 
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/viewport"
@@ -28,6 +30,10 @@ type Model struct {
 	apiClient *APIClient
 
 	chatInputY int
+	homePrompt textarea.Model
+	homeFocus  string // "menu" | "prompt"
+	aiLoading  bool
+	skipEscape bool
 }
 
 type commandDoneMsg struct {
@@ -37,31 +43,46 @@ type commandDoneMsg struct {
 
 func InitialModel(client *APIClient) Model {
 	ta := textarea.New()
-	ta.Placeholder = "Message Chinna... (supports /commands)"
-	ta.Focus()
+	ta.Placeholder = "Message Chinna... (Telugu · Hindi · Tinglish · English)"
 	ta.SetWidth(112)
 	ta.SetHeight(3)
 
-	vp := viewport.New(viewport.WithWidth(112), viewport.WithHeight(22))
-	vp.SetContent("Containment breached.\nType /help for commands.\n")
+	hp := textarea.New()
+	hp.Placeholder = "Ask Chinna anything… Mac · repos · run projects · localhost (Tab to menu)"
+	hp.SetWidth(112)
+	hp.SetHeight(2)
 
-	return Model{
-		viewport:  vp,
-		input:     ta,
-		messages:  []Message{},
-		status:    "ready",
-		entryMode: true,
-		viewMode:  "home",
-		apiClient: client,
+	vp := viewport.New(viewport.WithWidth(112), viewport.WithHeight(22))
+	vp.SetContent("")
+
+	skipEscape := os.Getenv("CHINNA_CODE_MODE") == "1" || os.Getenv("CHINNA_SKIP_ESCAPE") == "1"
+	entryMode := !skipEscape
+
+	m := Model{
+		viewport:   vp,
+		input:      ta,
+		homePrompt: hp,
+		messages:   []Message{},
+		status:     "ready",
+		entryMode:  entryMode,
+		entryDone:  skipEscape,
+		viewMode:   "home",
+		homeFocus:  "prompt",
+		apiClient:  client,
+		skipEscape: skipEscape,
 	}
+	if skipEscape {
+		m.homeFocus = "prompt"
+	}
+	return m
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(
-		textarea.Blink,
-		tickEntry(),
-		tickStatus(),
-	)
+	cmds := []tea.Cmd{textarea.Blink, tickStatus()}
+	if m.entryMode {
+		cmds = append(cmds, tickEntry())
+	}
+	return tea.Batch(cmds...)
 }
 
 func tickStatus() tea.Cmd {
@@ -111,25 +132,43 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "h":
 			if m.viewMode != "chat" {
 				m.viewMode = "home"
+				m.homeFocus = "menu"
+				return m, nil
+			}
+		case "tab":
+			if m.viewMode == "home" {
+				if m.homeFocus == "menu" {
+					m.homeFocus = "prompt"
+					m.homePrompt.Focus()
+				} else {
+					m.homeFocus = "menu"
+					m.homePrompt.Blur()
+				}
 				return m, nil
 			}
 		case "up", "k":
-			if m.viewMode == "home" {
+			if m.viewMode == "home" && m.homeFocus == "menu" {
 				m.selected = (m.selected + len(menuItems()) - 1) % len(menuItems())
 				return m, nil
 			}
-		case "down", "j", "tab":
-			if m.viewMode == "home" {
+		case "down", "j":
+			if m.viewMode == "home" && m.homeFocus == "menu" {
 				m.selected = (m.selected + 1) % len(menuItems())
 				return m, nil
 			}
 		case "1", "2", "3", "4", "5", "6":
-			if m.viewMode == "home" {
+			if m.viewMode == "home" && m.homeFocus == "menu" {
 				m.selected = int(msg.String()[0] - '1')
 				return m.activateSelected()
 			}
 		case "enter":
 			if m.viewMode == "home" {
+				if m.homeFocus == "prompt" {
+					text := strings.TrimSpace(m.homePrompt.Value())
+					if text != "" {
+						return m.submitHomePrompt(text)
+					}
+				}
 				return m.activateSelected()
 			}
 			if m.viewMode != "chat" {
@@ -147,10 +186,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if strings.HasPrefix(input, "/") {
 				cmds = append(cmds, handleSlashCommand(input, m))
 			} else {
-				cmds = append(cmds, sendAIMessage(m.apiClient, input))
+				m.aiLoading = true
+				cmds = append(cmds, sendAIMessage(m.apiClient, input, m.messages[:len(m.messages)-1]))
+				if label, args, ok := detectMacAction(input); ok {
+					cmds = append(cmds, runMacAction(label, args))
+				}
 			}
 
 			m.input.Reset()
+		default:
+			if m.viewMode == "home" && m.homeFocus == "menu" && isPrintableKey(msg) {
+				m.homeFocus = "prompt"
+				m.homePrompt.Focus()
+				m.homePrompt, cmd = m.homePrompt.Update(msg)
+				cmds = append(cmds, cmd)
+				return m, tea.Batch(cmds...)
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -161,6 +212,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.SetHeight(l.viewportH)
 		m.input.SetWidth(l.inputW)
 		m.input.SetHeight(l.inputH)
+		m.homePrompt.SetWidth(max(20, msg.Width-8))
 		m.chatInputY = l.chatInputY
 
 	case tea.MouseClickMsg:
@@ -195,9 +247,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case AIResponseMsg:
+		m.aiLoading = false
 		m.messages = append(m.messages, Message{Role: "assistant", Content: msg.Content, Timestamp: time.Now()})
 		m.viewport.SetContent(renderMessages(m.messages))
 		m.viewport.GotoBottom()
+
+	case aiErrorMsg:
+		m.aiLoading = false
+		m = m.appendAssistant("AI: " + msg.Err)
 
 	case commandDoneMsg:
 		if msg.Err != nil {
@@ -228,6 +285,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.entryMode {
 		return m, tea.Batch(cmds...)
+	}
+
+	if m.viewMode == "home" && m.homeFocus == "prompt" {
+		m.homePrompt, cmd = m.homePrompt.Update(msg)
+		cmds = append(cmds, cmd)
 	}
 
 	if m.viewMode == "chat" {
@@ -278,7 +340,11 @@ func (m Model) View() tea.View {
 		Width(max(20, m.width)).
 		Render("  " + m.status + "  ")
 
-	chat := lipgloss.NewStyle().Width(max(20, m.width)).Render(m.viewport.View())
+	chatContent := m.viewport.View()
+	if m.aiLoading {
+		chatContent += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#ff7a18")).Render("Chinna is thinking…")
+	}
+	chat := lipgloss.NewStyle().Width(max(20, m.width)).Render(chatContent)
 	input := lipgloss.NewStyle().Width(max(20, m.width)).Render(m.input.View())
 
 	footer := lipgloss.NewStyle().
@@ -301,9 +367,44 @@ func (m Model) finishEntry() Model {
 	m.entryDone = true
 	m.entryStep = 0
 	m.viewMode = "home"
+	m.homeFocus = "prompt"
+	m.homePrompt.Focus()
 	m.messages = []Message{}
 	m.viewport.SetContent("")
 	return m
+}
+
+func (m Model) submitHomePrompt(text string) (tea.Model, tea.Cmd) {
+	m.viewMode = "chat"
+	m.homePrompt.Reset()
+	m.homeFocus = "menu"
+	m.messages = append(m.messages, Message{Role: "user", Content: text, Timestamp: time.Now()})
+	m.viewport.SetContent(renderMessages(m.messages))
+	m.viewport.GotoBottom()
+	m.input.Focus()
+	m.aiLoading = true
+	var cmds []tea.Cmd
+	cmds = append(cmds, sendAIMessage(m.apiClient, text, m.messages[:len(m.messages)-1]))
+	if label, args, ok := detectMacAction(text); ok {
+		cmds = append(cmds, runMacAction(label, args))
+	}
+	return m, tea.Batch(cmds...)
+}
+
+func isPrintableKey(msg tea.KeyMsg) bool {
+	k, ok := msg.(tea.KeyPressMsg)
+	if !ok {
+		return false
+	}
+	if k.Text == "" {
+		return false
+	}
+	for _, r := range k.Text {
+		if unicode.IsPrint(r) {
+			return true
+		}
+	}
+	return false
 }
 
 func menuItems() []struct {
@@ -387,7 +488,7 @@ func (m Model) homeView() (panel string, placed string) {
 		Render("CONTAINMENT BREACHED")
 	subtitle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#9ca3af")).
-		Render("select with ↑↓, numbers, enter, or mouse click")
+		Render("Escape complete · pick an option or type below · Tab switches menu ↔ prompt")
 
 	var rows []string
 	for i, item := range items {
@@ -436,8 +537,29 @@ func (m Model) homeView() (panel string, placed string) {
 	)
 	footer := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#8b949e")).
-		Render("↑↓ move   ↵ run   mouse click   h home   q quit")
+		Render("↑↓ menu   Tab prompt   ↵ send/run   mouse   q quit")
 	rule := lipgloss.NewStyle().Foreground(lipgloss.Color("#333333")).Render(strings.Repeat("─", panelWidth-6))
+
+	promptLabel := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#75baff")).
+		Bold(true).
+		Render("chinna ❯")
+	promptBox := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#39ff14")).
+		Background(lipgloss.Color("#0d0d0d")).
+		Padding(0, 1).
+		Width(panelWidth - 6).
+		Render(m.homePrompt.View())
+	if m.homeFocus == "prompt" {
+		promptBox = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#ff7a18")).
+			Background(lipgloss.Color("#12100a")).
+			Padding(0, 1).
+			Width(panelWidth - 6).
+			Render(m.homePrompt.View())
+	}
 
 	body := lipgloss.JoinVertical(lipgloss.Left,
 		lipgloss.JoinHorizontal(lipgloss.Top, title, "  ", tag),
@@ -448,6 +570,8 @@ func (m Model) homeView() (panel string, placed string) {
 		rule,
 		tabs,
 		rule,
+		promptLabel,
+		promptBox,
 		footer,
 	)
 
@@ -485,7 +609,7 @@ func (m Model) entryView() string {
 	logs := entryLogs(step)
 	progress := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#60a5fa")).
-		Render(fmt.Sprintf("breach %s  ·  ~%ds left  ·  frame %d/%d",
+		Render(fmt.Sprintf("breach %s  ·  ~%ds left  ·  frame %d/%d  ·  total ~1:10",
 			EscapeProgressBar(step), EscapeCountdown(step), step+1, EscapeTotalSteps()))
 	controls := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#7e6a58")).

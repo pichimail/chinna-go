@@ -713,7 +713,7 @@ _or_chat() {
     echo ""; echo ""
 }
 
-cmd_free() { _or_chat "${CHINNA_FREE_MODEL:-meta-llama/llama-3.3-70b-instruct:free}" "$@"; }
+cmd_free() { _or_chat "${ACTIVE_MODEL:-openrouter/free}" "$@"; }
 cmd_pro()  { _or_chat "${CHINNA_PRO_MODEL:-anthropic/claude-sonnet-4-5}" "$@"; }
 
 # ═══════════════════════════════════════════════════════════════
@@ -1442,6 +1442,10 @@ run_go_tui() {
     (cd "$root" && go run -buildvcs=false ./cmd/chinna-tui)
 }
 
+run_go_code() {
+    CHINNA_CODE_MODE=1 CHINNA_SKIP_ESCAPE=1 run_go_tui
+}
+
 run_go_escape() {
     if ! command -v go >/dev/null 2>&1; then
         warn "Go toolchain not installed; cannot run escape animation"
@@ -1464,9 +1468,10 @@ show_help() {
     banner
     cat <<HELP
    ${BOLD}CHINNA v7 — Grok-style CLI${RESET}
-     chinna                   ~30s containment escape intro + Bubble Tea TUI
+     chinna                   ~1:10 escape intro + options + AI chat TUI
+     chinna code              Global Mac agent (skip intro, like Grok/Claude Code)
      chinna hub               Legacy shell hub (mouse + keyboard)
-     chinna escape            Standalone containment-break animation (~30s, s to skip)
+     chinna escape            Standalone containment-break animation (~1:10, s to skip)
      chinna <command>         Run directly
      chinna "anything"        Telugu · Hindi · English · Tinglish
 
@@ -1568,6 +1573,9 @@ main() {
             ;;
         escape)
             run_go_escape
+            ;;
+        code)
+            run_go_code
             ;;
         clean|cleanmymac)           cmd_clean ;;
         "clean mac"|"clean-mac")    cmd_clean_mac ;;
