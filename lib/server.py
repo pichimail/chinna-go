@@ -32,7 +32,7 @@ REPO_ROOT = os.path.abspath(os.path.join(SERVER_DIR, '..'))
 try:
     CHINNA_VERSION = open(os.path.join(REPO_ROOT, 'VERSION')).read().strip()
 except:
-    CHINNA_VERSION = "6.9.0"
+    CHINNA_VERSION = "7.0.0"
 
 VERSION_LOG_LOCAL = os.path.join(REPO_ROOT, 'version-log.json')
 VERSION_LOG_REMOTE = 'https://raw.githubusercontent.com/pichimail/chinna-go/main/version-log.json'
@@ -1954,7 +1954,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 'chat_default_relay_url': dashboard_origin(),
             })
         elif p == '/api/version':
-            self._json({'version': CHINNA_VERSION, 'name': 'Chinna V6.9'})
+            self._json({'version': CHINNA_VERSION, 'name': 'Chinna V7.0'})
         elif p == '/api/ai/status':
             self._json(ai_key_status())
 
@@ -2119,7 +2119,9 @@ class H(http.server.SimpleHTTPRequestHandler):
         elif p == '/api/update':
             jid = new_job()
             threading.Thread(target=self.job_update, args=(jid,), daemon=True).start()
-            self._json({'job': jid, 'message': 'Opening Terminal to upgrade Chinna'})
+            self._json({'job': jid, 'message': 'Opening Terminal to upgrade Chinna, then the escape CLI intro'})
+        elif p == '/api/launch-cli':
+            self._json(self.launch_chinna_cli())
         elif p == '/api/purge':
             jid = new_job(); threading.Thread(target=self.job_purge, args=(jid,), daemon=True).start(); self._json({'job': jid})
         elif p == '/api/clean':
@@ -3067,13 +3069,16 @@ fi
         latest = safe_text(check.get('latest') or start_ver)
         job_log(jid, f'Installed: v{start_ver}')
         job_log(jid, f'Latest available: v{latest}')
-        chinna_bin = shutil.which('chinna') or os.path.join(CHINNA_HOME, 'bin', 'chinna')
+        chinna_bin = os.path.expanduser('~/.local/bin/chinna')
+        if not os.path.isfile(chinna_bin):
+            chinna_bin = shutil.which('chinna') or os.path.join(CHINNA_HOME, 'bin', 'chinna')
+        install_url = 'curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash'
         if not os.path.isfile(chinna_bin):
             job_log(jid, 'chinna CLI not found — using installer fallback')
-            cmd = 'curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash'
+            cmd = f'{install_url} && chinna'
         else:
-            cmd = f'"{chinna_bin}" update --apply'
-        job_log(jid, 'Opening Terminal to run upgrade in the background...')
+            cmd = f'CHINNA_SKIP_LAUNCH=1 "{chinna_bin}" update --apply && "{chinna_bin}"'
+        job_log(jid, 'Opening Terminal — upgrade then Chinna escape sequence (~30s, press s to skip)...')
         esc = cmd.replace('\\', '\\\\').replace('"', '\\"')
         sh(
             "osascript "
@@ -3094,10 +3099,27 @@ fi
                     job_log(jid, f"  + {item}")
                 for item in (entry.get('resolved') or [])[:4]:
                     job_log(jid, f"  ✓ {item}")
+                job_log(jid, '✅ Upgrade complete — Chinna escape CLI should be running in Terminal')
                 job_done(jid, True)
                 return
-        job_log(jid, 'Upgrade may still be running in Terminal. Refresh Settings when it finishes.')
+        job_log(jid, 'Upgrade may still be running in Terminal. When done, run: chinna')
         job_done(jid, True)
+
+    def launch_chinna_cli(self, quiet=False):
+        chinna_bin = os.path.expanduser('~/.local/bin/chinna')
+        if not os.path.isfile(chinna_bin):
+            chinna_bin = shutil.which('chinna') or os.path.join(CHINNA_HOME, 'bin', 'chinna')
+        if not os.path.isfile(chinna_bin):
+            return {'error': 'chinna CLI not installed. Run the one-touch installer first.'}
+        esc = chinna_bin.replace('\\', '\\\\').replace('"', '\\"')
+        sh(
+            "osascript "
+            "-e 'tell application \"Terminal\" to activate' "
+            f"-e 'tell application \"Terminal\" to do script \"{esc}\"'"
+        )
+        if not quiet:
+            return {'ok': True, 'message': 'Chinna CLI opened in Terminal'}
+        return {'ok': True}
 
     def list_models(self):
         models_file = os.path.join(CHINNA_HOME, "models")
@@ -4006,7 +4028,7 @@ H.delete_artifact = delete_artifact
 H.exec_shell_direct = exec_shell_direct
 
 if __name__ == '__main__':
-    print(f"Chinna V6.9 -> http://localhost:{PORT}")
+    print(f"Chinna V7.0 -> http://localhost:{PORT}")
     print(f"serving {DASHBOARD_DIR}")
     threading.Thread(target=stats_loop, daemon=True).start()
     try:

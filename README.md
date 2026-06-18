@@ -1,4 +1,4 @@
-# chinna v6.9
+# chinna v7.0
 
 **chinna** is the local-first Mac sidekick that actually *does* things on your machine.
 
@@ -22,6 +22,14 @@ bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/ins
 
 This command **always** gives you the latest version. Run it again any time to upgrade — your data, keys, and configs are never touched.
 
+After install, open a new terminal tab (or `source ~/.zshrc`) and run:
+
+```bash
+chinna
+```
+
+That launches the **~30 second containment escape intro** (press `s`, `enter`, or `space` to skip) and then the Bubble Tea CLI.
+
 ## Auto-Update (built-in)
 
 Chinna checks GitHub on launch.
@@ -41,16 +49,17 @@ chinna update
 We rebuilt the entire terminal experience to feel exactly like a premium Grok-style CLI:
 
 - Clean, sparse, high-signal output
-- Elegant minimal banner (`chinna v6.9.0`)
+- Elegant minimal banner (`chinna v7.0.0`)
 - `chinna ❯ ` prompt aesthetic
 - Restrained beautiful ANSI (electric accents + signature lime)
 - Direct, slightly wry, extremely useful messages
 - Perfect progress, spinners, and sectioning
 
 ```bash
+chinna                # escape intro (~30s) + interactive TUI
+chinna escape         # standalone escape animation only
 chinna --version
 chinna dashboard
-chinna agent          # (or just launch the UI)
 chinna clean
 chinna config
 ```
@@ -65,7 +74,7 @@ Everything else (`help`, `doctor`, `status`...) follows the same strict visual l
 |--------------------------------|--------------------------------------------------------------------------------------|
 | **Conversational App Builder Agent** | The Agent tab is a full v0.app / emergent-style experience: Ask / Plan / Build modes that are *actually* dynamic, live Code ↔ Preview toggles, artifacts that instantly appear in an optimized workspace, export to real local folders or ZIP, one-click share, new-tab preview. You chat → it builds real things you can keep iterating on. |
 | **True Mac-native execution**  | The agent and tools can run real `bash`, `python`, AppleScript, open apps, control music, clean your disk, write files — safely, with your approval flow where it matters. Not another chat that just tells you commands. |
-| **Full-window Web Embeds (v6.9)** | Add *any* URL as a named view. They live in the sidebar with a sub-menu. Open them and they fill the entire dashboard window (optimized, no chrome). Fullscreen, dock back to normal, edit name/URL live, mark "auth done". Perfect for Vercel, Linear, internal tools, staging sites, Notion, whatever. Auth usually just works because it's your browser session. |
+| **Full-window Web Embeds** | Add *any* URL as a named view. They live in the sidebar with a sub-menu. Open them and they fill the entire dashboard window (optimized, no chrome). Fullscreen, dock back to normal, edit name/URL live, mark "auth done". Perfect for Vercel, Linear, internal tools, staging sites, Notion, whatever. Auth usually just works because it's your browser session. |
 | **Grok-style CLI**             | The `chinna` command itself now looks and feels like a first-class Grok terminal client. Clean, precise, beautiful. |
 | **Everything local & private** | All state, keys (`~/.chinna/api_keys.json`), artifacts, chat history, and your custom web views live only on your Mac. The dashboard is a local Python server. No accounts. No telemetry. |
 | **Real artifacts & exports**   | When the Agent builds HTML/JS/apps it creates live previewable artifacts you can instantly preview, iterate, download, or export straight to `~/ChinnaExports/...` (or as a ZIP). |
@@ -85,7 +94,7 @@ chinna agent         # jump straight to the powerful builder
 chinna config        # set your OpenRouter / OpenAI / Telegram keys
 ```
 
-## Settings → Custom Web Views (the new v6.9 superpower)
+## Settings → Custom Web Views
 
 In **Settings** there is a dedicated "Embeds" card:
 
@@ -151,11 +160,11 @@ Local. Private. Powerful. Yours.
 
 ---
 
-**Current version:** v6.9.0  
+**Current version:** v7.0.0
 **Repo:** https://github.com/pichimail/chinna-go
 
 Run the installer. Open the dashboard. Try the Agent. Add a couple of web views.
 
 Then never think about "where do I put that one-off tool" again.
 
-**UI Redesign (v6.9+)**: Floating shadcn-style surfaces (clean borders, subtle elevation, no slop), sleek separators, resizable panels (generalized drag handles with persistence), top floating command bar, pop-to-float for panes (Agent preview, Web views, etc.), #workspace for composable floats. All original features preserved via upgrade/merge. Press ? for shortcuts; drag resizers; use ⤴ to float.
+**UI Redesign (v7+)**: Floating shadcn-style surfaces (clean borders, subtle elevation, no slop), sleek separators, resizable panels (generalized drag handles with persistence), top floating command bar, pop-to-float for panes (Agent preview, Web views, etc.), #workspace for composable floats. All original features preserved via upgrade/merge. Press ? for shortcuts; drag resizers; use ⤴ to float.

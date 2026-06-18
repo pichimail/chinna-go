@@ -6,6 +6,18 @@
 # ╚══════════════════════════════════════════════════════════════╝
 set -uo pipefail
 
+# Re-exec from canonical install when an old PATH symlink/hash is still active.
+if [ -x "${HOME}/.local/bin/chinna" ] && [ -n "${BASH_SOURCE[0]:-}" ]; then
+    case "${BASH_SOURCE[0]}" in
+        /usr/local/bin/chinna|/opt/homebrew/bin/chinna|"$HOME"/.chinna/bin/chinna)
+            if [ "${CHINNA_NO_REEXEC:-}" != "1" ]; then
+                export CHINNA_NO_REEXEC=1
+                exec "${HOME}/.local/bin/chinna" "$@"
+            fi
+            ;;
+    esac
+fi
+
 CHINNA_VERSION="7.0.0"
 CHINNA_REPO="pichimail/chinna-go"
 CHINNA_HOME="${CHINNA_HOME:-$HOME/.chinna}"
@@ -255,6 +267,12 @@ apply_update() {
         "$CHINNA_HOME"/*|*"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"/*) ;;
         *) rm -f "$installer" 2>/dev/null || true ;;
     esac
+
+    if [ "$rc" -eq 0 ] && [ "${CHINNA_SKIP_LAUNCH:-}" != "1" ] && [ -t 0 ] && [ -t 1 ]; then
+        ok "Update complete — launching Chinna escape sequence..."
+        run_go_tui
+        return 0
+    fi
 
     return "$rc"
 }
@@ -1177,7 +1195,11 @@ cmd_update() {
 
     if [ "${1:-}" = "--apply" ] || [ "${1:-}" = "-y" ] || [ "${1:-}" = "--yes" ]; then
         apply_update "$remote_ver"
-        return $?
+        local rc=$?
+        if [ "$rc" -eq 0 ] && [ "${CHINNA_SKIP_LAUNCH:-}" = "1" ]; then
+            info "Update applied. Run: chinna"
+        fi
+        return "$rc"
     fi
 
     local choice
@@ -1437,9 +1459,9 @@ show_help() {
     banner
     cat <<HELP
    ${BOLD}CHINNA v7 — Grok-style CLI${RESET}
-     chinna                   Bubble Tea conversational TUI
+     chinna                   ~30s containment escape intro + Bubble Tea TUI
      chinna hub               Legacy shell hub (mouse + keyboard)
-     chinna escape            ASCII containment-break animation
+     chinna escape            Standalone containment-break animation (~30s, s to skip)
      chinna <command>         Run directly
      chinna "anything"        Telugu · Hindi · English · Tinglish
 

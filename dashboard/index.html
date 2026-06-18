@@ -2,7 +2,7 @@
 <html lang="en" data-theme="obsidian">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Chinna v6.8</title>
+<title>Chinna v7.0</title>
 <script>
 if (window.location.protocol === 'file:') {
   window.location.replace('http://127.0.0.1:7777/' + (window.location.hash || ''));
@@ -730,7 +730,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
   <aside id="sidebar">
     <div class="sidebar-logo">
       <div class="logo-mark">C</div>
-      <div><div class="logo-text">CHINNA <span class="logo-ver">V6.8</span></div></div>
+      <div><div class="logo-text">CHINNA <span class="logo-ver">V7.0</span></div></div>
       <button id="sidebarToggle" class="sidebar-toggle" title="Toggle sidebar">⇐</button>
     </div>
     <div id="sidebarResize"></div>
@@ -2070,7 +2070,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           </section>
           <aside class="launch-side">
             <div class="ux-panel-title">Setup status</div>
-            <div class="rail-item"><b>Version</b><span>v6.8.0</span></div>
+            <div class="rail-item"><b>Version</b><span>v7.0.0</span></div>
             <div class="rail-item"><b>App home</b><span>~/.chinna</span></div>
             <div class="rail-item"><b>Dashboard</b><span>http://localhost:7777</span></div>
             <div class="rail-item"><b>Update command</b><span>chinna update</span></div>
@@ -2215,9 +2215,14 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
             <aside class="settings-rail">
               <div class="settings-version">
                 <span class="label">Installed</span>
-                <strong id="settings-current-version">v6.8.0</strong>
+                <strong id="settings-current-version">v7.0.0</strong>
                 <span id="settings-update-summary">Checking update status...</span>
               </div>
+              <div class="settings-inline" style="margin-top:10px">
+                <button type="button" class="bigbtn solid smallbtn" id="settings-update-btn" onclick="runChinnaUpgrade()">Update now</button>
+                <button type="button" class="bigbtn ghost smallbtn" onclick="runChinnaEscape()">Open CLI escape</button>
+              </div>
+              <div class="settings-help" style="margin-top:6px">One-touch install: <code style="font-size:10px">curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash</code></div>
               <div class="settings-banner" id="settings-update-banner" style="margin-top:12px">
                 <div class="banner-icon">↻</div>
                 <div class="settings-banner-copy">
@@ -3835,17 +3840,47 @@ async function loadKeySettings(){
   chatxRelayConfig = { url: k.chat_relay_url || '', defaultUrl: k.chat_default_relay_url || location.origin };
   if($('turn-test-status')) $('turn-test-status').textContent = (k.turn_enabled && (k.turn_urls||'').trim()) ? 'TURN configured. Run test to verify relay.' : 'No TURN test yet.';
 }
+async function runChinnaEscape(){
+  try{
+    const d = await api('launch-cli', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    if(d?.error){ toast(d.error, 'error'); return; }
+    toast('Chinna CLI opened — ~30s escape intro (press s to skip)');
+  }catch(e){
+    toast('Could not open Terminal: '+(e?.message||'failed'), 'error');
+  }
+}
+async function runChinnaUpgrade(){
+  const btn = $('settings-update-btn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Updating…'; }
+  try{
+    showProgress('Upgrading Chinna', 'Terminal will refresh the install, then run chinna with the ~30s escape intro. Press s anytime to skip.');
+    const d = await api('update', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    if(d?.job){
+      await runJob(Promise.resolve(d), 'Upgrade complete');
+      toast('Upgrade finished — Chinna CLI escape should be running in Terminal');
+      loadSettingsUpdateStatus();
+    }else{
+      toast(d?.error || 'Could not start upgrade', 'error');
+      closeModal();
+    }
+  }catch(e){
+    toast('Upgrade failed: '+(e?.message||'network'), 'error');
+    closeModal();
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = 'Update now'; }
+  }
+}
 async function loadSettingsUpdateStatus(){
   const banner = $('settings-update-banner');
   const version = $('settings-current-version');
   const summary = $('settings-update-summary');
   if(!banner || !version || !summary) return;
-  version.textContent = 'v6.7.0';
+  version.textContent = 'v7.0.0';
   summary.textContent = 'Checking update status…';
   try{
     const d = await api('check-update');
-    const current = d?.current ? `v${d.current}` : 'v6.7.0';
-    const latest = d?.latest ? `v${d.latest}` : 'v6.7.0';
+    const current = d?.current ? `v${d.current}` : 'v7.0.0';
+    const latest = d?.latest ? `v${d.latest}` : 'v7.0.0';
     version.textContent = current;
     if(d?.update_available){
       banner.className = 'settings-banner warn';
@@ -3853,7 +3888,7 @@ async function loadSettingsUpdateStatus(){
         <div class="banner-icon">⬆</div>
         <div class="settings-banner-copy">
           <strong>Update ready: ${latest}</strong>
-          <span>Install the latest build to keep the dashboard, daemon, and launcher aligned. Use <code>chinna update</code> or the one-touch installer.</span>
+          <span>Click <strong>Update now</strong> above — Terminal upgrades Chinna, then runs <code>chinna</code> with the containment escape visual (~30s, skippable).</span>
         </div>
       `;
       summary.textContent = `Update available to ${latest}`;
@@ -3863,7 +3898,7 @@ async function loadSettingsUpdateStatus(){
         <div class="banner-icon">✓</div>
         <div class="settings-banner-copy">
           <strong>You are on the latest build.</strong>
-          <span>Remote version matches the installed dashboard. Nothing else needs to be done.</span>
+          <span>Run <code>chinna</code> in Terminal for the escape intro, or click <strong>Open CLI escape</strong>.</span>
         </div>
       `;
       summary.textContent = `Latest release: ${latest}`;
@@ -3874,7 +3909,7 @@ async function loadSettingsUpdateStatus(){
       <div class="banner-icon">!</div>
       <div class="settings-banner-copy">
         <strong>Unable to verify updates right now.</strong>
-        <span>Open the terminal install URL below or run <code>chinna update</code> later when the network is available.</span>
+        <span>Run: <code>curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash</code> then <code>chinna</code></span>
       </div>
     `;
     summary.textContent = 'Update check unavailable';
@@ -8214,7 +8249,7 @@ function webNormal() {
 
 function updateWebVersionInSettings() {
   const el = document.getElementById('settings-current-version');
-  if (el) el.textContent = 'v6.8.0';
+  if (el) el.textContent = 'v7.0.0';
 }
 
 // Hook into existing go() and init

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════╗
-# ║  CHINNA V6.9 — Always-Fresh installer                   ║
+# ║  CHINNA V7.0 — Always-Fresh installer                   ║
 # ║  curl -fsSL https://raw.githubusercontent.com/          ║
 # ║    pichimail/chinna-go/main/install/install.sh | bash   ║
 # ╚══════════════════════════════════════════════════════════╝
@@ -21,7 +21,7 @@ fi
 
 echo ""
 echo "  ╔══════════════════════════════════════════════════╗"
-echo "  ║   C H I N N A   V6.9    —  Mac Sidekick         ║"
+echo "  ║   C H I N N A   V7.0    —  Mac Sidekick         ║"
 echo "  ║   Always-Fresh · Models · Music · WhatsApp · More║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo ""
@@ -187,14 +187,35 @@ step_write_extension() {
 
 step_write_bin() {
     echo "    ↻ Force-refreshing chinna CLI..."
-    mkdir -p "$HOME/.local/bin"
+    mkdir -p "$HOME/.local/bin" "${CHINNA}/bin"
     copy_or_fetch "bin/chinna" "$HOME/.local/bin/chinna"
     chmod +x "$HOME/.local/bin/chinna"
     if ! bash -n "$HOME/.local/bin/chinna"; then
         echo "    ✗ chinna CLI failed syntax check — refusing to leave a broken install" >&2
         exit 1
     fi
+    ln -sf "$HOME/.local/bin/chinna" "${CHINNA}/bin/chinna"
     echo "    ✓ chinna CLI updated → ~/.local/bin/chinna"
+}
+
+step_link_chinna_path() {
+    local canonical="$HOME/.local/bin/chinna"
+    local linked=0
+    for dir in /usr/local/bin /opt/homebrew/bin; do
+        [ -d "$dir" ] || continue
+        if ln -sf "$canonical" "$dir/chinna" 2>/dev/null; then
+            linked=1
+            echo "    ✓ linked $dir/chinna → ~/.local/bin/chinna"
+            continue
+        fi
+        if command -v sudo >/dev/null 2>&1 && sudo -n ln -sf "$canonical" "$dir/chinna" 2>/dev/null; then
+            linked=1
+            echo "    ✓ linked $dir/chinna → ~/.local/bin/chinna (sudo)"
+        fi
+    done
+    if [ "$linked" -eq 0 ]; then
+        echo "    ✓ PATH uses ~/.local/bin/chinna"
+    fi
 }
 
 step_write_defaults() {
@@ -234,19 +255,51 @@ MODELS
 }
 
 step_zshrc_block() {
-    local BLOCK='# ── Chinna V6.9 ────────────────────────────────────────
+    local zshrc="$HOME/.zshrc"
+    local begin='# ── Chinna CLI (managed by install.sh — do not edit) ──'
+    local end='# ── /Chinna CLI ──'
+    touch "$zshrc"
+
+    python3 - "$zshrc" "$begin" "$end" <<'PY'
+import pathlib, re, sys
+
+zshrc = pathlib.Path(sys.argv[1])
+begin, end = sys.argv[2], sys.argv[3]
+text = zshrc.read_text() if zshrc.exists() else ""
+
+managed = re.compile(
+    re.escape(begin) + r".*?" + re.escape(end) + r"\n?",
+    re.S,
+)
+text = managed.sub("", text)
+
+legacy = re.compile(
+    r"# ── Chinna V\d.*?(?=\n# ──|\n\nexport |\Z)",
+    re.S,
+)
+text = legacy.sub("", text)
+text = re.sub(r"\nalias chinna=.*\n", "\n", text)
+
+block = f"""
+{begin}
 export PATH="$HOME/.local/bin:$PATH"
 export CHINNA_HOME="$HOME/.chinna"
 [ -f "$CHINNA_HOME/env" ]    && source "$CHINNA_HOME/env"
 [ -f "$CHINNA_HOME/models" ] && source "$CHINNA_HOME/models"
-alias chinna="$HOME/.local/bin/chinna"'
-    if ! grep -q 'Chinna V6.9' "$HOME/.zshrc" 2>/dev/null; then
-        echo "" >> "$HOME/.zshrc"
-        echo "$BLOCK" >> "$HOME/.zshrc"
-        echo "    ✓ Chinna block added to ~/.zshrc"
-    else
-        echo "    ✓ .zshrc block already present"
-    fi
+# Shell function always hits the latest CLI (no hash -r needed).
+unalias chinna 2>/dev/null || true
+chinna() {{
+  "$HOME/.local/bin/chinna" "$@"
+}}
+{end}
+"""
+
+if not text.endswith("\n"):
+    text += "\n"
+zshrc.write_text(text + block)
+PY
+
+    echo "    ✓ ~/.zshrc Chinna CLI block refreshed (chinna opens TUI directly)"
 }
 
 step_start_server() {
@@ -273,19 +326,20 @@ run_step "install_homebrew"   step_install_homebrew
 run_step "brew_shellenv"      step_brew_shellenv
 run_step "install_clis"       step_install_clis
 run_step "install_node_tools" step_install_node_tools
-run_step "zshrc_block"        step_zshrc_block
 
 # ──────────────────────────────────────────────────────────────
 # ALWAYS FORCE-REFRESHED  (new + existing users get latest code)
 # ──────────────────────────────────────────────────────────────
 echo ""
-echo "  ↻ Pulling latest V6.9 app files from GitHub..."
+echo "  ↻ Pulling latest V7.0 app files..."
 step_write_server
 step_write_dashboard
 step_write_whatsapp_bridge
 step_write_libs
 step_write_go_tui
 step_write_bin
+step_link_chinna_path
+step_zshrc_block
 step_write_defaults
 
 # ──────────────────────────────────────────────────────────────
@@ -295,18 +349,21 @@ step_write_extension
 step_start_server
 
 # ── macOS notification ─────────────────────────────────────
-osascript -e 'display notification "Models, Music, WhatsApp & 15 Godspeed features ready!" with title "🟢 Chinna V6.9 installed"' 2>/dev/null || true
+osascript -e 'display notification "Chinna v7 ready — run chinna for the escape intro!" with title "🟢 Chinna V7.0 installed"' 2>/dev/null || true
 
 echo ""
 echo "  ══════════════════════════════════════════════════════"
-echo "  ✅  CHINNA V6.9 READY!"
+echo "  ✅  CHINNA V7.0 READY!"
 echo "  ══════════════════════════════════════════════════════"
 echo ""
 echo "  🌐  Dashboard   →  http://localhost:${PORT}"
-echo "  📦  Share URL   →  curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash"
+echo "  📦  Install URL  →  curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash"
 echo ""
-echo "  Quick commands (in a new terminal tab):"
-echo "    chinna doctor         → full system health check"
+echo "  Quick commands:"
+echo "    chinna                  → ~30s containment escape intro + TUI (s to skip)"
+echo "    source ~/.zshrc         → activate chinna in this terminal (once)"
+echo "    chinna escape           → standalone escape animation in Terminal"
+echo "    chinna doctor           → full system health check"
 echo "    chinna run            → smart project runner"
 echo "    chinna ai <prompt>    → AI chat"
 echo "    chinna dashboard      → open dashboard"

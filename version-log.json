@@ -1,6 +1,22 @@
 {
   "versions": [
     {
+      "version": "7.0.0",
+      "date": "2026-06-18",
+      "title": "Containment escape CLI & one-touch launch",
+      "improved": [
+        "Bare `chinna` opens a ~30 second sarcastic containment-break intro with skip controls",
+        "Creator greeting to SAI baked into the escape finale",
+        "Settings Update now button upgrades then launches `chinna` in Terminal automatically",
+        "Installer refreshes shell function + symlinks so `chinna` works without hash -r"
+      ],
+      "resolved": [
+        "Escape visual only played 1–2 seconds",
+        "Stale shell hash required `hash -r; chinna` after updates",
+        "Dashboard update flow did not open the new CLI"
+      ]
+    },
+    {
       "version": "6.9.0",
       "date": "2026-06-17",
       "title": "Direct terminal upgrade panel",

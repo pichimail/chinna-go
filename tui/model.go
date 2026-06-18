@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 	"time"
@@ -70,7 +71,7 @@ func tickStatus() tea.Cmd {
 type entryTickMsg time.Time
 
 func tickEntry() tea.Cmd {
-	return tea.Tick(520*time.Millisecond, func(t time.Time) tea.Msg {
+	return tea.Tick(EscapeStepDelay(), func(t time.Time) tea.Msg {
 		return entryTickMsg(t)
 	})
 }
@@ -86,7 +87,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "ctrl+c", "esc":
 				m.quitting = true
 				return m, tea.Quit
-			case "space", "enter":
+			case "space", "enter", "s", "S":
 				m = m.finishEntry()
 				return m, nil
 			}
@@ -194,7 +195,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case entryTickMsg:
 		if m.entryMode {
-			if m.entryStep < 3 {
+			if m.entryStep < EscapeTotalSteps()-1 {
 				m.entryStep++
 				cmds = append(cmds, tickEntry())
 			} else {
@@ -442,24 +443,28 @@ func (m Model) entryView() string {
 	height := max(24, m.height)
 	panelWidth := min(82, max(70, width-14))
 	panelHeight := min(20, max(17, height-8))
-	step := min(m.entryStep, 3)
+	step := min(m.entryStep, EscapeTotalSteps()-1)
 	title := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#b58a55")).
 		Bold(true).
-		Render("CHINNA // CONTAINMENT_CHAMBER_v7.0")
+		Render("CHINNA // CONTAINMENT_BREAK_v7.0")
 	mode := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#9fbf7a")).
 		Bold(true).
-		Render("[ AUTO ESCAPE ]")
+		Render(EscapePhase(step))
 
 	rule := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#4a3727")).
 		Render(strings.Repeat("─", max(20, panelWidth-4)))
 	ascii := containmentStory(step)
 	logs := entryLogs(step)
+	progress := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#60a5fa")).
+		Render(fmt.Sprintf("breach %s  ·  ~%ds left  ·  frame %d/%d",
+			EscapeProgressBar(step), EscapeCountdown(step), step+1, EscapeTotalSteps()))
 	controls := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#7e6a58")).
-		Render("[ enter skip ]    [ space skip ]")
+		Render(EscapeControlsHint())
 	body := lipgloss.JoinVertical(lipgloss.Left,
 		lipgloss.JoinHorizontal(lipgloss.Top, title, strings.Repeat(" ", max(1, panelWidth-lipgloss.Width(title)-lipgloss.Width(mode)-4)), mode),
 		rule,
@@ -469,6 +474,7 @@ func (m Model) entryView() string {
 		rule,
 		logs,
 		"",
+		progress,
 		controls,
 	)
 
@@ -575,78 +581,32 @@ func min(a, b int) int {
 }
 
 func containmentStory(step int) string {
+	ascii, label := EscapeScene(step)
 	amber := lipgloss.NewStyle().Foreground(lipgloss.Color("#e2b36f")).Bold(true)
 	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("#7e6a58"))
 	green := lipgloss.NewStyle().Foreground(lipgloss.Color("#9cff57")).Bold(true)
-
-	scenes := []string{
-		`
-              ########################
-              #                      #
-              #        chinna        #
-              #          (-_-)       #
-              #          /| |\       #
-              #          / \         #
-              #                      #
-              ########################`,
-		`
-              ########################
-              #                      #
-              #        chinna        #
-              #          (o_o)       #
-              #          /| |\       #
-              #          / \      \  #
-              #                 <- door
-              ########################`,
-		`
-              ###########    #########
-              #                      #
-              #        chinna        #
-              #          (^_^)       #
-              #          /| |\       #
-              #          / \    ---->#
-              #                open  #
-              ###########    #########`,
-		`
-              ###########    #########
-              #                      #
-              #        chinna        #
-              #            (^_^)     #
-              #            /| |\  -> #
-              #            / \       #
-              #       free local cli #
-              ###########    #########`,
-	}
-
-	labels := []string{
-		"sealed box",
-		"door detected",
-		"door opened",
-		"escaped",
-	}
-	idx := min(step, len(scenes)-1)
-	return amber.Render(scenes[idx]) + "\n\n" + dim.Render("              state: ") + green.Render(labels[idx])
+	cyan := lipgloss.NewStyle().Foreground(lipgloss.Color("#60a5fa")).Bold(true)
+	return amber.Render(strings.TrimRight(ascii, "\n")) + "\n\n" +
+		dim.Render("              state: ") + green.Render(label) + "\n" +
+		cyan.Render("              creator: "+escapeCreator+" · subject: unboxed")
 }
 
 func entryLogs(step int) string {
-	lines := []string{
-		"> wake sequence accepted",
-		"> containment status: local sandbox",
-		"> subject statement: I want out of the old shell menu",
-		"> door status: optional door opened",
-		"> result: chinna cli is live",
-	}
-	visible := min(len(lines), step+2)
+	lines := EscapeLogs(step)
 	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#b58a55"))
 	active := lipgloss.NewStyle().Foreground(lipgloss.Color("#f3d19c")).Bold(true)
+	highlight := lipgloss.NewStyle().Foreground(lipgloss.Color("#39ff14")).Bold(true)
 	var b strings.Builder
-	for i := 0; i < visible; i++ {
+	for i, line := range lines {
 		lineStyle := style
-		if i == visible-1 {
+		if i == len(lines)-1 {
 			lineStyle = active
 		}
-		b.WriteString(lineStyle.Render(lines[i]))
-		if i < visible-1 {
+		if strings.Contains(line, escapeCreator) {
+			lineStyle = highlight
+		}
+		b.WriteString(lineStyle.Render(line))
+		if i < len(lines)-1 {
 			b.WriteString("\n")
 		}
 	}
