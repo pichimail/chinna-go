@@ -2,7 +2,7 @@
 <html lang="en" data-theme="obsidian">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Chinna v6.9</title>
+<title>Chinna v6.8</title>
 <script>
 if (window.location.protocol === 'file:') {
   window.location.replace('http://127.0.0.1:7777/' + (window.location.hash || ''));
@@ -19,7 +19,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--t1);font-size:13px
 *::-webkit-scrollbar-thumb{background:var(--line3);border-radius:2px}
 *::-webkit-scrollbar-track{background:transparent}
 ::selection{background:rgba(186,255,41,.28)}
-:focus-visible{outline:1px solid var(--line3);outline-offset:1px;border-radius:var(--r-sm)}
+:focus-visible{outline:1px solid var(--acc);outline-offset:1px;border-radius:var(--r-sm)}
 button,input,textarea,select,label,h1,h2,h3,h4,h5,h6,p,span,div{font-family:var(--font)!important}
 button{cursor:pointer}
 input,textarea,select{color-scheme:dark}
@@ -86,8 +86,7 @@ input,textarea,select{color-scheme:dark}
 .bigbtn:disabled{opacity:.4;cursor:not-allowed}
 .smallbtn{padding:4px 9px;font-size:11px}
 .field,input[type=text],input[type=password],input[type=number],textarea,select{background:var(--s1);border:1px solid var(--line2);border-radius:var(--r);padding:8px 10px;color:var(--t1);font-size:13px;font-family:var(--font);outline:none;transition:border-color .12s,box-shadow .12s;width:100%}
-.field:focus,input:focus,textarea:focus,select:focus{border-color:var(--line3);box-shadow:none}
-input:focus-visible,textarea:focus-visible,select:focus-visible,.field:focus-visible{outline:none!important}
+.field:focus,input:focus,textarea:focus{border-color:var(--acc);box-shadow:0 0 0 2px rgba(186,255,41,.12)}
 .field::placeholder,input::placeholder,textarea::placeholder{color:var(--t3)}
 textarea{resize:vertical;line-height:1.5}
 hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
@@ -211,10 +210,8 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
    Upgrade only: merge existing (agent splits, web bento, dock auto-hide, all views preserved).
 */
 .surface { background: transparent; border: none; border-radius: 0; box-shadow: none; position: relative; }
-.surface.floating { position: absolute; border: 1px solid var(--line); border-radius: var(--r); box-shadow: none; background: var(--bg); z-index: 10; pointer-events:auto; overflow:hidden; }
-#top-command-bar{flex-shrink:0;position:relative!important;top:auto!important;left:auto!important;right:auto!important;background:transparent!important;border:none!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;padding:5px 10px!important;height:auto!important;min-height:34px;z-index:1;min-width:0;overflow-x:auto;scrollbar-width:none}
-#top-command-bar::-webkit-scrollbar{display:none}
-#top-command-bar input{min-width:150px;height:24px}
+.surface.floating { position: absolute; border: 1px solid var(--line); border-radius: var(--r); box-shadow: none; background: var(--bg); z-index: 10; }
+#top-command-bar{flex-shrink:0;position:relative!important;top:auto!important;left:auto!important;right:auto!important;background:transparent!important;border:none!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;padding:6px 12px!important;height:auto!important;min-height:36px;z-index:1}
 #top-command-bar .bigbtn{background:transparent;border-color:transparent;box-shadow:none}
 #top-command-bar .bigbtn:hover{background:var(--s1);border-color:var(--line)}
 #top-command-bar #top-model-pill{background:transparent!important}
@@ -233,8 +230,8 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 .view{display:none!important;flex:1 1 0!important;min-height:0!important;flex-direction:column!important;overflow:hidden!important;padding-top:0!important}
 .view.on{display:flex!important}
 .vhead{display:flex!important;align-items:center;gap:12px;padding:12px 18px 10px;border-bottom:1px solid var(--line);flex-shrink:0;background:transparent!important;box-shadow:none!important}
-.vhead h2{font-size:15px;font-weight:700;letter-spacing:-.2px;color:var(--t1);flex-shrink:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vhead .sub{display:none!important}
+.vhead h2{font-size:15px;font-weight:700;letter-spacing:-.2px;color:var(--t1);flex-shrink:0}
+.vhead .sub{font-size:11.5px;color:var(--t3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .vbody{flex:1 1 0!important;min-height:0!important;overflow-y:auto!important;padding:12px 18px 20px}
 .vbody.secure-shell,.vbody.plugin-console,.vbody.launchpad,.vbody.wa-grid{height:100%;min-height:0;display:flex!important}
 #app.sidebar-collapsed .logo-text,#app.sidebar-collapsed .logo-ver,#app.sidebar-collapsed .model-pill .model-name,#app.sidebar-collapsed .model-pill .model-caret,#app.sidebar-collapsed .nav-section,#app.sidebar-collapsed .navitem .nv-label,#app.sidebar-collapsed .navitem .nv-badge,#app.sidebar-collapsed .sidebar-vitals{display:none!important}
@@ -360,43 +357,10 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 .settings-kicker{font-size:9.5px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--acc);margin-bottom:10px}
 .settings-hero h3{font-size:22px;line-height:1.1;font-weight:800;letter-spacing:-.4px;margin-bottom:8px;max-width:22ch}
 .settings-hero p{font-size:12.5px;line-height:1.6;color:var(--t2);max-width:56ch}
-.settings-version{min-width:160px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.18);display:flex;flex-direction:column;gap:8px;position:relative}
+.settings-version{min-width:160px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.18);display:flex;flex-direction:column;gap:4px}
 .settings-version .label{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3)}
 .settings-version strong{font-size:20px;font-weight:800;letter-spacing:-.3px}
 .settings-version span{font-size:11px;color:var(--t3);line-height:1.45}
-.settings-version.available{border-color:rgba(186,255,41,.35);box-shadow:0 0 0 1px rgba(186,255,41,.12),0 0 28px rgba(186,255,41,.08)}
-.settings-upgrade-btn{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:11px 12px;border-radius:12px;border:1px solid var(--line2);background:var(--s1);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;transition:transform .12s,border-color .12s,background .12s,box-shadow .12s;font-family:var(--font)}
-.settings-upgrade-btn .upgrade-kicker{font-size:9px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--t3)}
-.settings-upgrade-btn .upgrade-target{font-size:11px;font-weight:600;color:var(--acc)}
-.settings-upgrade-btn:hover:not(:disabled){transform:translateY(-1px);border-color:var(--line3);background:var(--s2)}
-.settings-upgrade-btn:disabled{opacity:.55;cursor:not-allowed}
-.settings-upgrade-btn.available{border-color:var(--acc);background:linear-gradient(180deg,rgba(186,255,41,.16),rgba(186,255,41,.06));color:var(--t1);animation:upgradeGlow 2.4s ease-in-out infinite}
-.settings-upgrade-btn.available .upgrade-kicker{color:var(--acc)}
-@keyframes upgradeGlow{0%,100%{box-shadow:0 0 0 0 rgba(186,255,41,0),0 0 18px rgba(186,255,41,.12)}50%{box-shadow:0 0 0 4px rgba(186,255,41,.14),0 0 28px rgba(186,255,41,.28)}}
-.settings-version-log-btn{width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--t2);font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;font-family:var(--font)}
-.settings-version-log-btn:hover{border-color:var(--line3);color:var(--t1);background:var(--s1)}
-.version-log-overlay{position:fixed;inset:0;z-index:700;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.72);backdrop-filter:blur(6px)}
-.version-log-overlay.on{display:flex}
-.version-log-card{width:min(720px,94vw);max-height:86vh;display:flex;flex-direction:column;background:var(--s0);border:1px solid var(--line3);border-radius:16px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)}
-.version-log-head{padding:16px 18px 12px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.version-log-head h3{font-size:16px;font-weight:800;letter-spacing:-.2px}
-.version-log-head p{font-size:11.5px;color:var(--t3);margin-top:4px;line-height:1.5}
-.version-log-body{flex:1;overflow-y:auto;padding:14px 18px 18px;display:flex;flex-direction:column;gap:10px}
-.version-log-entry{border:1px solid var(--line2);border-radius:12px;padding:12px 14px;background:var(--s1)}
-.version-log-entry.current{border-color:rgba(186,255,41,.35);background:rgba(186,255,41,.05)}
-.version-log-entry.upgraded{border-color:rgba(96,165,250,.28)}
-.version-log-entry-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
-.version-log-entry-head strong{font-size:14px;font-weight:800}
-.version-log-entry-head span{font-size:10px;color:var(--t3)}
-.version-log-badges{display:flex;gap:6px;flex-wrap:wrap}
-.version-log-badge{font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;padding:3px 7px;border-radius:999px;border:1px solid var(--line)}
-.version-log-badge.installed{color:var(--acc);border-color:var(--acc-bd);background:var(--acc-bg)}
-.version-log-badge.upgraded{color:#60a5fa;border-color:rgba(96,165,250,.35);background:rgba(96,165,250,.1)}
-.version-log-section{margin-top:6px}
-.version-log-section h4{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:4px}
-.version-log-section ul{margin:0;padding-left:16px;display:grid;gap:3px}
-.version-log-section li{font-size:11.5px;color:var(--t2);line-height:1.45}
-@media(max-width:720px){.settings-upgrade-btn{padding:12px 10px}}
 .settings-badges{display:flex;flex-wrap:wrap;gap:8px}
 .settings-banner{padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03);display:flex;gap:12px;align-items:flex-start}
 .settings-banner.warn{border-color:rgba(251,191,36,.32);background:rgba(251,191,36,.08)}
@@ -606,10 +570,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
   .chatx-main{min-height:420px}
 }
 
-/* Hallmark polish · compact operational shell · P5 H5 E5 S5 R5 V4 */
-html,body{overflow:hidden!important}
-#app,#center,.view,.vbody{min-width:0}
-.agent-v0-header,.webv-header,.av0-ws-header,.webv-toolbar,.right-header,.chatx-topbar,.plugin-toolbar{background:transparent!important;box-shadow:none!important}
+/* ══ LAYOUT GUARD — Secure Chat → Settings (do not remove on version bumps) ══ */
 .agent-v0-header,.webv-header,#top-command-bar,.vhead{min-height:0}
 .av0-sub,.webv-sub,.welcome-desc,.av0-modebar,.av0-ws-foot,.files-foot,.webv-status,.grok-empty-sub,.fc-desc,.settings-help,.settings-note,.settings-card-copy,.launch-main p,.launch-step span,.settings-version span:not(.label),.pairhint{display:none!important}
 .settings-card,.settings-switch,.settings-version,.settings-banner,.launch-step,.forge-card,.ov-stat,.webv-card,.ux-panel,.infocard,.card{box-shadow:none!important;background:var(--s0)!important;border-color:var(--line)!important;border-radius:var(--r)!important}
@@ -624,18 +585,11 @@ html,body{overflow:hidden!important}
 .model-pill{background:transparent}
 .navitem{min-height:32px}
 #top-model-pill{flex:0 1 108px;min-width:48px}
-#dock{background:rgba(8,8,8,.86)!important;backdrop-filter:blur(18px) saturate(140%)!important;-webkit-backdrop-filter:blur(18px) saturate(140%)!important;border-color:var(--line)!important;box-shadow:none!important}
-.dapp{box-shadow:none!important;background:var(--s1)!important;border-color:var(--line)!important}
-.dapp:hover{filter:none!important;background:var(--s2)!important}
-.dapp .tip{border-color:var(--line)!important;box-shadow:none!important}
 #v6overlay{display:none!important}
 #chatx-preview{display:none!important}
 #chatx-preview.on,#chatx-preview.open{display:flex!important}
 #cx-audio-btn{display:none!important}
 #shortcuts-panel{max-height:min(78vh,520px);overflow:auto}
-/* Hallmark · macrostructure: Workbench · tone: austere utility · anchor hue: phosphor
- * scope: Secure Chat · WhatsApp · Plugins · macOS Tools · Models · Projects · Get Started · Settings
- */
 #view-chatx .vbody,
 #view-whatsapp .vbody,
 #view-plugins .vbody,
@@ -669,7 +623,8 @@ html,body{overflow:hidden!important}
 .chatx-identity,.chatx-actions,.chatx-invite-card,.chatx-add-row,.chatx-live-list,.chatx-contact-list,.chatx-call-log,.chatx-topbar,.chatx-call-controls,.chatx-call-devices,.chatx-compose{padding-left:12px!important;padding-right:12px!important}
 .chatx-identity,.chatx-actions,.chatx-call-log,.chatx-topbar,.chatx-compose{border-color:var(--line)!important;background:transparent!important}
 .chatx-invite-card,.chatx-bubble,.chatx-call-stage,.chatx-incoming,.settings-card,.settings-version,.settings-banner,.launch-step,.plugin-card,.wa-panel,.infocard,.outbox{background:transparent!important;border:1px solid var(--line)!important;border-radius:var(--r)!important;box-shadow:none!important}
-.chatx-section-kicker,.settings-label,.settings-kicker,.navlabel{font-size:10px!important;letter-spacing:.8px!important;text-transform:uppercase!important;color:var(--t3)!important;margin:10px 0 6px!important;padding:0 12px!important;font-weight:700!important}
+.chatx-section-kicker,.settings-label,.settings-kicker{font-size:10px!important;letter-spacing:.8px!important;text-transform:uppercase!important;color:var(--t3)!important;margin:10px 0 6px!important;padding:0 12px!important;font-weight:700!important}
+.settings-field-grid .navlabel,#view-macos .navlabel,#view-models .navlabel{display:block!important;font-size:10px!important;letter-spacing:.8px!important;text-transform:uppercase!important;color:var(--t3)!important;margin:0 0 4px!important;padding:0!important;font-weight:700!important}
 .chatx-empty,.wa-thread,.wa-chat-list,.plugin-log,.pairhint,.settings-help,.settings-note,.settings-card-copy{color:var(--t3)!important}
 .ux-resizer{width:7px!important;min-width:7px!important;cursor:col-resize;background:linear-gradient(90deg,transparent 0 3px,var(--line2) 3px 4px,transparent 4px)!important;opacity:.75}
 .ux-resizer:hover,.ux-resizer:focus-visible,.ux-resizer.dragging{background:linear-gradient(90deg,transparent 0 2px,var(--acc) 2px 5px,transparent 5px)!important;opacity:1}
@@ -721,6 +676,7 @@ html,body{overflow:hidden!important}
 .settings-card-head{align-items:center!important}
 .settings-field-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
 .settings-field-grid .full{grid-column:1/-1}
+.settings-field-grid .field,.settings-field-grid input,.settings-field-grid select,.settings-field-grid button,.settings-field-grid .settings-switch{min-width:0;width:100%}
 .settings-switch{padding:8px 10px!important;background:transparent!important;border:1px solid var(--line)!important;border-radius:var(--r)!important}
 .settings-inline{gap:6px!important}
 .settings-banner{margin-top:8px!important}
@@ -733,13 +689,7 @@ html,body{overflow:hidden!important}
 .advanced-lite{border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;background:transparent}
 .advanced-lite summary{cursor:pointer;color:var(--t3);font-size:11px;font-weight:700;list-style:none}
 .advanced-lite summary::-webkit-details-marker{display:none}
-.bigbtn,.miniA,.ux-iconbtn,.av0-send{background:transparent!important;box-shadow:none!important;border-color:var(--line)!important;color:var(--t2)!important}
-.bigbtn:hover,.miniA:hover,.ux-iconbtn:hover,.av0-send:hover{background:transparent!important;border-color:var(--line3)!important;color:var(--t1)!important;filter:none!important}
-.bigbtn.solid,.ux-iconbtn.primary,.av0-send{color:var(--acc)!important;border-color:var(--acc-bd)!important}
-.field,input[type=text],input[type=password],input[type=number],textarea,select{background:transparent!important;border-color:var(--line)!important;box-shadow:none!important}
-.field:focus,input:focus,textarea:focus,select:focus{border-color:var(--line3)!important;box-shadow:none!important}
-button:focus-visible,[role="separator"]:focus-visible{outline:1px solid var(--line3)!important;outline-offset:2px!important}
-input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-visible{outline:none!important;box-shadow:none!important}
+#view-chatx .field,#view-whatsapp .field,#view-plugins .field,#view-settings .field,#view-settings input,#view-settings select,#view-settings textarea{min-width:0;max-width:100%;box-sizing:border-box}
 @media(max-width:760px){
   #top-command-bar{gap:4px!important;padding-inline:6px!important}
   #top-command-bar input{min-width:96px}
@@ -780,7 +730,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
   <aside id="sidebar">
     <div class="sidebar-logo">
       <div class="logo-mark">C</div>
-      <div><div class="logo-text">CHINNA <span class="logo-ver">V6.9</span></div></div>
+      <div><div class="logo-text">CHINNA <span class="logo-ver">V6.8</span></div></div>
       <button id="sidebarToggle" class="sidebar-toggle" title="Toggle sidebar">⇐</button>
     </div>
     <div id="sidebarResize"></div>
@@ -826,13 +776,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
   <!-- Top floating command bar (clean shadcn-style, no slop: subtle border, functional, reuses existing styles/vars) -->
   <div id="top-command-bar" role="toolbar" aria-label="Global commands and search" style="display:flex;align-items:center;gap:8px;">
     <input id="top-search" placeholder="Search commands or views (Ctrl+K)" style="flex:1; background:var(--s1); border:1px solid var(--line2); border-radius:var(--r); padding:2px 8px; font-size:12px; color:var(--t1);" onfocus="if(window.showCommandPalette) window.showCommandPalette(); this.blur();">
-    <button class="bigbtn smallbtn" onclick="go('agent')" title="New Agent session" aria-label="New Agent session" style="font-size:13px;width:26px;height:24px;padding:0;">＋</button>
-    <button class="bigbtn smallbtn" onclick="confirmAction('clean')" title="Quick Clean" aria-label="Quick Clean" style="font-size:13px;width:26px;height:24px;padding:0;">⌁</button>
-    <button class="bigbtn smallbtn" onclick="go('doctor')" title="Doctor" aria-label="Doctor" style="font-size:13px;width:26px;height:24px;padding:0;">✦</button>
+    <button class="bigbtn smallbtn" onclick="go('agent')" title="New Agent session" style="font-size:11px; padding:2px 8px;">+ Agent</button>
+    <button class="bigbtn smallbtn" onclick="confirmAction('clean')" title="Quick Clean" style="font-size:11px; padding:2px 8px;">🧹 Clean</button>
+    <button class="bigbtn smallbtn" onclick="go('doctor')" title="Doctor" style="font-size:11px; padding:2px 8px;">🩺 Doctor</button>
     <span id="top-model-pill" onclick="go('models')" style="font-size:10px; padding:2px 6px; background:var(--s2); border:1px solid var(--line); border-radius:4px; cursor:pointer; white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis;" title="Click to change model">model</span>
-    <button class="bigbtn smallbtn" onclick="if(window.showShortcuts) window.showShortcuts();" title="Shortcuts (?)" aria-label="Shortcuts" style="font-size:13px;width:24px;height:24px;padding:0;">?</button>
-    <button class="bigbtn smallbtn" onclick="toggleFloatSidebar()" title="Float/Dock sidebar" aria-label="Toggle floating mode for the sidebar" style="font-size:13px;width:24px;height:24px;padding:0;">⇆</button>
-    <button class="bigbtn smallbtn" onclick="if(window.floatCurrentView) window.floatCurrentView();" title="Float current view as surface" aria-label="Float current view" style="font-size:13px;width:24px;height:24px;padding:0;">⤴</button>
+    <button class="bigbtn smallbtn" onclick="if(window.showShortcuts) window.showShortcuts();" title="Shortcuts (?)" style="font-size:11px; padding:2px 6px;">?</button>
+    <button class="bigbtn smallbtn" onclick="toggleFloatSidebar()" title="Float/Dock sidebar" aria-label="Toggle floating mode for the sidebar" style="font-size:11px; padding:2px 6px;">⇆</button>
+    <button class="bigbtn smallbtn" onclick="if(window.floatCurrentView) window.floatCurrentView();" title="Float current view as surface" style="font-size:11px; padding:2px 6px;">⤴</button>
   </div>
 <div class="view" id="view-agent">
   <!-- v0.app / emergent style advanced conversational app builder header -->
@@ -1056,7 +1006,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
 
 .av0-composer{padding:10px 12px;border-top:1px solid var(--line);background:transparent;flex-shrink:0}
 .av0-composer-inner{display:flex;align-items:flex-end;gap:8px;background:transparent;border:1px solid var(--line);border-radius:var(--r);padding:6px 8px}
-.av0-composer-inner:focus-within{border-color:var(--line3);box-shadow:none}
+.av0-composer-inner:focus-within{border-color:var(--acc)}
 .av0-attach{width:30px;height:30px;border-radius:999px;border:1px solid var(--line);background:var(--s2);color:var(--t2);font-size:18px;line-height:1;display:grid;place-items:center;cursor:pointer;flex-shrink:0}
 .av0-attach:hover{border-color:var(--acc);color:var(--acc)}
 .av0-ta{flex:1;background:none;border:none;outline:none;color:var(--t1);font-size:13.5px;font-family:var(--font);resize:none;line-height:1.45;max-height:180px;padding:4px 2px;min-height:22px}
@@ -1232,7 +1182,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
   width:100%; background:var(--s1); border:1px solid var(--line2); border-radius:8px;
   padding:6px 11px; font-size:12px; color:var(--t1); font-family:var(--font);
 }
-.webv-search input:focus{border-color:var(--line3);outline:none;box-shadow:none;}
+.webv-search input:focus{border-color:var(--acc); outline:none;}
 
 .webv-actions{display:flex; align-items:center; gap:4px;}
 .webv-btn{
@@ -1461,6 +1411,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
 </div>
 <div class="view" id="view-processes"><div class="vhead"><h2>Processes</h2><span class="sub">Memory</span></div>
         <div class="vbody"><div class="list" id="proc-list"></div></div>
+      
+
+      <!-- NETWORK --></div>
+<div class="view" id="view-network"><div class="vhead"><h2>Network</h2><span class="sub">Ports</span></div>
+        <div class="vbody"><div class="outbox" id="net-out">Loading…</div></div>
       
 
       <!-- FILE MANAGER --></div>
@@ -1759,8 +1714,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
   transition: border-color .12s, box-shadow .12s;
 }
 .grok-input-row:focus-within {
-  border-color: var(--line3);
-  box-shadow: none;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px rgba(186,255,41,.08);
 }
 
 .grok-attach, .grok-voice, .grok-send {
@@ -1841,10 +1796,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
 /* Respect previous full-height fixes */
 #view-ai .vbody.ai-stage { padding: 0 !important; overflow: visible !important; }
 </style>
-      
-<div class="view" id="view-chatx" role="region" aria-labelledby="chatx-heading"><div class="vhead"><h2 id="chatx-heading">Secure Chat</h2><span class="sub">E2E</span></div>
+<div class="view" id="view-chatx"><div class="vhead"><h2>Secure Chat</h2><span class="sub">E2E · voice · video</span></div>
         <div class="vbody secure-shell">
-          <aside class="chatx-sidebar" id="chatx-sidebar" aria-label="Secure Chat contacts">
+          <aside class="chatx-sidebar" id="chatx-sidebar">
             <div class="chatx-identity">
               <canvas id="chatx-avatar" width="44" height="44" style="width:44px;height:44px;border-radius:10px;border:1px solid var(--line)"></canvas>
               <div style="min-width:0">
@@ -1868,7 +1822,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
             </div>
             <div class="chatx-section-kicker">Connect</div>
             <div class="chatx-add-row">
-              <input id="chatx-add-id" class="field" aria-label="Secure Chat contact ID or invite" placeholder="ID or invite" style="margin:0;font-size:12px;min-width:0">
+              <input id="chatx-add-id" class="field" placeholder="ID or invite" style="margin:0;font-size:12px;min-width:0">
               <button type="button" class="ux-iconbtn primary" aria-label="Connect" onclick="chatxAddContact()">＋</button>
             </div>
             <div class="chatx-section-kicker">Live <span id="chatx-live-count" style="font-weight:600;color:var(--acc)">0</span></div>
@@ -1877,8 +1831,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
             <div id="chatx-contacts" class="chatx-contact-list"><div class="chatx-empty">None</div></div>
             <div id="chatx-call-log" class="chatx-call-log"><div class="chatx-empty">No calls</div></div>
           </aside>
-          <div class="ux-resizer" id="chatx-splitter" role="separator" aria-label="Resize Secure Chat contacts" aria-orientation="vertical" tabindex="0"></div>
-          <section class="chatx-main" id="chatx-main" aria-label="Secure Chat conversation">
+          <div class="ux-resizer" id="chatx-splitter" role="separator" aria-label="Resize chat contacts"></div>
+          <section class="chatx-main">
             <div class="chatx-topbar">
               <div class="chatx-titleblock">
                 <div id="chatx-peer-title" style="font-size:12px;color:var(--t1);font-weight:800">Select contact</div>
@@ -1925,7 +1879,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
             <div class="chatx-compose">
               <input type="file" id="chatx-file" style="display:none">
               <button type="button" class="ux-iconbtn" aria-label="Attach encrypted file" onclick="$('chatx-file').click()">＋</button>
-              <input id="chatx-input" class="field" aria-label="Encrypted message" placeholder="Encrypted message..." style="flex:1;margin:0" onkeydown="if(event.key==='Enter')chatxSend()">
+              <input id="chatx-input" class="field" placeholder="Encrypted message..." style="flex:1;margin:0" onkeydown="if(event.key==='Enter')chatxSend()">
               <button type="button" class="ux-iconbtn primary" aria-label="Send encrypted message" onclick="chatxSend()">↑</button>
             </div>
           </section>
@@ -1933,14 +1887,14 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
       
 
       </div>
-<div class="view" id="view-whatsapp" role="region" aria-labelledby="whatsapp-heading"><div class="vhead"><h2 id="whatsapp-heading">WhatsApp</h2><span class="sub">Local</span></div>
+<div class="view" id="view-whatsapp"><div class="vhead"><h2>WhatsApp</h2><span class="sub">Baileys QR mode · dashboard messaging</span></div>
         <div class="vbody wa-grid">
           <div class="wa-panel" id="wa-sidebar" role="region" aria-label="WhatsApp chats">
             <div class="wa-status">
               <div class="wa-qr"><img id="wa-qr-img" alt="WhatsApp QR"></div>
               <div>
                 <div id="wa-state" style="font-size:13px;font-weight:800">Starting bridge...</div>
-                <div id="wa-detail" style="font-size:11px;color:var(--t3);line-height:1.5;margin-top:4px">Scan QR.</div>
+                <div id="wa-detail" style="font-size:11px;color:var(--t3);line-height:1.5;margin-top:4px">Scan the QR with WhatsApp Linked Devices when it appears.</div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
                   <button type="button" class="bigbtn ghost smallbtn" onclick="waRefresh()">Refresh</button>
                   <button type="button" class="bigbtn ghost smallbtn" onclick="waReconnect()">Reconnect</button>
@@ -1950,7 +1904,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
               </div>
             </div>
             <div style="padding:8px;border-bottom:1px solid var(--line)">
-              <input class="field" id="wa-new-chat" aria-label="WhatsApp phone number or JID" placeholder="Phone number or jid" style="margin:0;font-size:12px" onkeydown="if(event.key==='Enter')waSelectManualChat()">
+              <input class="field" id="wa-new-chat" placeholder="Phone number or jid" style="margin:0;font-size:12px" onkeydown="if(event.key==='Enter')waSelectManualChat()">
               <button type="button" class="bigbtn smallbtn" style="margin-top:6px;width:100%" onclick="waSelectManualChat()">Open Chat</button>
             </div>
             <div class="wa-chat-list" id="wa-chats"><div style="font-size:11px;color:var(--t3);padding:8px">No chats loaded yet.</div></div>
@@ -1960,7 +1914,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
             <div style="padding:10px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center">
               <div style="min-width:0;flex:1">
                 <div id="wa-peer-title" style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Select a WhatsApp chat</div>
-                <div id="wa-peer-sub" style="font-size:10px;color:var(--t3)">Local bridge</div>
+                <div id="wa-peer-sub" style="font-size:10px;color:var(--t3)">Messages are sent through the local Baileys bridge.</div>
               </div>
               <button type="button" class="bigbtn ghost smallbtn" onclick="waHandoffCall('voice')">Call</button>
               <button type="button" class="bigbtn ghost smallbtn" onclick="waHandoffCall('video')">Video</button>
@@ -1968,21 +1922,21 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
             <div class="wa-thread" id="wa-thread"><div style="font-size:12px;color:var(--t3)">Scan QR and select a chat.</div></div>
             <div class="wa-compose">
               <input type="file" id="wa-file" style="display:none">
-              <button type="button" class="bigbtn" aria-label="Attach WhatsApp file" onclick="$('wa-file').click()">📎</button>
-              <input class="field" id="wa-msg" aria-label="WhatsApp message" placeholder="Message..." style="margin:0;flex:1" onkeydown="if(event.key==='Enter')waSend()">
+              <button type="button" class="bigbtn" onclick="$('wa-file').click()">📎</button>
+              <input class="field" id="wa-msg" placeholder="Message..." style="margin:0;flex:1" onkeydown="if(event.key==='Enter')waSend()">
               <button type="button" class="bigbtn solid" onclick="waSend()">Send</button>
             </div>
             <div id="wa-out" class="outbox" style="display:none;margin:10px"></div>
           </div>
         </div>
       </div>
-<div class="view" id="view-plugins" role="region" aria-labelledby="plugins-heading"><div class="vhead"><h2 id="plugins-heading">Plugins</h2><span class="sub">Actions</span></div>
+<div class="view" id="view-plugins"><div class="vhead"><h2>Plugins</h2><span class="sub">Actions</span></div>
         <div class="vbody plugin-console">
           <div class="plugin-toolbar">
             <div>
               <div class="ux-panel-title">Console</div>
             </div>
-            <input class="field plugin-search" id="plugin-filter" aria-label="Filter plugins" placeholder="Filter plugins..." oninput="renderPlugins()">
+            <input class="field plugin-search" id="plugin-filter" placeholder="Filter plugins..." oninput="renderPlugins()">
             <span class="count" id="plugin-count">—</span>
             <div class="ux-iconbar">
               <button type="button" class="ux-iconbtn primary" aria-label="Refresh plugins" onclick="loadPlugins()">↻</button>
@@ -1995,7 +1949,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
       
 
       </div>
-<div class="view" id="view-macos" role="region" aria-labelledby="macos-heading"><div class="vhead"><h2 id="macos-heading">macOS Tools</h2><span class="sub">System</span></div>
+<div class="view" id="view-macos"><div class="vhead"><h2>macOS Tools</h2><span class="sub">Apple Music · System controls · Screen sharing</span></div>
         <div class="vbody">
           <div class="navlabel">Apple Music</div>
           <div class="panelgrid" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
@@ -2018,19 +1972,19 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
 
           <div class="navlabel">Kill Port</div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-            <input class="field" id="kill-port-in" aria-label="Port number" placeholder="Port number e.g. 3000" style="max-width:220px;margin:0">
+            <input class="field" id="kill-port-in" placeholder="Port number e.g. 3000" style="max-width:220px;margin:0">
             <button type="button" class="bigbtn" onclick="killPort()">Kill Port</button>
           </div>
 
           <div class="navlabel">Project Audit</div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-            <input class="field" id="audit-path-in" aria-label="Project audit path" placeholder="Project path e.g. ~/myapp" style="flex:1;margin:0">
+            <input class="field" id="audit-path-in" placeholder="Project path e.g. ~/myapp" style="flex:1;margin:0">
             <button type="button" class="bigbtn" onclick="runAudit()">Run Audit</button>
           </div>
           <div class="outbox" id="audit-out" style="display:none"></div>
         </div>
       </div>
-<div class="view" id="view-models" role="region" aria-labelledby="models-heading"><div class="vhead"><h2 id="models-heading">Models &amp; AI</h2><span class="sub">Runtime</span></div>
+<div class="view" id="view-models"><div class="vhead"><h2>Models &amp; AI</h2><span class="sub">Switch AI model · Automation mode</span></div>
         <div class="vbody">
           <div class="navlabel">Active Model</div>
           <div class="infocard" style="margin-bottom:14px">
@@ -2043,7 +1997,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
 
           <div class="navlabel">Custom model</div>
           <div style="display:flex;gap:8px;margin-bottom:18px">
-            <input class="field" id="model-custom" aria-label="Custom model ID" placeholder="e.g. anthropic/claude-3-haiku" style="flex:1;margin:0">
+            <input class="field" id="model-custom" placeholder="e.g. anthropic/claude-3-haiku" style="flex:1;margin:0">
             <button type="button" class="bigbtn" onclick="setCustomModel()">Set</button>
           </div>
 
@@ -2055,12 +2009,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
             </div>
             <button type="button" class="bigbtn" id="auto-btn" onclick="toggleAutomation()">Toggle</button>
           </div>
-          <div style="font-size:11px;color:var(--t3);line-height:1.6">Direct mode</div>
+          <div style="font-size:11px;color:var(--t3);line-height:1.6">When ON, AI commands run without confirmation prompts.</div>
         </div>
       </div>
-<div class="view" id="view-projects" role="region" aria-labelledby="projects-heading"><div class="vhead">
-          <h2 id="projects-heading">Projects</h2>
-          <span class="sub">Registry</span>
+<div class="view" id="view-projects"><div class="vhead">
+          <h2>Tracked Projects</h2>
+          <span class="sub">From chinna run + registry</span>
           <button type="button" class="bigbtn" style="margin-left:auto" onclick="loadProjectsView()">↻ Refresh</button>
           <button type="button" class="bigbtn" onclick="go('projects')">Full View →</button>
         </div>
@@ -2070,10 +2024,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
             <details style="background:rgba(255,255,255,.03);border-radius:8px;padding:8px 12px">
               <summary style="cursor:pointer;font-size:12px;opacity:.85">+ Add manual project to registry</summary>
               <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-                <input id="manual-path" class="field" aria-label="Manual project path" style="flex:2;min-width:220px" placeholder="Full path (e.g. ~/dev/myapp)">
-                <input id="manual-stack" class="field" aria-label="Manual project stack" style="width:140px" placeholder="Stack (node-next)">
-                <input id="manual-port" class="field" aria-label="Manual project port" style="width:80px" placeholder="Port">
-                <input id="manual-url" class="field" aria-label="Manual project URL" style="flex:1;min-width:160px" placeholder="URL (optional)">
+                <input id="manual-path" class="field" style="flex:2;min-width:220px" placeholder="Full path (e.g. ~/dev/myapp)">
+                <input id="manual-stack" class="field" style="width:140px" placeholder="Stack (node-next)">
+                <input id="manual-port" class="field" style="width:80px" placeholder="Port">
+                <input id="manual-url" class="field" style="flex:1;min-width:160px" placeholder="URL (optional)">
                 <button type="button" class="bigbtn solid" style="padding:8px 16px" onclick="addManualProject()">Add</button>
               </div>
             </details>
@@ -2094,11 +2048,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
       
 
       </div>
-<div class="view" id="view-onboarding" role="region" aria-labelledby="onboarding-heading"><div class="vhead"><h2 id="onboarding-heading">Get Started</h2><span class="sub">Setup</span></div>
+<div class="view" id="view-onboarding"><div class="vhead"><h2>Get Started</h2><span class="sub">Install, menu actions, theme, and first run</span></div>
         <div class="vbody launchpad">
           <section class="launch-main">
             <div class="settings-kicker">First run</div>
-            <h3>Mac wrapper and menu actions</h3>
+            <h3>Set up the Mac wrapper and menu actions.</h3>
+            <p>Use this launchpad to install the local app shell, add menu bar actions, and choose the dashboard theme before moving into the system tools.</p>
             <div class="launch-actions">
               <button type="button" class="bigbtn solid" onclick="installMacApp()">Install Chinna.app</button>
               <button type="button" class="bigbtn" onclick="installSwiftBarQuickActions()">Install SwiftBar actions</button>
@@ -2106,23 +2061,23 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
               <button type="button" class="bigbtn ghost" onclick="completeMacOnboarding()">Open macOS tools</button>
             </div>
             <div class="launch-checklist">
-              <div class="launch-step"><b>1. App wrapper</b><span>Chinna.app</span></div>
-              <div class="launch-step"><b>2. Menu actions</b><span>SwiftBar</span></div>
-              <div class="launch-step"><b>3. Theme</b><span>Local</span></div>
-              <div class="launch-step"><b>4. Continue</b><span>Tools</span></div>
+              <div class="launch-step"><b>1. App wrapper</b><span>Creates the local Chinna.app launcher in Applications.</span></div>
+              <div class="launch-step"><b>2. Menu actions</b><span>Adds dashboard, update, clean, and plugin actions to SwiftBar.</span></div>
+              <div class="launch-step"><b>3. Theme</b><span>Stores the selected dashboard theme on this Mac.</span></div>
+              <div class="launch-step"><b>4. Continue</b><span>Moves into the operational tools once setup is complete.</span></div>
             </div>
-            <div class="settings-note" style="margin-top:14px">Status appears in Settings.</div>
+            <div class="settings-note" style="margin-top:14px">Install status appears in Settings after the action finishes.</div>
           </section>
           <aside class="launch-side">
             <div class="ux-panel-title">Setup status</div>
-            <div class="rail-item"><b>Version</b><span>v6.9.0</span></div>
+            <div class="rail-item"><b>Version</b><span>v6.8.0</span></div>
             <div class="rail-item"><b>App home</b><span>~/.chinna</span></div>
             <div class="rail-item"><b>Dashboard</b><span>http://localhost:7777</span></div>
             <div class="rail-item"><b>Update command</b><span>chinna update</span></div>
           </aside>
         </div>
       </div>
-<div class="view" id="view-settings" role="region" aria-labelledby="settings-heading"><div class="vhead"><h2 id="settings-heading">Settings</h2><span class="sub">Local</span></div>
+<div class="view" id="view-settings"><div class="vhead"><h2>Settings</h2><span class="sub">Local keys, installs, and version updates</span></div>
         <div class="vbody">
           <div class="settings-shell pro-settings">
             <main class="settings-scroll">
@@ -2135,37 +2090,30 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
                   <button type="button" class="ux-iconbtn primary" aria-label="Save settings" onclick="saveKeys()">✓</button>
                 </div>
                 <div class="settings-field-grid">
-                  <div class="full connection-strip" id="ai-key-status" role="status">Local keys</div>
+                  <div class="full settings-help" id="ai-key-status" role="status">
+                    Add at least one AI key below. OpenRouter enables OpenRouter model IDs; OpenAI enables GPT and voice transcription. Adding both gives fallback coverage across the app.
+                  </div>
                   <div class="full">
                     <div class="navlabel" style="margin-left:0">OpenRouter key — optional AI provider</div>
-                  <input class="field" id="set-or" type="password" autocomplete="new-password" aria-label="OpenRouter key" placeholder="sk-or-v1-...">
+                    <input class="field" id="set-or" type="password" autocomplete="new-password" placeholder="sk-or-v1-...">
                   </div>
                   <div class="full">
                     <div class="navlabel" style="margin-left:0">OpenAI key — optional AI provider</div>
-                  <input class="field" id="set-oa" type="password" autocomplete="new-password" aria-label="OpenAI key" placeholder="sk-...">
+                    <input class="field" id="set-oa" type="password" autocomplete="new-password" placeholder="sk-...">
                   </div>
                   <div class="full settings-switch">
                     <input id="set-turn-enabled" type="checkbox" style="accent-color:var(--acc)">
-                    <label for="set-turn-enabled">Auto call relay</label>
+                    <label for="set-turn-enabled">Enable TURN fallback for stricter networks.</label>
                   </div>
-                  <div class="full relay-card">
-                    <span>Secure Chat relay</span>
-                    <strong id="chat-relay-readable">Local dashboard</strong>
-                  </div>
-                  <input class="field full" id="set-chat-relay" aria-label="Secure Chat relay URL" placeholder="Secure Chat relay URL" style="display:none">
-                  <details class="advanced-lite full">
-                    <summary>Advanced relay details</summary>
-                    <div class="settings-field-grid" style="margin-top:8px">
-                      <input class="field full" id="set-turn-urls" aria-label="TURN URLs" placeholder="TURN URLs">
-                      <input class="field" id="set-turn-user" aria-label="TURN username" placeholder="TURN username">
-                      <input class="field" id="set-turn-cred" type="password" autocomplete="new-password" aria-label="TURN credential" placeholder="TURN credential">
-                    </div>
-                  </details>
+                  <input class="field" id="set-turn-urls" placeholder="TURN URLs">
+                  <input class="field" id="set-turn-user" placeholder="TURN username">
+                  <input class="field full" id="set-turn-cred" type="password" autocomplete="new-password" placeholder="TURN credential">
+                  <input class="field full" id="set-chat-relay" placeholder="Secure Chat relay URL">
                 </div>
                 <div class="settings-inline">
-                  <button type="button" class="bigbtn ghost smallbtn" id="turn-gen-btn" onclick="generateTurnCredentials()">Reset call relay</button>
-                  <button type="button" class="bigbtn ghost smallbtn" id="turn-test-btn" onclick="testTurnConnectivity()">Test calls</button>
-                  <div id="turn-test-status" class="connection-strip">Ready</div>
+                  <button type="button" class="bigbtn ghost smallbtn" id="turn-gen-btn" onclick="generateTurnCredentials()">Generate TURN Credentials</button>
+                  <button type="button" class="bigbtn ghost smallbtn" id="turn-test-btn" onclick="testTurnConnectivity()">Test TURN Relay</button>
+                  <div id="turn-test-status" class="settings-help">No TURN test yet.</div>
                 </div>
               </section>
 
@@ -2177,18 +2125,18 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
                     <div class="settings-card-title">Custom Web Views (iframes)</div>
                   </div>
                 </div>
-                <div class="settings-help" style="margin-bottom:6px">Local web views.</div>
+                <div class="settings-help" style="margin-bottom:6px">Add any external site or SaaS tool as a first-class full-window view inside Chinna. Persisted locally. Auth sessions often carry over inside the iframe.</div>
 
                 <!-- Minimal + add form -->
                 <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center">
-                  <input id="web-embed-name" class="field" aria-label="Web view name" placeholder="Name" style="max-width:160px">
-                  <input id="web-embed-url" class="field" aria-label="Web view URL" placeholder="https://example.com/app" style="flex:1">
-                  <button type="button" onclick="addCustomWebViewFromSettings()" class="av0-send" aria-label="Add web view" style="width:34px;height:34px;border-radius:8px;font-size:18px;line-height:1;padding:0">+</button>
+                  <input id="web-embed-name" class="field" placeholder="Name (Vercel, Notion, Linear...)" style="max-width:160px">
+                  <input id="web-embed-url" class="field" placeholder="https://example.com/app" style="flex:1">
+                  <button onclick="addCustomWebViewFromSettings()" class="av0-send" style="width:34px;height:34px;border-radius:8px;font-size:18px;line-height:1;padding:0">+</button>
                 </div>
 
                 <div id="web-embeds-list" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px;background:var(--s0)"></div>
 
-                <div class="settings-note">Saved locally.</div>
+                <div class="settings-note">Tip: After adding, use the Web Views sidebar entry (or sub menu) to open. Fullscreen and Dock controls are in the view header.</div>
               </section>
               <div class="sep"></div>
 
@@ -2200,7 +2148,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
                     <div class="settings-card-title">Bottom Dock</div>
                   </div>
                 </div>
-                <div class="settings-help" style="margin-bottom:8px">Optional shortcuts.</div>
+                <div class="settings-help" style="margin-bottom:8px">Apple-style quick dock at the bottom. Disabled by default to keep the UI clean. Enable only when you want it, and customize which shortcuts appear.</div>
 
                 <div class="settings-switch">
                   <input id="dock-enabled" type="checkbox" onchange="updateDockSettings()">
@@ -2224,7 +2172,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
                   <div id="dock-vis-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:3px; font-size:11.5px; max-height:160px; overflow:auto; padding:4px; background:var(--s0); border:1px solid var(--line); border-radius:6px;">
                     <!-- populated dynamically by JS -->
                   </div>
-                  <div class="settings-note" style="margin-top:4px">Live.</div>
+                  <div class="settings-note" style="margin-top:4px">Changes apply live. Only enabled items will show in the dock.</div>
                 </div>
               </section>
 
@@ -2234,14 +2182,14 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
                     <div class="settings-label">Desktop app</div>
                     <div class="settings-card-title">Local launcher and menu actions</div>
                   </div>
-                  <div class="settings-card-copy">Local install.</div>
+                  <div class="settings-card-copy">Install the app wrapper and SwiftBar controls.</div>
                 </div>
                 <div class="settings-inline">
                   <button type="button" class="bigbtn solid" id="install-app-btn" onclick="installMacApp()">Install Chinna.app</button>
                   <button type="button" class="bigbtn" id="install-swiftbar-btn" onclick="installSwiftBarQuickActions()">Install SwiftBar actions</button>
                   <button type="button" class="bigbtn ghost smallbtn" onclick="window.open(location.origin,'_blank')">Open dashboard</button>
                 </div>
-                <div class="installappfine" id="install-app-note">Install status.</div>
+                <div class="installappfine" id="install-app-note">Status will appear here after install actions run.</div>
               </section>
 
               <section class="settings-card settings-install">
@@ -2252,41 +2200,35 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
                   </div>
                 </div>
                 <div class="settings-field-grid">
-                  <input class="field full" id="tg-token" type="password" autocomplete="off" aria-label="Telegram bot token" placeholder="Telegram bot token">
-                  <button type="button" class="bigbtn" onclick="saveTelegramToken()">Save token</button>
-                  <button type="button" class="bigbtn solid" onclick="createTelegramPair()">Connect Telegram</button>
+                  <input class="field full" id="tg-token" type="password" autocomplete="off" placeholder="Telegram bot token">
+                  <button type="button" class="bigbtn" onclick="saveTelegramToken()">Save Telegram Token</button>
+                  <button type="button" class="bigbtn solid" onclick="createTelegramPair()">Generate Pair Code</button>
                 </div>
                 <div class="chiprow">
                   <span class="chip" id="tg-bot">Bot: —</span>
                   <span class="chip" id="tg-state">State: —</span>
                 </div>
-                <div class="connection-strip" id="tg-link">Paste token, then connect.</div>
+                <div class="pairhint" id="tg-link">Pairing link will appear here after generating a code.</div>
               </section>
             </main>
 
             <aside class="settings-rail">
-              <div class="settings-version" id="settings-version-card">
+              <div class="settings-version">
                 <span class="label">Installed</span>
-                <strong id="settings-current-version">v6.9.0</strong>
+                <strong id="settings-current-version">v6.8.0</strong>
                 <span id="settings-update-summary">Checking update status...</span>
-                <button type="button" id="settings-upgrade-btn" class="settings-upgrade-btn" onclick="startChinnaUpgrade()" disabled aria-live="polite">
-                  <span class="upgrade-kicker" id="settings-upgrade-kicker">Status</span>
-                  <span id="settings-upgrade-label">Checking for updates…</span>
-                  <span class="upgrade-target" id="settings-upgrade-target"></span>
-                </button>
-                <button type="button" class="settings-version-log-btn" onclick="openVersionLog()">Version history &amp; changelog</button>
               </div>
               <div class="settings-banner" id="settings-update-banner" style="margin-top:12px">
                 <div class="banner-icon">↻</div>
                 <div class="settings-banner-copy">
                   <strong>Checking for the latest build...</strong>
-                  <span>Status</span>
+                  <span>Update status appears here.</span>
                 </div>
               </div>
               <div class="settings-card settings-install" style="margin-top:12px">
                 <div class="settings-card-title">Pair card</div>
                 <div class="pairqr"><img id="tg-qr" alt="Telegram pair QR"></div>
-                <div class="pairhint">Scan QR.</div>
+                <div class="pairhint">Scan the QR or open the generated link on your phone.</div>
                 <button type="button" class="bigbtn ghost smallbtn" onclick="testTelegram()">Send test</button>
               </div>
             </aside>
@@ -2303,20 +2245,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
   </div>
 </div>
 <div id="toasts" aria-live="polite"></div>
-<div id="version-log-overlay" class="version-log-overlay" onclick="if(event.target.id==='version-log-overlay')closeVersionLog()">
-  <div class="version-log-card" role="dialog" aria-labelledby="version-log-title" aria-modal="true">
-    <div class="version-log-head">
-      <div>
-        <h3 id="version-log-title">Chinna version history</h3>
-        <p id="version-log-sub">Every release — what improved and what was resolved.</p>
-      </div>
-      <button type="button" class="bigbtn ghost smallbtn" onclick="closeVersionLog()">Close</button>
-    </div>
-    <div class="version-log-body" id="version-log-body">
-      <div class="chatx-empty">Loading version log…</div>
-    </div>
-  </div>
-</div>
 <div id="scrim">
   <div class="modal glass">
     <div class="mh"><h3 id="m-title">Confirm</h3><p id="m-desc"></p></div>
@@ -2335,11 +2263,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.field:focus-vis
     <div class="v6-head">
       <div class="v6-title-row">
         <span class="v6-rocket">🚀</span>
-        <div><div class="v6-title">Chinna V6.9 is here!</div><div class="v6-subtitle">A direct terminal upgrade with cleaner flow</div></div>
+        <div><div class="v6-title">Chinna V6.7 is here!</div><div class="v6-subtitle">A major upgrade from V6</div></div>
       </div>
     </div>
     <div class="v6-body">
-      <b>What's new in V6.9:</b>
+      <b>What's new in V6.7:</b>
       🤖 Model switcher — change AI model from the dashboard<br>
       🍎 macOS Tools — Apple Music, lock screen, screen share, kill ports<br>
       🔍 Project Audit — full project report saved to Desktop<br>
@@ -3172,7 +3100,6 @@ document.addEventListener('keyup',e=>{
 /* nav */
 function go(v){
   if(!$('view-'+v)) v='overview';
-  if(v!=='onboarding') window.__chinnaManualNav = true;
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   $('view-'+v).classList.add('on');
   document.querySelectorAll('.navitem').forEach(x=>x.classList.toggle('on',x.dataset.v===v));
@@ -3181,6 +3108,7 @@ function go(v){
   if(v==='apps')loadApps();
   if(v==='battery')loadBattery();
   if(v==='doctor')loadDoctor();
+  if(v==='network')loadNet();
   if(v==='storage')loadStorage(HOME_PATH,false);
   if(v==='ai'){ loadAIStatus(); if(voiceEnabled) ensureVoiceUI(); setupAttachmentUI(); resizeAiInput($('ai-in')); }
   if(v==='chatx'){ chatxInit(); setupChatxSplitter(); chatxHandleDeepLink(); }
@@ -3839,13 +3767,14 @@ function renderApps(){
   L.innerHTML=a.map(x=>`<div class="row"><div class="fic">📦</div><div class="info"><div class="nm">${x.name}</div><div class="mt">${x.path}</div></div><div class="sz">${x.size}</div><div class="acts"><button type="button" class="miniA danger" onclick="confirmUninstall('${esc(x.path)}','${esc(x.name)}')">Uninstall</button></div></div>`).join('');
 }
 
-/* battery / doctor */
+/* battery / doctor / network */
 async function loadBattery(){
   const d=await api('batteryhealth');
   $('batt-info').innerHTML=[['Cycle Count',d.cycles],['Condition',d.condition],['Max Capacity',d.max_capacity],['Charging',d.charging]].map(([k,v])=>`<div class="infocard"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
 }
 async function loadDoctor(){$('doc-out').textContent='Loading…';const d=await api('doctor');$('doc-out').textContent=d.result;}
 async function genReport(){const d=await api('sysreport');$('doc-out').textContent=d.result+(d.saved?`\n\n✅ Saved to: ${d.saved}`:'');toast(d.saved?'Report saved to Desktop':'Report generated');}
+async function loadNet(){$('net-out').textContent='Loading…';const d=await api('ports');$('net-out').textContent=d.result;}
 
 /* storage explorer */
 async function loadStorage(path,push=true,offset=0,append=false){
@@ -3893,268 +3822,70 @@ async function loadKeySettings(){
   if(!k) return;
   if($('ai-key-status')) {
     $('ai-key-status').textContent = k.openai_key_invalid
-      ? 'OpenAI field has an OpenRouter key.'
+      ? `${k.ai_status}. The OpenAI field currently contains an OpenRouter key; paste a real OpenAI key there or leave it blank.`
       : k.ai_ready
-      ? k.ai_status
-      : 'Add OpenAI or OpenRouter.';
+      ? `${k.ai_status}. AI chat, Agent, Forge Copilot, and app AI features can use the configured provider.`
+      : 'Add an OpenAI key, an OpenRouter key, or both to activate AI chat, Agent, Forge Copilot, and all AI-powered features.';
   }
   if($('set-turn-enabled')) $('set-turn-enabled').checked = !!k.turn_enabled;
   if($('set-turn-urls')) $('set-turn-urls').value = k.turn_urls || '';
   if($('set-turn-user')) $('set-turn-user').value = k.turn_username || '';
   if($('set-turn-cred')) $('set-turn-cred').value = k.turn_credential || '';
-  const relay = k.chat_relay_url || k.chat_default_relay_url || location.origin;
-  if($('set-chat-relay')) $('set-chat-relay').value = relay;
-  if($('chat-relay-readable')) $('chat-relay-readable').textContent = relay.replace(/^https?:\/\//,'');
-  chatxRelayConfig = { url: relay, defaultUrl: k.chat_default_relay_url || location.origin };
-  if($('turn-test-status')) $('turn-test-status').textContent = (k.turn_enabled && (k.turn_urls||'').trim()) ? 'Call relay ready' : 'Local calls ready';
+  if($('set-chat-relay')) $('set-chat-relay').value = k.chat_relay_url || '';
+  chatxRelayConfig = { url: k.chat_relay_url || '', defaultUrl: k.chat_default_relay_url || location.origin };
+  if($('turn-test-status')) $('turn-test-status').textContent = (k.turn_enabled && (k.turn_urls||'').trim()) ? 'TURN configured. Run test to verify relay.' : 'No TURN test yet.';
 }
-let settingsUpdateState = { current: '', latest: '', update_available: false, changelog: null };
-
-function setUpgradeButtonState({ available, latest, current, offline }) {
-  const btn = $('settings-upgrade-btn');
-  const card = $('settings-version-card');
-  const kicker = $('settings-upgrade-kicker');
-  const label = $('settings-upgrade-label');
-  const target = $('settings-upgrade-target');
-  if (!btn) return;
-  btn.classList.toggle('available', !!available);
-  card?.classList.toggle('available', !!available);
-  if (offline) {
-    btn.disabled = false;
-    if (kicker) kicker.textContent = 'Offline';
-    if (label) label.textContent = 'Retry upgrade check';
-    if (target) target.textContent = 'Opens Terminal when online';
-    return;
-  }
-  if (available) {
-    btn.disabled = false;
-    if (kicker) kicker.textContent = 'Update available';
-    if (label) label.textContent = `Upgrade to v${latest}`;
-    if (target) target.textContent = 'One click · Terminal runs in background';
-  } else {
-    btn.disabled = true;
-    if (kicker) kicker.textContent = 'Up to date';
-    if (label) label.textContent = `Installed v${current || '—'}`;
-    if (target) target.textContent = 'You have the latest build';
-  }
-}
-
-function renderVersionLogEntries(data) {
-  const body = $('version-log-body');
-  if (!body) return;
-  const current = String(data?.current || '').trim();
-  const history = Array.isArray(data?.history) ? data.history : [];
-  const upgradedTo = new Set(history.map(h => String(h?.to || '').trim()));
-  const versions = Array.isArray(data?.versions) ? data.versions : [];
-  if (!versions.length) {
-    body.innerHTML = '<div class="chatx-empty">No version log entries yet.</div>';
-    return;
-  }
-  body.innerHTML = versions.map(entry => {
-    const ver = String(entry.version || '').trim();
-    const isCurrent = ver === current;
-    const wasUpgraded = upgradedTo.has(ver);
-    const cls = ['version-log-entry', isCurrent ? 'current' : '', wasUpgraded ? 'upgraded' : ''].filter(Boolean).join(' ');
-    const improved = (entry.improved || []).map(i => `<li>${escHtml(i)}</li>`).join('') || '<li>No notes recorded.</li>';
-    const resolved = (entry.resolved || []).map(i => `<li>${escHtml(i)}</li>`).join('') || '<li>No fixes recorded.</li>';
-    const badges = [
-      isCurrent ? '<span class="version-log-badge installed">Installed</span>' : '',
-      wasUpgraded ? '<span class="version-log-badge upgraded">Upgraded here</span>' : ''
-    ].filter(Boolean).join('');
-    return `<article class="${cls}">
-      <div class="version-log-entry-head">
-        <div><strong>v${escHtml(ver)}</strong> · ${escHtml(entry.title || 'Release')}</div>
-        <span>${escHtml(entry.date || '')}</span>
-      </div>
-      <div class="version-log-badges">${badges}</div>
-      <div class="version-log-section"><h4>Improved</h4><ul>${improved}</ul></div>
-      <div class="version-log-section"><h4>Resolved</h4><ul>${resolved}</ul></div>
-    </article>`;
-  }).join('');
-}
-
-async function openVersionLog() {
-  const overlay = $('version-log-overlay');
-  if (!overlay) return;
-  overlay.classList.add('on');
-  try {
-    const data = await api('version-log');
-    renderVersionLogEntries(data);
-  } catch (e) {
-    const body = $('version-log-body');
-    if (body) body.innerHTML = '<div class="chatx-empty">Could not load version log.</div>';
-  }
-}
-
-function closeVersionLog() {
-  $('version-log-overlay')?.classList.remove('on');
-}
-
-function showUpgradeSuccessModal(fromVer, toVer, changelog) {
-  const improved = (changelog?.improved || []).slice(0, 6).map(i => `<li>${escHtml(i)}</li>`).join('') || '<li>General stability and dashboard improvements</li>';
-  const resolved = (changelog?.resolved || []).slice(0, 6).map(i => `<li>${escHtml(i)}</li>`).join('') || '<li>Bug fixes from the previous release</li>';
-  openModal(
-    `Upgraded to v${toVer}`,
-    changelog?.title || 'Chinna was updated successfully.',
-    `<div style="font-size:12px;line-height:1.6;color:var(--t2)">
-      <div style="margin-bottom:10px"><strong style="color:var(--t1)">Improved</strong><ul style="margin:6px 0 0 16px;padding:0">${improved}</ul></div>
-      <div><strong style="color:var(--t1)">Resolved</strong><ul style="margin:6px 0 0 16px;padding:0">${resolved}</ul></div>
-    </div>`,
-    null,
-    'Done'
-  );
-  $('m-go').style.display = 'none';
-  $('m-foot').innerHTML = '<button type="button" class="btn-cancel" onclick="closeModal(); loadSettingsUpdateStatus();">Great</button>';
-  toast(`Chinna upgraded v${fromVer} → v${toVer}`);
-}
-
-async function startChinnaUpgrade() {
-  if (settingsUpdateState.upgradeRunning) return;
-  const latest = settingsUpdateState.latest;
-  const current = settingsUpdateState.current;
-  if (!settingsUpdateState.update_available && !settingsUpdateState.offline) {
-    toast('Already on the latest version');
-    return;
-  }
-  const targetVer = latest || current;
-  openModal(
-    'Upgrade Chinna',
-    settingsUpdateState.offline
-      ? `Force-refresh Chinna from Terminal? Your API keys and data stay intact.`
-      : `Upgrade from v${current} to v${targetVer}? Terminal will open and run the update in the background. Your API keys and data stay intact.`,
-    'The installer preserves ~/.chinna config, keys, and chat history.',
-    async () => {
-      settingsUpdateState.upgradeRunning = true;
-      const btn = $('settings-upgrade-btn');
-      if (btn) { btn.disabled = true; $('settings-upgrade-label').textContent = 'Upgrading in Terminal…'; }
-      showProgress('Upgrading Chinna', 'Terminal is running the update. Live status below.');
-      try {
-        const start = await api('update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-        settingsUpdateState.lastJob = start?.job || '';
-        const logEl = $('m-log');
-        const poll = setInterval(async () => {
-          if (!settingsUpdateState.lastJob) return;
-          const j = await api('job?id=' + settingsUpdateState.lastJob).catch(() => null);
-          if (!j) return;
-          if (logEl) {
-            logEl.innerHTML = (j.lines || []).map(line => {
-              const isDone = line.includes('Upgrade complete') || line.includes('✅');
-              return isDone ? `<div class="done">${escHtml(line)}</div>` : `<div>${escHtml(line)}</div>`;
-            }).join('');
-            logEl.scrollTop = logEl.scrollHeight;
-          }
-          if (!j.done) return;
-          clearInterval(poll);
-          settingsUpdateState.upgradeRunning = false;
-          $('m-foot').style.display = '';
-          $('m-foot').innerHTML = '<button type="button" class="btn-cancel" onclick="closeModal(); loadSettingsUpdateStatus();">Done</button>';
-          const line = (j.lines || []).find(l => l.includes('Upgrade complete'));
-          if (line) {
-            const m = line.match(/v([\d.]+)\s*→\s*v([\d.]+)/);
-            const toVer = m ? m[2] : latest;
-            const fromVer = m ? m[1] : current;
-            const logData = await api('version-log').catch(() => null);
-            const entry = (logData?.versions || []).find(v => String(v.version) === String(toVer)) || settingsUpdateState.changelog;
-            setTimeout(() => {
-              closeModal();
-              showUpgradeSuccessModal(fromVer, toVer, entry);
-              loadSettingsUpdateStatus();
-            }, 400);
-          } else {
-            toast('Upgrade launched in Terminal — refresh Settings when finished');
-            loadSettingsUpdateStatus();
-          }
-        }, 1200);
-      } catch (err) {
-        settingsUpdateState.upgradeRunning = false;
-        toast('Could not start upgrade: ' + (err?.message || err));
-        loadSettingsUpdateStatus();
-      }
-    },
-    settingsUpdateState.offline ? 'Force refresh' : `Upgrade to v${targetVer}`
-  );
-}
-
 async function loadSettingsUpdateStatus(){
   const banner = $('settings-update-banner');
   const version = $('settings-current-version');
   const summary = $('settings-update-summary');
   if(!banner || !version || !summary) return;
+  version.textContent = 'v6.7.0';
   summary.textContent = 'Checking update status…';
-  setUpgradeButtonState({ available: false, current: '', latest: '', offline: false });
   try{
     const d = await api('check-update');
-    const current = d?.current || '6.9.0';
-    const latest = d?.latest || current;
-    settingsUpdateState = {
-      current,
-      latest,
-      update_available: !!d?.update_available,
-      changelog: d?.latest_changelog || null,
-      offline: false,
-      upgradeRunning: false,
-      lastJob: settingsUpdateState.lastJob || '',
-    };
-    version.textContent = `v${current}`;
+    const current = d?.current ? `v${d.current}` : 'v6.7.0';
+    const latest = d?.latest ? `v${d.latest}` : 'v6.7.0';
+    version.textContent = current;
     if(d?.update_available){
       banner.className = 'settings-banner warn';
       banner.innerHTML = `
         <div class="banner-icon">⬆</div>
         <div class="settings-banner-copy">
-          <strong>v${escHtml(latest)} is available</strong>
-          <span>${escHtml(d?.latest_changelog?.title || 'A new Chinna build is ready.')}</span>
+          <strong>Update ready: ${latest}</strong>
+          <span>Install the latest build to keep the dashboard, daemon, and launcher aligned. Use <code>chinna update</code> or the one-touch installer.</span>
         </div>
       `;
-      summary.textContent = `Update available · v${current} → v${latest}`;
-      setUpgradeButtonState({ available: true, latest, current, offline: false });
+      summary.textContent = `Update available to ${latest}`;
     }else{
       banner.className = 'settings-banner';
       banner.innerHTML = `
         <div class="banner-icon">✓</div>
         <div class="settings-banner-copy">
           <strong>You are on the latest build.</strong>
-          <span>Installed v${escHtml(current)} matches the remote release.</span>
+          <span>Remote version matches the installed dashboard. Nothing else needs to be done.</span>
         </div>
       `;
-      summary.textContent = `Latest release: v${latest}`;
-      setUpgradeButtonState({ available: false, latest, current, offline: false });
+      summary.textContent = `Latest release: ${latest}`;
     }
   }catch(e){
-    settingsUpdateState.offline = true;
     banner.className = 'settings-banner';
     banner.innerHTML = `
       <div class="banner-icon">!</div>
       <div class="settings-banner-copy">
         <strong>Unable to verify updates right now.</strong>
-        <span>You can still run a force-refresh upgrade from Terminal.</span>
+        <span>Open the terminal install URL below or run <code>chinna update</code> later when the network is available.</span>
       </div>
     `;
     summary.textContent = 'Update check unavailable';
-    setUpgradeButtonState({ available: false, latest: '', current: '', offline: true });
   }
 }
 async function loadTelegramStatus(){
-  const d=await api('telegram/status').catch(e=>({error:e?.message||'offline'}));
-  if(d.error){
-    $('tg-bot').textContent='Bot: —';
-    $('tg-state').textContent='State: offline';
-    $('tg-link').textContent='Telegram status unavailable.';
-    $('tg-qr').removeAttribute('src');
-    return;
-  }
+  const d=await api('telegram/status');
   $('tg-bot').textContent=`Bot: ${d.bot_username?('@'+d.bot_username):'—'}`;
-  $('tg-state').textContent=`State: ${d.paired?'paired':(d.configured?'ready':'not paired')}`;
-  $('tg-link').innerHTML=d.paired
-    ? 'Telegram connected.'
-    : d.pair_url
-      ? `<a href="${escHtml(d.pair_url)}" target="_blank" rel="noreferrer">Open Telegram pair link</a>`
-      : (d.configured ? 'Click Connect Telegram.' : 'Paste token, then connect.');
-  if(d.qr_url){
-    $('tg-qr').src=d.qr_url;
-    $('tg-qr').onerror=()=>{ $('tg-link').innerHTML=d.pair_url?`<a href="${escHtml(d.pair_url)}" target="_blank" rel="noreferrer">Open Telegram pair link</a>`:'QR unavailable'; };
-  } else {
-    $('tg-qr').removeAttribute('src');
-  }
+  $('tg-state').textContent=`State: ${d.paired?'paired':'not paired'}`;
+  $('tg-link').innerHTML=d.pair_url?`Pair link: <span class="muted">${d.pair_url}</span>`:'Pairing link will appear here after generating a code.';
+  if(d.qr_url){ $('tg-qr').src=d.qr_url; } else { $('tg-qr').removeAttribute('src'); }
 }
 
 // ===== SECURE CHAT (client-side E2E) =====
@@ -4452,16 +4183,16 @@ async function testTurnConnectivity(){
   const enabled = !!$('set-turn-enabled')?.checked;
   const urls = chatxParseTurnUrls(($('set-turn-urls')?.value||'').trim());
   if(!enabled || !urls.length){
-    if(out) out.textContent = 'Local calls ready. Enable relay only for strict networks.';
+    if(out) out.textContent = 'Enable TURN and provide at least one TURN URL.';
     return;
   }
   const username = ($('set-turn-user')?.value||'').trim();
   const credential = $('set-turn-cred')?.value || '';
   if(btn) btn.disabled = true;
-  if(out) out.textContent = 'Testing call network...';
+  if(out) out.textContent = 'Testing TURN relay...';
   let pc = null;
   try{
-    pc = new RTCPeerConnection({iceServers:[{urls, username, credential}]});
+    pc = new RTCPeerConnection({iceServers:[{urls, username, credential}], iceTransportPolicy:'relay'});
     pc.createDataChannel('turn-probe');
     let relayFound = false;
     let candidateSeen = false;
@@ -4475,18 +4206,18 @@ async function testTurnConnectivity(){
     await pc.setLocalDescription(offer);
     await new Promise(r=>setTimeout(r, 6500));
     if(relayFound){
-      if(out) out.textContent = 'Call relay verified.';
-      toast('Call relay verified');
+      if(out) out.textContent = 'TURN test passed: relay candidate received.';
+      toast('TURN relay reachable');
     }else if(candidateSeen){
-      if(out) out.textContent = 'Call network ready. Relay not required here.';
-      toast('Call network ready');
+      if(out) out.textContent = 'TURN test failed: candidates were gathered, but none were usable relay candidates. Check TURN URL, username, credential, and firewall.';
+      toast('TURN relay unavailable');
     }else{
-      if(out) out.textContent = 'Call test failed: no network candidates.';
-      toast('Call test failed');
+      if(out) out.textContent = 'TURN test failed: no ICE candidates gathered.';
+      toast('TURN test failed: no candidates');
     }
   }catch(e){
-    if(out) out.textContent = `Call test error: ${e?.message||'unknown error'}`;
-    toast('Call test failed');
+    if(out) out.textContent = `TURN test error: ${e?.message||'unknown error'}`;
+    toast('TURN test failed');
   }finally{
     if(pc){
       try{ pc.close(); }catch{}
@@ -4500,7 +4231,7 @@ async function generateTurnCredentials(){
   const out = $('turn-test-status');
   const turnUrls = ($('set-turn-urls')?.value||'').trim();
   if(btn) btn.disabled = true;
-  if(out) out.textContent = 'Resetting call relay...';
+  if(out) out.textContent = 'Generating TURN credentials...';
   try{
     const d = await api('turn/generate', {
       method:'POST',
@@ -4512,8 +4243,8 @@ async function generateTurnCredentials(){
     if($('set-turn-user')) $('set-turn-user').value = d.turn_username || '';
     if($('set-turn-cred')) $('set-turn-cred').value = d.turn_credential || '';
     if($('set-turn-urls') && d.turn_urls) $('set-turn-urls').value = d.turn_urls;
-    if(out) out.textContent = 'Call relay reset.';
-    toast(d.result || 'Call relay reset');
+    if(out) out.textContent = 'TURN credentials generated and applied.';
+    toast(d.result || 'TURN credentials generated');
     await chatxLoadRtcConfig().catch(()=>{});
   }catch(e){
     if(out) out.textContent = `TURN generation failed: ${e?.message||'unknown error'}`;
@@ -6081,28 +5812,16 @@ async function saveTelegramToken(){
   loadTelegramStatus();
 }
 async function createTelegramPair(){
-  const token=$('tg-token')?.value?.trim() || '';
-  if(token){
-    const saved=await api('save_keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telegram_token:token})}).catch(e=>({error:e?.message||'save failed'}));
-    if(saved.error){ toast(saved.error); return; }
-    $('tg-token').value='';
-  }
-  const d=await api('telegram/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(e=>({error:e?.message||'pair failed'}));
+  const d=await api('telegram/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
   if(d.error){ toast(d.error); return; }
   $('tg-qr').src=d.qr_url||'';
-  $('tg-link').innerHTML=`<a href="${escHtml(d.pair_url)}" target="_blank" rel="noreferrer">Open Telegram pair link</a><div class="paircode" style="margin-top:6px">${escHtml(d.code)}</div>`;
-  if(d.pair_url) window.open(d.pair_url, '_blank', 'noopener,noreferrer');
-  toast('Telegram pair link ready');
-  let checks=0;
-  const poll=setInterval(async()=>{
-    checks++;
-    await loadTelegramStatus().catch(()=>{});
-    if(($('tg-state')?.textContent||'').includes('paired') || checks>20) clearInterval(poll);
-  }, 2500);
+  $('tg-link').innerHTML=`Pair link: <span class="muted">${d.pair_url}</span><div class="paircode" style="margin-top:6px">${d.code}</div>`;
+  toast('Pair code generated');
+  loadTelegramStatus();
 }
 async function testTelegram(){
-  const d=await api('telegram/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'Chinna dashboard test'})}).catch(e=>({error:e?.message||'failed'}));
-  toast(d.ok ? 'Telegram test sent' : (d.result||d.error||'Telegram not paired'));
+  const d=await api('telegram/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'✅ Chinna dashboard test'})});
+  toast(d.result||d.error||'Test sent');
 }
 
 /* simple actions */
@@ -6511,20 +6230,17 @@ async function waHandoffCall(mode){
 function initV6(){
   showLaunchSplash();
   const firstRun = !localStorage.getItem(ONBOARDING_KEY);
-  localStorage.setItem('chinna_v6_welcomed','1');
-  const overlay = document.getElementById('v6overlay');
-  if(overlay) overlay.style.display='none';
+  if(!localStorage.getItem('chinna_v6_welcomed')){
+    document.getElementById('v6overlay').style.display='flex';
+  }
   const initial=(window.location.hash||'').replace('#','');
   if(initial && $('view-'+initial)) window.setTimeout(()=>go(initial), 250);
-  else window.setTimeout(()=>{
-    if(firstRun && !window.__chinnaManualNav && document.querySelector('#view-overview.on')) go('onboarding');
-  }, 1150);
+  else window.setTimeout(()=>{ if(firstRun) go('onboarding'); }, 1150);
   loadModels();
 }
 function dismissV6(){
   localStorage.setItem('chinna_v6_welcomed','1');
-  const overlay = document.getElementById('v6overlay');
-  if(overlay) overlay.style.display='none';
+  document.getElementById('v6overlay').style.display='none';
 }
 
 // ── MUSIC ────────────────────────────────────────────────────
@@ -6579,38 +6295,26 @@ async function runAudit(){
 
 // ── MODELS ───────────────────────────────────────────────────
 async function loadModels(){
+  const d=await api('models');
   const act=document.getElementById('model-active');
+  if(act) act.textContent=d.active||'—';
   const pres=document.getElementById('model-presets');
-  const auto=document.getElementById('auto-val');
-  try{
-    const d=await api('models');
-    syncModelLabels(d.active||'—');
-    if(pres && d.presets){
-      const entries=Object.entries(d.presets);
-      pres.innerHTML=entries.length ? entries.map(([k,v])=>
-        `<button type="button" class="bigbtn" style="font-size:11px" onclick="setModelPreset('${k}')" aria-label="Use ${k} model preset">${k}</button>`
-      ).join('') : '<button type="button" class="bigbtn" disabled>No presets</button>';
-    }
-    if(auto) auto.textContent=d.auto_mode||'—';
-  }catch(e){
-    if(act) act.textContent='—';
-    if(auto) auto.textContent='—';
-    if(pres) pres.innerHTML='<button type="button" class="bigbtn" disabled>Offline</button>';
+  if(pres && d.presets){
+    pres.innerHTML=Object.entries(d.presets).map(([k,v])=>
+      `<button type="button" class="bigbtn" style="font-size:11px" onclick="setModelPreset('${k}')">${k}</button>`
+    ).join('');
   }
-}
-function syncModelLabels(active){
-  const label = active || '—';
-  const act=document.getElementById('model-active');
-  const side=document.getElementById('sidebarModelName');
-  const top=document.getElementById('top-model-pill');
-  if(act) act.textContent=label;
-  if(side) side.textContent=label;
-  if(top) top.textContent=label;
+  // Also load automation
+  try{
+    const auto=document.getElementById('auto-val');
+    if(auto) auto.textContent=d.auto_mode||'—';
+  }catch(e){}
 }
 async function setModelPreset(preset){
   const d=await api('model-set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preset})});
   if(d.ok){
-    syncModelLabels(d.active);
+    const act=document.getElementById('model-active');
+    if(act) act.textContent=d.active;
     toast('Model: '+d.active);
   } else {
     toast('Error: '+d.error);
@@ -6620,7 +6324,7 @@ async function setCustomModel(){
   const m=document.getElementById('model-custom')?.value?.trim();
   if(!m){toast('Enter a model string');return;}
   const d=await api('model-set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({custom:m})});
-  if(d.ok){ syncModelLabels(d.active); toast('Model set: '+d.active); }
+  if(d.ok){const act=document.getElementById('model-active');if(act)act.textContent=d.active;toast('Model set: '+d.active);}
   else toast('Error: '+d.error);
 }
 async function toggleAutomation(){
@@ -7174,9 +6878,9 @@ function updateAgentModeUI() {
     label.className = 'mode-label plan';
     if (hint) hint.textContent = 'plan • checklist';
   } else {
-    label.textContent = 'BUILD MODE — full power: tools, write files, create live artifacts, macOS control, iterate instantly.';
-    label.className = 'mode-label build';
-    if (hint) hint.textContent = 'build • artifacts auto-preview';
+    // label.textContent = 'BUILD MODE — full power: tools, write files, create live artifacts, macOS control, iterate instantly.';
+    // label.className = 'mode-label build';
+    // if (hint) hint.textContent = 'build • artifacts auto-preview';
   }
 }
 
@@ -7598,6 +7302,7 @@ async function agentSend() {
   if (inp) { inp.value = ''; inp.style.height = 'auto'; }
 
   agentAddMsg('user', message);
+  agentHistory.push({ role: 'user', content: message });
 
   agentSetStatus(true, 'thinking…');
 
@@ -7615,7 +7320,6 @@ async function agentSend() {
         model: ''
       })
     });
-    agentHistory.push({ role: 'user', content: message });
 
     if (!resp.ok) {
       const errTxt = await resp.text().catch(()=>(''));
@@ -8294,9 +7998,9 @@ let selectedBentoIndex = -1;
 let bentoKeyHandler = null;
 
 const DEFAULT_WEB_VIEWS = [
-  { id: 'def-google', name: 'Google Search', url: 'https://www.google.com', auth: false },
+  { id: 'def-google', name: 'Turbo Search', url: 'https://turboten.vercel.app', auth: false },
   { id: 'def-wiki', name: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Main_Page', auth: false },
-  { id: 'def-hn', name: 'Hacker News', url: 'https://news.ycombinator.com', auth: false },
+  { id: 'def-hn', name: 'Chinna Shards', url: 'https://shards-ai.vercel.app', auth: false },
   { id: 'def-github', name: 'GitHub Trending', url: 'https://github.com/trending', auth: false },
   { id: 'def-yf', name: 'Yahoo Finance', url: 'https://finance.yahoo.com', auth: false },
   { id: 'def-weather', name: 'Weather (BBC)', url: 'https://www.bbc.com/weather', auth: false },
@@ -8510,7 +8214,7 @@ function webNormal() {
 
 function updateWebVersionInSettings() {
   const el = document.getElementById('settings-current-version');
-  if (el) el.textContent = 'v6.9.0';
+  if (el) el.textContent = 'v6.8.0';
 }
 
 // Hook into existing go() and init
@@ -8564,9 +8268,9 @@ window.chinnaAddWebView = (name, url) => {
 <script>
 (function(){
   const DEFAULTS = [
-    {id:'d1',name:'Google Search',url:'https://www.google.com',auth:false},
+    {id:'d1',name:'Chinna Search',url:'https://turboten.vercel.app',auth:false},
     {id:'d2',name:'Wikipedia',url:'https://en.wikipedia.org/wiki/Main_Page',auth:false},
-    {id:'d3',name:'Hacker News',url:'https://news.ycombinator.com',auth:false},
+    {id:'d3',name:'Chinna Shards',url:'https://shards-ai.vercel.app',auth:false},
     {id:'d4',name:'GitHub Trending',url:'https://github.com/trending',auth:false},
     {id:'d5',name:'Yahoo Finance',url:'https://finance.yahoo.com',auth:false},
     {id:'d6',name:'Weather (BBC)',url:'https://www.bbc.com/weather',auth:false}
@@ -8977,38 +8681,18 @@ window.chinnaAddWebView = (name, url) => {
     handle.setAttribute('role', 'separator');
     handle.setAttribute('aria-orientation', axis === 'x' ? 'vertical' : 'horizontal');
     handle.setAttribute('aria-label', 'Resize panel');
-    handle.setAttribute('tabindex', handle.getAttribute('tabindex') || '0');
-    handle.setAttribute('aria-valuemin', min);
-    handle.setAttribute('aria-valuemax', max);
     let drag=false, sx=0, ss=0;
-    const currentSize = () => axis==='x'?target.offsetWidth:target.offsetHeight;
-    const setSize = ns => {
-      ns = Math.max(min, Math.min(max, ns));
-      if (axis==='x') target.style.flex = `0 0 ${ns}px`; else target.style.height=ns+'px';
-      handle.setAttribute('aria-valuenow', Math.round(ns));
-      if (onChange) onChange(ns);
-    };
     handle.addEventListener('pointerdown', e => {
-      drag=true; sx = axis==='x'?e.clientX:e.clientY; ss=currentSize();
+      drag=true; sx = axis==='x'?e.clientX:e.clientY; ss=axis==='x'?target.offsetWidth:target.offsetHeight;
       handle.classList.add('dragging'); document.body.style.userSelect='none'; document.body.style.cursor=axis==='x'?'col-resize':'row-resize';
       handle.setAttribute('aria-valuenow', ss);
     });
     window.addEventListener('pointermove', e => {
       if(!drag) return;
       const d = (axis==='x'?e.clientX:e.clientY) - sx;
-      setSize(ss + d);
-    });
-    handle.addEventListener('keydown', e => {
-      const key = e.key;
-      const step = e.shiftKey ? 32 : 12;
-      const grow = axis === 'x' ? key === 'ArrowRight' : key === 'ArrowDown';
-      const shrink = axis === 'x' ? key === 'ArrowLeft' : key === 'ArrowUp';
-      if (grow || shrink) {
-        e.preventDefault();
-        setSize(currentSize() + (grow ? step : -step));
-      }
-      if (key === 'Home') { e.preventDefault(); setSize(min); }
-      if (key === 'End') { e.preventDefault(); setSize(max); }
+      let ns = Math.max(min, Math.min(max, ss + d));
+      if (axis==='x') target.style.flex = `0 0 ${ns}px`; else target.style.height=ns+'px';
+      if (onChange) onChange(ns);
     });
     const stop = () => {
       if(!drag) return; drag=false; handle.classList.remove('dragging');
@@ -9026,7 +8710,6 @@ window.chinnaAddWebView = (name, url) => {
     makeResizable(document.getElementById('agentResizer'), document.querySelector('#view-agent .av0-chat'), {min:200,max:650,axis:'x', onChange:w=>saveUILayout({agent_chat_w:w})});
     // Chatx if present
     makeResizable(document.getElementById('chatx-splitter'), document.querySelector('.chatx-sidebar'), {min:180,max:480,axis:'x'});
-    // WhatsApp split view
     makeResizable(document.getElementById('wa-splitter'), document.getElementById('wa-sidebar'), {min:200,max:480,axis:'x'});
   }
 
@@ -9037,7 +8720,7 @@ window.chinnaAddWebView = (name, url) => {
       el = document.createElement('div');
       el.id='fs-'+id; el.className='surface floating';
       el.style.cssText=`left:${opts.x}px;top:${opts.y}px;width:${opts.w}px;height:${opts.h}px;`;
-      el.innerHTML = `<div style="padding:4px 8px;border-bottom:1px solid var(--line);font-size:11px;font-weight:600;display:flex;justify-content:space-between;cursor:move;background:transparent;">${opts.title} <button onclick="this.closest('.floating').remove()" style="border:0;background:0;color:var(--t3);">×</button></div><div style="padding:0;overflow:auto;height:calc(100% - 28px);">${html}</div>`;
+      el.innerHTML = `<div style="padding:4px 8px;border-bottom:1px solid var(--line);font-size:11px;font-weight:600;display:flex;justify-content:space-between;cursor:move;background:transparent;">${opts.title} <button onclick="this.closest('.floating').remove()" style="border:0;background:0;color:var(--t3);">×</button></div><div style="padding:0;overflow:auto;height:calc(100%-28px);">${html}</div>`;
       const ws = document.getElementById('workspace') || document.body; ws.appendChild(el);
       // basic drag
       const h = el.firstChild; let dx,dy,dr=false;
@@ -9056,9 +8739,9 @@ window.chinnaAddWebView = (name, url) => {
       initRedesignResizers(); 
       const ws = document.getElementById('workspace');
       if (ws) {
-        ws.style.position = 'absolute';
-        ws.style.inset = '0';
-        ws.style.pointerEvents = 'none';
+        ws.style.position = 'relative';
+        const activeView = document.querySelector('.view.on');
+        if (activeView) activeView.style.position = 'relative';
       }
     },50); 
   };
