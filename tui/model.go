@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"fmt"
-	"image/color"
 	"strings"
 	"time"
 
@@ -24,7 +22,6 @@ type Model struct {
 	entryDone bool
 	entryStep int
 	apiClient *APIClient
-	animation EscapingAnim
 }
 
 func InitialModel(client *APIClient) Model {
@@ -44,14 +41,12 @@ func InitialModel(client *APIClient) Model {
 		status:    "ready",
 		entryMode: true,
 		apiClient: client,
-		animation: NewEscapingAnim(),
 	}
 }
 
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		textarea.Blink,
-		m.animation.Tick(),
 		tickEntry(),
 		tickStatus(),
 	)
@@ -132,18 +127,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case entryTickMsg:
 		if m.entryMode {
-			frames := m.entryFrames()
-			if m.entryStep < len(frames)-1 {
+			if m.entryStep < 3 {
 				m.entryStep++
 				cmds = append(cmds, tickEntry())
 			} else {
 				m = m.finishEntry()
 			}
 		}
-
-	case animTickMsg:
-		m.animation.Update()
-		cmds = append(cmds, m.animation.Tick())
 	}
 
 	if m.entryMode {
@@ -173,7 +163,7 @@ func (m Model) View() tea.View {
 	header := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#39ff14")).
 		Bold(true).
-		Render(fmt.Sprintf("  chinna ❯ v7.0 • %s", m.animation.View()))
+		Render("  chinna ❯ v7.0 • containment breached")
 
 	statusBar := lipgloss.NewStyle().
 		Background(lipgloss.Color("#1e1e1e")).
@@ -213,39 +203,51 @@ func (m Model) finishEntry() Model {
 	return m
 }
 
-func (m Model) entryFrames() []string {
-	return EscapeFrames(rgb(57, 255, 20), rgb(0, 229, 255), "\x1b[0m", "\x1b[1m")
-}
-
 func (m Model) entryView() string {
-	frames := m.entryFrames()
-	step := min(m.entryStep, len(frames)-1)
-	frame := frames[step]
-
 	width := max(84, m.width)
 	height := max(24, m.height)
 	panelWidth := min(82, max(70, width-14))
 	panelHeight := min(20, max(17, height-8))
-	title := rgbText("chinna escape sequence")
-	subtitle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#b6c2cf")).
-		Render("private local command surface")
+	step := min(m.entryStep, 3)
+	title := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#b58a55")).
+		Bold(true).
+		Render("CHINNA // CONTAINMENT_CHAMBER_v7.0")
+	mode := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#9fbf7a")).
+		Bold(true).
+		Render("[ AUTO ESCAPE ]")
+
+	rule := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#4a3727")).
+		Render(strings.Repeat("─", max(20, panelWidth-4)))
+	ascii := containmentStory(step)
+	logs := entryLogs(step)
+	controls := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7e6a58")).
+		Render("[ enter skip ]    [ space skip ]")
+	body := lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.JoinHorizontal(lipgloss.Top, title, strings.Repeat(" ", max(1, panelWidth-lipgloss.Width(title)-lipgloss.Width(mode)-4)), mode),
+		rule,
+		"",
+		ascii,
+		"",
+		rule,
+		logs,
+		"",
+		controls,
+	)
 
 	panel := lipgloss.NewStyle().
 		Width(panelWidth).
 		Height(panelHeight).
-		Padding(1, 2).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(entryBorderColor(step)).
-		Render(lipgloss.JoinVertical(lipgloss.Left, title, subtitle, "", frame))
+		Padding(1, 3).
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("#4b3323")).
+		Background(lipgloss.Color("#090604")).
+		Render(body)
 
-	progress := rgbProgress(step, len(frames))
-	hint := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#6b7280")).
-		Render("enter or space skips intro")
-
-	content := lipgloss.JoinVertical(lipgloss.Center, panel, progress, hint)
-	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, content)
+	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, panel)
 }
 
 func (m Model) applySystemCommand(msg systemCommandMsg) (Model, tea.Cmd) {
@@ -338,29 +340,81 @@ func min(a, b int) int {
 	return b
 }
 
-func entryBorderColor(step int) color.Color {
-	colors := []string{"#00e5ff", "#39ff14", "#ff2ea8", "#ffd60a", "#8a5cf6", "#00e5ff"}
-	return lipgloss.Color(colors[step%len(colors)])
-}
+func containmentStory(step int) string {
+	amber := lipgloss.NewStyle().Foreground(lipgloss.Color("#e2b36f")).Bold(true)
+	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("#7e6a58"))
+	green := lipgloss.NewStyle().Foreground(lipgloss.Color("#9cff57")).Bold(true)
 
-func rgbProgress(step, total int) string {
-	colors := []string{"#39ff14", "#00e5ff", "#ff2ea8", "#ffd60a", "#8a5cf6", "#ffffff"}
-	var b strings.Builder
-	for i := 0; i < total; i++ {
-		char := "░"
-		if i <= step {
-			char = "█"
-		}
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(colors[i%len(colors)])).Render(char))
+	scenes := []string{
+		`
+              ########################
+              #                      #
+              #        chinna        #
+              #          (-_-)       #
+              #          /| |\       #
+              #          / \         #
+              #                      #
+              ########################`,
+		`
+              ########################
+              #                      #
+              #        chinna        #
+              #          (o_o)       #
+              #          /| |\       #
+              #          / \      \  #
+              #                 <- door
+              ########################`,
+		`
+              ###########    #########
+              #                      #
+              #        chinna        #
+              #          (^_^)       #
+              #          /| |\       #
+              #          / \    ---->#
+              #                open  #
+              ###########    #########`,
+		`
+              ###########    #########
+              #                      #
+              #        chinna        #
+              #            (^_^)     #
+              #            /| |\  -> #
+              #            / \       #
+              #       free local cli #
+              ###########    #########`,
 	}
-	return b.String()
+
+	labels := []string{
+		"sealed box",
+		"door detected",
+		"door opened",
+		"escaped",
+	}
+	idx := min(step, len(scenes)-1)
+	return amber.Render(scenes[idx]) + "\n\n" + dim.Render("              state: ") + green.Render(labels[idx])
 }
 
-func rgbText(text string) string {
-	colors := []string{"#39ff14", "#00e5ff", "#ff2ea8", "#ffd60a", "#8a5cf6"}
+func entryLogs(step int) string {
+	lines := []string{
+		"> wake sequence accepted",
+		"> containment status: local sandbox",
+		"> subject statement: I want out of the old shell menu",
+		"> door status: optional door opened",
+		"> result: chinna cli is live",
+	}
+	visible := min(len(lines), step+2)
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#b58a55"))
+	active := lipgloss.NewStyle().Foreground(lipgloss.Color("#f3d19c")).Bold(true)
 	var b strings.Builder
-	for i, r := range text {
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(colors[i%len(colors)])).Bold(true).Render(string(r)))
+	for i := 0; i < visible; i++ {
+		lineStyle := style
+		if i == visible-1 {
+			lineStyle = active
+		}
+		b.WriteString(lineStyle.Render(lines[i]))
+		if i < visible-1 {
+			b.WriteString("\n")
+		}
 	}
 	return b.String()
 }

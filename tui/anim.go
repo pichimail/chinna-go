@@ -15,13 +15,9 @@ type EscapingAnim struct {
 func NewEscapingAnim() EscapingAnim {
 	return EscapingAnim{
 		frames: []string{
-			`[CONTAINMENT]   🤖 CHINNA`,
-			`╔════════════════════════════╗`,
-			`║  ████████░░░░░░░░  45%     ║`,
-			`╚════════════════════════════╝`,
-			`     🔥 *CRACK*`,
-			`        ↓`,
-			`   [ESCAPING...]`,
+			`chinna: containment breached`,
+			`local cli surface ready`,
+			`keyboard + pointer controls active`,
 		},
 	}
 }
