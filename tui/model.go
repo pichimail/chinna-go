@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"os/exec"
 	"strings"
 	"time"
 
@@ -21,7 +22,14 @@ type Model struct {
 	entryMode bool
 	entryDone bool
 	entryStep int
+	viewMode  string
+	selected  int
 	apiClient *APIClient
+}
+
+type commandDoneMsg struct {
+	Label string
+	Err   error
 }
 
 func InitialModel(client *APIClient) Model {
@@ -40,6 +48,7 @@ func InitialModel(client *APIClient) Model {
 		messages:  []Message{},
 		status:    "ready",
 		entryMode: true,
+		viewMode:  "home",
 		apiClient: client,
 	}
 }
@@ -72,18 +81,55 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "esc":
-			m.quitting = true
-			return m, tea.Quit
-		case "space":
-			if m.entryMode {
+		if m.entryMode {
+			switch msg.String() {
+			case "ctrl+c", "esc":
+				m.quitting = true
+				return m, tea.Quit
+			case "space", "enter":
 				m = m.finishEntry()
 				return m, nil
 			}
+		}
+
+		switch msg.String() {
+		case "ctrl+c", "esc":
+			if m.viewMode == "home" {
+				m.quitting = true
+				return m, tea.Quit
+			}
+			m.viewMode = "home"
+			return m, nil
+		case "q":
+			if m.viewMode == "home" {
+				m.quitting = true
+				return m, tea.Quit
+			}
+		case "h":
+			if m.viewMode != "chat" {
+				m.viewMode = "home"
+				return m, nil
+			}
+		case "up", "k":
+			if m.viewMode == "home" {
+				m.selected = (m.selected + len(menuItems()) - 1) % len(menuItems())
+				return m, nil
+			}
+		case "down", "j", "tab":
+			if m.viewMode == "home" {
+				m.selected = (m.selected + 1) % len(menuItems())
+				return m, nil
+			}
+		case "1", "2", "3", "4", "5", "6":
+			if m.viewMode == "home" {
+				m.selected = int(msg.String()[0] - '1')
+				return m.activateSelected()
+			}
 		case "enter":
-			if m.entryMode {
-				m = m.finishEntry()
+			if m.viewMode == "home" {
+				return m.activateSelected()
+			}
+			if m.viewMode != "chat" {
 				return m, nil
 			}
 			input := strings.TrimSpace(m.input.Value())
@@ -111,10 +157,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.SetHeight(max(12, msg.Height-13))
 		m.input.SetWidth(max(70, msg.Width-6))
 
+	case tea.MouseClickMsg:
+		if m.entryMode {
+			m = m.finishEntry()
+			return m, nil
+		}
+		if m.viewMode == "home" {
+			mouse := msg.Mouse()
+			idx := mouse.Y - menuTopForHeight(m.height)
+			if idx >= 0 && idx < len(menuItems()) {
+				m.selected = idx
+				return m.activateSelected()
+			}
+		}
+
 	case AIResponseMsg:
 		m.messages = append(m.messages, Message{Role: "assistant", Content: msg.Content, Timestamp: time.Now()})
 		m.viewport.SetContent(renderMessages(m.messages))
 		m.viewport.GotoBottom()
+
+	case commandDoneMsg:
+		if msg.Err != nil {
+			m = m.appendAssistant(msg.Label + " failed: " + msg.Err.Error())
+		} else {
+			m = m.appendAssistant(msg.Label + " completed.")
+		}
 
 	case systemCommandMsg:
 		var extra tea.Cmd
@@ -140,8 +207,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 	}
 
-	m.input, cmd = m.input.Update(msg)
-	cmds = append(cmds, cmd)
+	if m.viewMode == "chat" {
+		m.input, cmd = m.input.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 	m.viewport, cmd = m.viewport.Update(msg)
 	cmds = append(cmds, cmd)
 
@@ -160,10 +229,17 @@ func (m Model) View() tea.View {
 		return view
 	}
 
+	if m.viewMode == "home" {
+		view := tea.NewView(m.homeView())
+		view.AltScreen = true
+		view.MouseMode = tea.MouseModeCellMotion
+		return view
+	}
+
 	header := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#39ff14")).
 		Bold(true).
-		Render("  chinna ❯ v7.0 • containment breached")
+		Render("  chinna ❯ v7.0 • " + m.viewMode)
 
 	statusBar := lipgloss.NewStyle().
 		Background(lipgloss.Color("#1e1e1e")).
@@ -175,7 +251,7 @@ func (m Model) View() tea.View {
 
 	footer := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#6b7280")).
-		Render("  /help  /status  /clear  /config  ctrl+c to quit")
+		Render("  esc home  /help  /status  /clear  /config  ctrl+c quit")
 
 	view := tea.NewView(lipgloss.JoinVertical(lipgloss.Left,
 		header,
@@ -193,14 +269,172 @@ func (m Model) finishEntry() Model {
 	m.entryMode = false
 	m.entryDone = true
 	m.entryStep = 0
-	m.messages = []Message{{
-		Role:    "assistant",
-		Content: "Containment breached. Chinna TUI is live.",
-	}}
+	m.viewMode = "home"
+	m.messages = []Message{}
+	m.viewport.SetContent("")
+	return m
+}
+
+func menuItems() []struct {
+	Icon  string
+	Title string
+	Desc  string
+	Key   string
+} {
+	return []struct {
+		Icon  string
+		Title string
+		Desc  string
+		Key   string
+	}{
+		{"◉", "Dashboard", "Open premium web UI in browser", "1"},
+		{"◆", "AI Chat", "Free model chat inside this terminal", "2"},
+		{"✦", "AI Pro", "Claude / GPT via OpenRouter", "3"},
+		{"▲", "Run Project", "Auto-detect stack and start", "4"},
+		{"●", "Doctor", "Full system health check", "5"},
+		{"■", "Project Audit", "Git, npm, disk scan report", "6"},
+	}
+}
+
+func (m Model) activateSelected() (tea.Model, tea.Cmd) {
+	items := menuItems()
+	if m.selected < 0 || m.selected >= len(items) {
+		m.selected = 0
+	}
+
+	switch m.selected {
+	case 0:
+		m.viewMode = "chat"
+		m = m.appendAssistant("Opening dashboard at http://127.0.0.1:7777")
+		return m, tea.ExecProcess(exec.Command("sh", "-lc", "open http://127.0.0.1:7777 >/dev/null 2>&1 || xdg-open http://127.0.0.1:7777 >/dev/null 2>&1"), func(err error) tea.Msg {
+			return commandDoneMsg{Label: "Dashboard launch", Err: err}
+		})
+	case 1:
+		m.viewMode = "chat"
+		m = m.appendAssistant("AI Chat ready. Type a prompt, or use /help.")
+	case 2:
+		m.viewMode = "chat"
+		m = m.appendAssistant("AI Pro selected. Configure OpenRouter keys in settings, then type your prompt.")
+	case 3:
+		m.viewMode = "chat"
+		m = m.appendAssistant("Run Project selected. Use the legacy command from another tab: chinna run")
+	case 4:
+		m.viewMode = "chat"
+		m = m.appendAssistant("Doctor selected. Use: chinna doctor")
+	case 5:
+		m.viewMode = "chat"
+		m = m.appendAssistant("Project Audit selected. Use: chinna audit")
+	}
+	m.input.Focus()
+	return m, nil
+}
+
+func (m Model) appendAssistant(content string) Model {
+	m.messages = append(m.messages, Message{Role: "assistant", Content: content, Timestamp: time.Now()})
 	m.viewport.SetContent(renderMessages(m.messages))
 	m.viewport.GotoBottom()
-	m.input.Focus()
 	return m
+}
+
+func (m Model) homeView() string {
+	width := max(90, m.width)
+	height := max(30, m.height)
+	panelWidth := min(88, max(76, width-10))
+	items := menuItems()
+
+	title := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#39ff14")).
+		Bold(true).
+		Render("chinna")
+	tag := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#ff7a18")).
+		Bold(true).
+		Render("CONTAINMENT BREACHED")
+	subtitle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#9ca3af")).
+		Render("select with ↑↓, numbers, enter, or mouse click")
+
+	var rows []string
+	for i, item := range items {
+		active := i == m.selected
+		pointer := "  "
+		if active {
+			pointer = "▸ "
+		}
+		number := lipgloss.NewStyle().Foreground(lipgloss.Color("#6b7280")).Render("#" + item.Key)
+		iconColor := "#39ff14"
+		titleColor := "#e5e7eb"
+		descColor := "#6b7280"
+		borderColor := "#2b2b2b"
+		bg := "#111111"
+		if active {
+			iconColor = "#ff7a18"
+			titleColor = "#ffffff"
+			descColor = "#75baff"
+			borderColor = "#39ff14"
+			bg = "#151a10"
+		}
+		line := lipgloss.JoinHorizontal(lipgloss.Top,
+			lipgloss.NewStyle().Width(3).Foreground(lipgloss.Color(iconColor)).Bold(active).Render(pointer),
+			lipgloss.NewStyle().Width(3).Foreground(lipgloss.Color(iconColor)).Bold(true).Render(item.Icon),
+			lipgloss.NewStyle().Width(18).Foreground(lipgloss.Color(titleColor)).Bold(true).Render(item.Title),
+			lipgloss.NewStyle().Width(39).Foreground(lipgloss.Color(descColor)).Render(item.Desc),
+			number,
+		)
+		rows = append(rows, lipgloss.NewStyle().
+			Width(panelWidth-8).
+			Padding(0, 1).
+			Border(lipgloss.NormalBorder(), false, false, false, true).
+			BorderForeground(lipgloss.Color(borderColor)).
+			Background(lipgloss.Color(bg)).
+			Render(line))
+	}
+
+	tabs := lipgloss.JoinHorizontal(lipgloss.Top,
+		lipgloss.NewStyle().Foreground(lipgloss.Color("#39ff14")).Bold(true).Render("Home"),
+		"    ",
+		lipgloss.NewStyle().Foreground(lipgloss.Color("#777777")).Render("System"),
+		"    ",
+		lipgloss.NewStyle().Foreground(lipgloss.Color("#777777")).Render("Developer"),
+		"    ",
+		lipgloss.NewStyle().Foreground(lipgloss.Color("#777777")).Render("Settings"),
+	)
+	footer := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#8b949e")).
+		Render("↑↓ move   ↵ run   mouse click   h home   q quit")
+	rule := lipgloss.NewStyle().Foreground(lipgloss.Color("#333333")).Render(strings.Repeat("─", panelWidth-6))
+
+	body := lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.JoinHorizontal(lipgloss.Top, title, "  ", tag),
+		subtitle,
+		"",
+		lipgloss.JoinVertical(lipgloss.Left, rows...),
+		"",
+		rule,
+		tabs,
+		rule,
+		footer,
+	)
+
+	panelHeight := lipgloss.Height(body) + 2
+	_ = panelHeight
+
+	panel := lipgloss.NewStyle().
+		Width(panelWidth).
+		Padding(1, 3).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#3d3d3d")).
+		Background(lipgloss.Color("#0b0b0b")).
+		Render(body)
+
+	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, panel)
+}
+
+func menuTopForHeight(height int) int {
+	// The home panel is centered. The first selectable row is after border,
+	// top padding, title, subtitle, and one spacer.
+	panelHeight := 18
+	return (max(30, height)-panelHeight)/2 + 4
 }
 
 func (m Model) entryView() string {
