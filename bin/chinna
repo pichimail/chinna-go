@@ -1381,6 +1381,41 @@ dispatch_intent() {
 # Legacy alias — interactive hub replaced the numbered menu
 show_menu() { chinna_hub; }
 
+run_go_tui() {
+    if [ ! -t 0 ] || [ ! -t 1 ]; then
+        show_help
+        return 0
+    fi
+
+    if ! command -v go >/dev/null 2>&1; then
+        warn "Go toolchain not installed; falling back to the legacy shell hub"
+        chinna_hub
+        return 0
+    fi
+
+    if [ ! -f "$REPO_ROOT/go.mod" ]; then
+        warn "Go module not initialized; falling back to the legacy shell hub"
+        chinna_hub
+        return 0
+    fi
+
+    (cd "$REPO_ROOT" && go run -buildvcs=false ./cmd/chinna-tui)
+}
+
+run_go_escape() {
+    if ! command -v go >/dev/null 2>&1; then
+        warn "Go toolchain not installed; cannot run escape animation"
+        return 1
+    fi
+
+    if [ ! -f "$REPO_ROOT/go.mod" ]; then
+        warn "Go module not initialized; cannot run escape animation"
+        return 1
+    fi
+
+    (cd "$REPO_ROOT" && go run -buildvcs=false ./cmd/chinna-escape)
+}
+
 # ═══════════════════════════════════════════════════════════════
 # HELP
 # ═══════════════════════════════════════════════════════════════
@@ -1388,7 +1423,9 @@ show_help() {
     banner
     cat <<HELP
    ${BOLD}CHINNA v7 — Grok-style CLI${RESET}
-     chinna                   Interactive hub (mouse + keyboard)
+     chinna                   Legacy shell hub (mouse + keyboard)
+     chinna tui               Bubble Tea conversational TUI
+     chinna escape            ASCII containment-break animation
      chinna <command>         Run directly
      chinna "anything"        Telugu · Hindi · English · Tinglish
 
@@ -1475,12 +1512,18 @@ main() {
     [ "$cmd" = "_daemon_loop" ] && { daemon_loop; exit 0; }
 
     case "$cmd" in
-        ""|menu|hub|tui)
+        ""|menu|hub)
             if [ ! -t 0 ]; then
                 show_help
                 return 0
             fi
             chinna_hub
+            ;;
+        tui)
+            run_go_tui
+            ;;
+        escape)
+            run_go_escape
             ;;
         clean|cleanmymac)           cmd_clean ;;
         "clean mac"|"clean-mac")    cmd_clean_mac ;;
