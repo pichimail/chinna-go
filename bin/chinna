@@ -1381,6 +1381,18 @@ dispatch_intent() {
 # Legacy alias — interactive hub replaced the numbered menu
 show_menu() { chinna_hub; }
 
+go_tui_root() {
+    if [ -f "$CHINNA_HOME/go.mod" ] && [ -d "$CHINNA_HOME/cmd/chinna-tui" ] && [ -d "$CHINNA_HOME/tui" ]; then
+        printf '%s\n' "$CHINNA_HOME"
+        return 0
+    fi
+    if [ -f "$REPO_ROOT/go.mod" ] && [ -d "$REPO_ROOT/cmd/chinna-tui" ] && [ -d "$REPO_ROOT/tui" ]; then
+        printf '%s\n' "$REPO_ROOT"
+        return 0
+    fi
+    return 1
+}
+
 run_go_tui() {
     if [ ! -t 0 ] || [ ! -t 1 ]; then
         show_help
@@ -1388,18 +1400,19 @@ run_go_tui() {
     fi
 
     if ! command -v go >/dev/null 2>&1; then
-        warn "Go toolchain not installed; falling back to the legacy shell hub"
+        warn "Go toolchain not installed; falling back to the shell hub"
         chinna_hub
         return 0
     fi
 
-    if [ ! -f "$REPO_ROOT/go.mod" ]; then
-        warn "Go module not initialized; falling back to the legacy shell hub"
+    local root
+    root="$(go_tui_root)" || {
+        warn "TUI files missing; falling back to the shell hub"
         chinna_hub
         return 0
-    fi
+    }
 
-    (cd "$REPO_ROOT" && go run -buildvcs=false ./cmd/chinna-tui)
+    (cd "$root" && go run -buildvcs=false ./cmd/chinna-tui)
 }
 
 run_go_escape() {
@@ -1408,12 +1421,13 @@ run_go_escape() {
         return 1
     fi
 
-    if [ ! -f "$REPO_ROOT/go.mod" ]; then
-        warn "Go module not initialized; cannot run escape animation"
+    local root
+    root="$(go_tui_root)" || {
+        warn "TUI files missing; cannot run escape animation"
         return 1
-    fi
+    }
 
-    (cd "$REPO_ROOT" && go run -buildvcs=false ./cmd/chinna-escape)
+    (cd "$root" && go run -buildvcs=false ./cmd/chinna-escape)
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -1423,8 +1437,8 @@ show_help() {
     banner
     cat <<HELP
    ${BOLD}CHINNA v7 — Grok-style CLI${RESET}
-     chinna                   Legacy shell hub (mouse + keyboard)
-     chinna tui               Bubble Tea conversational TUI
+     chinna                   Bubble Tea conversational TUI
+     chinna hub               Legacy shell hub (mouse + keyboard)
      chinna escape            ASCII containment-break animation
      chinna <command>         Run directly
      chinna "anything"        Telugu · Hindi · English · Tinglish
@@ -1512,7 +1526,10 @@ main() {
     [ "$cmd" = "_daemon_loop" ] && { daemon_loop; exit 0; }
 
     case "$cmd" in
-        ""|menu|hub)
+        "")
+            run_go_tui
+            ;;
+        menu|hub)
             if [ ! -t 0 ]; then
                 show_help
                 return 0

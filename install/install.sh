@@ -106,7 +106,7 @@ step_brew_shellenv() {
 
 step_install_clis() {
     command -v brew >/dev/null 2>&1 || { echo "    ⚠ brew not found, skipping CLI installs"; return 0; }
-    local tools=(git jq gh ripgrep fd fzf tmux watchman tree htop)
+    local tools=(git go jq gh ripgrep fd fzf tmux watchman tree htop)
     echo "    Installing CLI tools: ${tools[*]}"
     brew install "${tools[@]}" 2>/dev/null | grep -E "✓|already|Pouring" | head -6 || true
 }
@@ -158,6 +158,19 @@ step_write_libs() {
             echo "      ✓ lib/plugins/${plugin}.sh" || \
             echo "      ⚠ lib/plugins/${plugin}.sh (skipped)"
     done
+}
+
+step_write_go_tui() {
+    echo "    ↻ Force-refreshing Go TUI files..."
+    mkdir -p "${CHINNA}/cmd/chinna-tui" "${CHINNA}/cmd/chinna-escape" "${CHINNA}/tui"
+    copy_or_fetch "go.mod" "${CHINNA}/go.mod"
+    copy_or_fetch "go.sum" "${CHINNA}/go.sum"
+    copy_or_fetch "cmd/chinna-tui/main.go" "${CHINNA}/cmd/chinna-tui/main.go"
+    copy_or_fetch "cmd/chinna-escape/main.go" "${CHINNA}/cmd/chinna-escape/main.go"
+    for f in anim.go api.go escape.go model.go status.go types.go; do
+        copy_or_fetch "tui/${f}" "${CHINNA}/tui/${f}"
+    done
+    echo "    ✓ Go TUI updated → ~/.chinna"
 }
 
 step_write_extension() {
@@ -271,6 +284,7 @@ step_write_server
 step_write_dashboard
 step_write_whatsapp_bridge
 step_write_libs
+step_write_go_tui
 step_write_bin
 step_write_defaults
 
