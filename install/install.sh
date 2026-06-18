@@ -167,7 +167,7 @@ step_write_go_tui() {
     copy_or_fetch "go.sum" "${CHINNA}/go.sum"
     copy_or_fetch "cmd/chinna-tui/main.go" "${CHINNA}/cmd/chinna-tui/main.go"
     copy_or_fetch "cmd/chinna-escape/main.go" "${CHINNA}/cmd/chinna-escape/main.go"
-    for f in anim.go api.go escape.go model.go status.go types.go; do
+    for f in anim.go api.go chat.go escape.go layout.go model.go models.go status.go types.go; do
         copy_or_fetch "tui/${f}" "${CHINNA}/tui/${f}"
     done
     echo "    ✓ Go TUI updated → ~/.chinna"

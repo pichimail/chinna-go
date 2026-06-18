@@ -1408,12 +1408,22 @@ dispatch_intent() {
 # Legacy alias — interactive hub replaced the numbered menu
 show_menu() { chinna_hub; }
 
+go_tui_tree_ready() {
+    local root="${1:-}"
+    [ -n "$root" ] || return 1
+    [ -f "$root/go.mod" ] || return 1
+    [ -f "$root/cmd/chinna-tui/main.go" ] || return 1
+    for f in anim.go api.go chat.go escape.go layout.go model.go models.go status.go types.go; do
+        [ -f "$root/tui/$f" ] || return 1
+    done
+}
+
 go_tui_root() {
-    if [ -f "$CHINNA_HOME/go.mod" ] && [ -d "$CHINNA_HOME/cmd/chinna-tui" ] && [ -d "$CHINNA_HOME/tui" ]; then
+    if go_tui_tree_ready "$CHINNA_HOME"; then
         printf '%s\n' "$CHINNA_HOME"
         return 0
     fi
-    if [ -f "$REPO_ROOT/go.mod" ] && [ -d "$REPO_ROOT/cmd/chinna-tui" ] && [ -d "$REPO_ROOT/tui" ]; then
+    if go_tui_tree_ready "$REPO_ROOT"; then
         printf '%s\n' "$REPO_ROOT"
         return 0
     fi

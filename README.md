@@ -22,6 +22,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/ins
 
 This command **always** gives you the latest version. Run it again any time to upgrade — your data, keys, and configs are never touched.
 
+If `chinna` ever prints Go compile errors or looks half-updated, run the same command again. The installer force-refreshes the CLI, Go TUI source, dashboard, and server while preserving `~/.chinna/api_keys.json`, models, history, and local config.
+
 After install, open a new terminal tab (or `source ~/.zshrc`) and run:
 
 ```bash
@@ -58,6 +60,7 @@ We rebuilt the entire terminal experience to feel exactly like a premium Grok-st
 ```bash
 chinna                # escape intro (~1:10) + interactive TUI
 chinna escape         # standalone escape animation only
+chinna code           # direct conversational terminal prompt, skips intro
 chinna --version
 chinna dashboard
 chinna clean

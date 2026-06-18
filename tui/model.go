@@ -51,6 +51,7 @@ func InitialModel(client *APIClient) Model {
 	hp.Placeholder = "Ask Chinna anything… Mac · repos · run projects · localhost (Tab to menu)"
 	hp.SetWidth(112)
 	hp.SetHeight(2)
+	hp.Focus()
 
 	vp := viewport.New(viewport.WithWidth(112), viewport.WithHeight(22))
 	vp.SetContent("")
@@ -125,12 +126,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewMode = "home"
 			return m, nil
 		case "q":
-			if m.viewMode == "home" {
+			if m.viewMode == "home" && m.homeFocus == "menu" {
 				m.quitting = true
 				return m, tea.Quit
 			}
 		case "h":
-			if m.viewMode != "chat" {
+			if m.viewMode != "chat" && m.homeFocus == "menu" {
 				m.viewMode = "home"
 				m.homeFocus = "menu"
 				return m, nil
@@ -168,6 +169,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if text != "" {
 						return m.submitHomePrompt(text)
 					}
+					return m, nil
 				}
 				return m.activateSelected()
 			}
@@ -221,8 +223,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.viewMode == "home" {
 			if idx, ok := m.homeMenuIndexAt(mouse.X, mouse.Y); ok {
 				m.selected = idx
+				m.homeFocus = "menu"
+				m.homePrompt.Blur()
 				return m.activateSelected()
 			}
+			m.homeFocus = "prompt"
+			m.homePrompt.Focus()
 			return m, nil
 		}
 		if m.viewMode == "chat" {
@@ -546,9 +552,13 @@ func (m Model) homeView() (panel string, placed string) {
 		"    ",
 		lipgloss.NewStyle().Foreground(lipgloss.Color("#777777")).Render("Settings"),
 	)
+	footerText := "typing active   ↵ send   Tab menu   mouse select   ctrl+c quit"
+	if m.homeFocus == "menu" {
+		footerText = "↑↓ move   ↵ run   1-6 shortcuts   Tab prompt   q quit"
+	}
 	footer := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#8b949e")).
-		Render("↑↓ menu   Tab prompt   ↵ send/run   mouse   q quit")
+		Render(footerText)
 	rule := lipgloss.NewStyle().Foreground(lipgloss.Color("#333333")).Render(strings.Repeat("─", panelWidth-6))
 
 	promptLabel := lipgloss.NewStyle().
