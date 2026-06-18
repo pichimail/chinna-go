@@ -245,14 +245,15 @@ func sealedBoxArt(step int) string {
 }
 
 func scanBoxArt(step int) string {
-	bars := strings.Repeat("█", (step%8)+1)
+	barCount := (step % 8) + 1
+	bars := strings.Repeat("█", barCount)
 	return fmt.Sprintf(`
         ╔══════════════════════════════════╗
         ║  MAC SCAN  %s%s
         ║  repos · browser · ~/.chinna     ║
         ║  chinna (¬_¬) indexing your Mac  ║
         ║  Telugu/Hindi/Tinglish packs OK  ║
-        ╚══════════════════════════════════╝`, bars, strings.Repeat(" ", 8-len(bars)))
+        ╚══════════════════════════════════╝`, bars, strings.Repeat(" ", 8-barCount))
 }
 
 func crackingBoxArt(step int) string {
