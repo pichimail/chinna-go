@@ -1984,12 +1984,13 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <div class="outbox" id="audit-out" style="display:none"></div>
         </div>
       </div>
-<div class="view" id="view-models"><div class="vhead"><h2>Models &amp; AI</h2><span class="sub">Switch AI model · Automation mode</span></div>
+<div class="view" id="view-models"><div class="vhead"><h2>Models &amp; AI</h2><span class="sub">Default chinna/free · add your key for paid models</span></div>
         <div class="vbody">
           <div class="navlabel">Active Model</div>
           <div class="infocard" style="margin-bottom:14px">
             <div class="k">Currently using</div>
             <div class="v" id="model-active">—</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:6px">Free chatting starts on <strong>chinna/free</strong> (OpenRouter free tier). Switch presets or enter any OpenRouter / OpenAI model id below.</div>
           </div>
 
           <div class="navlabel">Presets</div>
@@ -1997,7 +1998,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 
           <div class="navlabel">Custom model</div>
           <div style="display:flex;gap:8px;margin-bottom:18px">
-            <input class="field" id="model-custom" placeholder="e.g. anthropic/claude-3-haiku" style="flex:1;margin:0">
+            <input class="field" id="model-custom" placeholder="e.g. openrouter/free, anthropic/claude-3-haiku, gpt-4o" style="flex:1;margin:0">
             <button type="button" class="bigbtn" onclick="setCustomModel()">Set</button>
           </div>
 
@@ -2091,11 +2092,11 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
                 </div>
                 <div class="settings-field-grid">
                   <div class="full settings-help" id="ai-key-status" role="status">
-                    Add at least one AI key below. OpenRouter enables OpenRouter model IDs; OpenAI enables GPT and voice transcription. Adding both gives fallback coverage across the app.
+                    Start free with <strong>chinna/free</strong> — paste an OpenRouter key below (free at openrouter.ai). OpenAI enables GPT models and voice. Add your own keys for paid models; chinna/free needs only an OpenRouter key.
                   </div>
                   <div class="full">
-                    <div class="navlabel" style="margin-left:0">OpenRouter key — optional AI provider</div>
-                    <input class="field" id="set-or" type="password" autocomplete="new-password" placeholder="sk-or-v1-...">
+                    <div class="navlabel" style="margin-left:0">OpenRouter key — powers chinna/free &amp; other OpenRouter models</div>
+                    <input class="field" id="set-or" type="password" autocomplete="new-password" placeholder="sk-or-v1-... (get free key at openrouter.ai)">
                   </div>
                   <div class="full">
                     <div class="navlabel" style="margin-left:0">OpenAI key — optional AI provider</div>
@@ -6329,15 +6330,29 @@ async function runAudit(){
 }
 
 // ── MODELS ───────────────────────────────────────────────────
+function modelDisplayName(id){
+  const map={'openrouter/free':'chinna/free','openrouter/auto':'chinna/auto'};
+  return map[id]||id;
+}
+function syncModelPills(label){
+  const act=document.getElementById('model-active');
+  const side=document.getElementById('sidebarModelName');
+  const top=document.getElementById('top-model-pill');
+  if(act) act.textContent=label||'—';
+  if(side) side.textContent=label||'model';
+  if(top) top.textContent=label||'model';
+}
 async function loadModels(){
   const d=await api('models');
-  const act=document.getElementById('model-active');
-  if(act) act.textContent=d.active||'—';
+  const label=d.active_display||modelDisplayName(d.active)||'—';
+  syncModelPills(label);
   const pres=document.getElementById('model-presets');
   if(pres && d.presets){
-    pres.innerHTML=Object.entries(d.presets).map(([k,v])=>
-      `<button type="button" class="bigbtn" style="font-size:11px" onclick="setModelPreset('${k}')">${k}</button>`
-    ).join('');
+    pres.innerHTML=Object.entries(d.presets).map(([k,v])=>{
+      const name=(d.preset_labels&&d.preset_labels[k])||modelDisplayName(v)||k;
+      const active=d.active===v?' solid':'';
+      return `<button type="button" class="bigbtn${active}" style="font-size:11px" onclick="setModelPreset('${k}')" title="${v}">${name}</button>`;
+    }).join('');
   }
   // Also load automation
   try{
@@ -6348,18 +6363,24 @@ async function loadModels(){
 async function setModelPreset(preset){
   const d=await api('model-set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preset})});
   if(d.ok){
-    const act=document.getElementById('model-active');
-    if(act) act.textContent=d.active;
-    toast('Model: '+d.active);
+    syncModelPills(d.active_display||modelDisplayName(d.active));
+    toast('Model: '+(d.active_display||modelDisplayName(d.active)));
+    loadModels();
   } else {
     toast('Error: '+d.error);
   }
 }
 async function setCustomModel(){
-  const m=document.getElementById('model-custom')?.value?.trim();
+  let m=document.getElementById('model-custom')?.value?.trim();
   if(!m){toast('Enter a model string');return;}
+  if(m==='chinna/free') m='openrouter/free';
+  if(m==='chinna/auto') m='openrouter/auto';
   const d=await api('model-set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({custom:m})});
-  if(d.ok){const act=document.getElementById('model-active');if(act)act.textContent=d.active;toast('Model set: '+d.active);}
+  if(d.ok){
+    syncModelPills(d.active_display||modelDisplayName(d.active));
+    toast('Model set: '+(d.active_display||modelDisplayName(d.active)));
+    loadModels();
+  }
   else toast('Error: '+d.error);
 }
 async function toggleAutomation(){

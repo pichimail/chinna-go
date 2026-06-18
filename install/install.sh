@@ -237,7 +237,7 @@ ENV
     fi
     if [ ! -f "${CHINNA}/models" ]; then
         cat > "${CHINNA}/models" << 'MODELS'
-ACTIVE_MODEL="openrouter/auto"
+ACTIVE_MODEL="openrouter/free"
 MODEL_coder="anthropic/claude-3.5-sonnet"
 MODEL_reasoning="anthropic/claude-3.5-sonnet"
 MODEL_small="google/gemini-2.5-flash"
@@ -250,7 +250,19 @@ MODEL_gemini_flash="google/gemini-2.5-flash"
 MODEL_auto="openrouter/auto"
 MODELS
         chmod 600 "${CHINNA}/models"
-        echo "    ✓ models file created"
+        echo "    ✓ models file created (default: chinna/free)"
+    else
+        # Migrate legacy defaults to openrouter/free for free-tier chatting
+        if grep -q 'ACTIVE_MODEL="openrouter/auto"' "${CHINNA}/models" 2>/dev/null \
+           || grep -q 'ACTIVE_MODEL="meta-llama/llama-3.3-70b-instruct:free"' "${CHINNA}/models" 2>/dev/null \
+           || grep -q 'ACTIVE_MODEL="openai/gpt-4o-mini"' "${CHINNA}/models" 2>/dev/null; then
+            sed -i '' 's/^ACTIVE_MODEL=.*/ACTIVE_MODEL="openrouter\/free"/' "${CHINNA}/models" 2>/dev/null \
+                || sed -i 's/^ACTIVE_MODEL=.*/ACTIVE_MODEL="openrouter\/free"/' "${CHINNA}/models"
+            echo "    ✓ default model migrated to chinna/free (openrouter/free)"
+        fi
+        if ! grep -q '^MODEL_free=' "${CHINNA}/models" 2>/dev/null; then
+            echo 'MODEL_free="openrouter/free"' >> "${CHINNA}/models"
+        fi
     fi
 }
 

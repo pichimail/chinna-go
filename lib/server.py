@@ -407,7 +407,25 @@ def read_models_file_active():
         pass
     return ''
 
-def resolve_active_model(keys=None, fallback='openrouter/auto'):
+def model_display_name(model_id):
+    """Map backend model ids to Chinna-facing labels (UI only)."""
+    model_id = safe_text(model_id)
+    aliases = {
+        'openrouter/free': 'chinna/free',
+        'openrouter/auto': 'chinna/auto',
+    }
+    return aliases.get(model_id, model_id)
+
+def resolve_model_id(label):
+    """Map UI labels back to provider model ids."""
+    label = safe_text(label)
+    reverse = {
+        'chinna/free': 'openrouter/free',
+        'chinna/auto': 'openrouter/auto',
+    }
+    return reverse.get(label, label)
+
+def resolve_active_model(keys=None, fallback='openrouter/free'):
     keys = keys or {}
     candidates = [
         keys.get('ACTIVE_MODEL'),
@@ -502,7 +520,7 @@ def provider_chat(messages, model='', tools=None, prefer_openrouter=True, max_to
         return None, 'no_key'
     errors = []
     if prefer_openrouter and has_openrouter:
-        base_model = model or keys.get('ACTIVE_MODEL') or 'meta-llama/llama-3.3-70b-instruct:free'
+        base_model = model or keys.get('ACTIVE_MODEL') or 'openrouter/free'
         candidates = [
             base_model,
             keys.get('ACTIVE_MODEL', ''),
@@ -526,7 +544,7 @@ def provider_chat(messages, model='', tools=None, prefer_openrouter=True, max_to
             return msg, used
         errors.append(used)
     if not prefer_openrouter and has_openrouter:
-        return openrouter_chat(messages, model=model or keys.get('ACTIVE_MODEL') or 'meta-llama/llama-3.3-70b-instruct:free', tools=tools, max_tokens=max_tokens)
+        return openrouter_chat(messages, model=model or keys.get('ACTIVE_MODEL') or 'openrouter/free', tools=tools, max_tokens=max_tokens)
     return None, '; '.join(errors[-3:]) or 'provider_failed'
 
 def forge_ai_fn(prompt):
@@ -3124,6 +3142,7 @@ fi
     def list_models(self):
         models_file = os.path.join(CHINNA_HOME, "models")
         presets = {}
+        preset_labels = {}
         active = resolve_active_model(load_keys())
         try:
             if os.path.exists(models_file):
@@ -3131,17 +3150,25 @@ fi
                     line = line.strip()
                     if line.startswith("MODEL_"):
                         k, v = line.split("=",1)
-                        presets[k.replace("MODEL_","")] = v.strip().strip('"')
+                        key = k.replace("MODEL_","")
+                        model_id = v.strip().strip('"')
+                        presets[key] = model_id
+                        preset_labels[key] = model_display_name(model_id)
         except:
             pass
-        return {"active": active, "presets": presets}
+        return {
+            "active": active,
+            "active_display": model_display_name(active),
+            "presets": presets,
+            "preset_labels": preset_labels,
+        }
 
     def model_set_cmd(self, preset, custom=''):
         models_file = os.path.join(CHINNA_HOME, "models")
         try:
             presets = self.list_models()["presets"]
             if custom:
-                new_model = custom.strip()
+                new_model = resolve_model_id(custom.strip())
             elif preset in presets:
                 new_model = presets[preset]
             else:
@@ -3167,7 +3194,12 @@ fi
                 lines.append(f'ACTIVE_MODEL="{new_model}"\n')
             with open(models_file, "w") as f:
                 f.writelines(lines)
-            return {"ok": True, "active": new_model, "preset": preset or "custom"}
+            return {
+                "ok": True,
+                "active": new_model,
+                "active_display": model_display_name(new_model),
+                "preset": preset or "custom",
+            }
         except Exception as e:
             return {"error": str(e)}
 

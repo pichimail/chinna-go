@@ -77,15 +77,16 @@ EOF
 # Chinna AI Model Presets
 # Switch with: chinna model-set <preset>
 
-ACTIVE_MODEL="openai/gpt-4o-mini"
+ACTIVE_MODEL="openrouter/free"
 
 # Presets (used by chinna ai / free / pro)
-MODEL_coder="openai/gpt-4o"
+MODEL_coder="anthropic/claude-3.5-sonnet"
 MODEL_reasoning="anthropic/claude-3.5-sonnet"
-MODEL_small="openai/gpt-4o-mini"
-MODEL_gemma="google/gemma-2-9b-it:free"
-MODEL_llama70="meta-llama/llama-3.3-70b-instruct:free"
-MODEL_free="meta-llama/llama-3.3-70b-instruct:free"
+MODEL_small="google/gemini-2.5-flash"
+MODEL_gemma="google/gemini-2.5-flash"
+MODEL_llama70="openrouter/free"
+MODEL_free="openrouter/free"
+MODEL_auto="openrouter/auto"
 MODEL_sonnet4="anthropic/claude-3.5-sonnet"
 MODEL_opus4="anthropic/claude-3-opus"
 MODEL_haiku4="anthropic/claude-3-haiku"
@@ -124,7 +125,12 @@ chinna_model_set() {
     chinna_setenv "$CHINNA_MODELS_FILE" "ACTIVE_MODEL" "$new_model"
     export ACTIVE_MODEL="$new_model"
 
-    ok "Active model set to: $new_model (preset: $preset)"
+    local display="$new_model"
+    case "$new_model" in
+        openrouter/free) display="chinna/free" ;;
+        openrouter/auto) display="chinna/auto" ;;
+    esac
+    ok "Active model set to: $display (preset: $preset)"
 }
 
 # ────────────────────────────────────────────────────────────────

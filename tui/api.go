@@ -31,18 +31,30 @@ func LoadAPIClient() *APIClient {
 		HomeDir:    home,
 		ConfigPath: filepath.Join(home, ".chinna", "api_keys.json"),
 		Provider:   "openrouter",
-		Model:      "openrouter/free",
+		Model:      readActiveModel(home),
 	}
 
 	if data, err := os.ReadFile(client.ConfigPath); err == nil {
-		client.Ready = len(strings.TrimSpace(string(data))) > 0
 		var cfg map[string]any
 		if json.Unmarshal(data, &cfg) == nil {
+			if v, ok := cfg["OPENROUTER_API_KEY"].(string); ok && strings.TrimSpace(v) != "" {
+				client.Ready = true
+			}
 			if v, ok := cfg["provider"].(string); ok && v != "" {
 				client.Provider = v
 			}
-			if v, ok := cfg["model"].(string); ok && v != "" {
-				client.Model = v
+		}
+	}
+
+	envPath := filepath.Join(home, ".chinna", "env")
+	if b, err := os.ReadFile(envPath); err == nil {
+		for _, line := range strings.Split(string(b), "\n") {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "OPENROUTER_API_KEY=") {
+				v := strings.Trim(strings.TrimPrefix(line, "OPENROUTER_API_KEY="), `"'`)
+				if v != "" {
+					client.Ready = true
+				}
 			}
 		}
 	}
@@ -66,7 +78,7 @@ func sendAIMessage(client *APIClient, prompt string) tea.Cmd {
 		}
 
 		return AIResponseMsg{
-			Content: "Stubbed response from " + provider + " / " + model + ": " + prompt,
+			Content: "Stubbed response from " + provider + " / " + DisplayModelName(model) + ": " + prompt,
 		}
 	}
 }

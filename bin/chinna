@@ -1047,7 +1047,12 @@ cmd_doctor() {
     [ -n "${OPENROUTER_API_KEY:-}" ] && ok "OpenRouter key set" || warn "OpenRouter key missing → chinna config openrouter"
     [ -n "${ANTHROPIC_API_KEY:-}" ]  && ok "Anthropic key set"  || info "Anthropic optional"
     [ -n "${OPENAI_API_KEY:-}" ]     && ok "OpenAI key set"     || info "OpenAI optional (voice + fallback)"
-    echo "  Active model:  ${ACTIVE_MODEL:-<not set>}"
+    local _model_display="${ACTIVE_MODEL:-<not set>}"
+    case "$_model_display" in
+        openrouter/free) _model_display="chinna/free" ;;
+        openrouter/auto) _model_display="chinna/auto" ;;
+    esac
+    echo "  Active model:  ${_model_display}"
 
     section "Automation & Dashboard"
     echo "  Automation mode: ${APPAUTOMATIONMODE:-off}"
