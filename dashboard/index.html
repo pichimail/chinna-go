@@ -9,6 +9,7 @@ if (window.location.protocol === 'file:') {
 }
 </script>
 <style>
+/* Hallmark · macrostructure: Mission Control Widget Board · tone: technical-austere · anchor hue: phosphor */
 /* Apple San Francisco (SF Pro / California) — native Mac system font only */
 
 :root{--bg:#080808;--s0:#0d0d0f;--s1:#111114;--s2:#181819;--s3:#202023;--line:#1c1c1f;--line2:#262629;--line3:#333337;--acc:#baff29;--acc2:#e84118;--acc-bg:rgba(186,255,41,.08);--acc-bd:rgba(186,255,41,.2);--accr:186,255,41;--t1:#ffffff;--t2:rgba(240,240,242,.82);--t3:rgba(240,240,242,.58);--t4:rgba(240,240,242,.42);--green:#4ade80;--red:#f87171;--amber:#fbbf24;--blue:#60a5fa;--r:4px;--r-sm:3px;--r-lg:8px;--sidebar-w:220px;--right-w:380px;--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;--font-mono:"SF Mono",ui-monospace,Menlo,"Courier New",monospace;--ease:cubic-bezier(.2,.8,.2,1)}
@@ -345,6 +346,78 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 .ov-stat.ram .ov-stat-val{color:#60a5fa}
 .ov-stat.disk .ov-stat-val{color:#c084fc}
 .ov-stat.batt .ov-stat-val{color:#fbbf24}
+
+/* Premium Mac mission-control widget board */
+.home-board-wrap{padding:14px!important;background:
+  radial-gradient(circle at 18% 8%,rgba(186,255,41,.08),transparent 28%),
+  radial-gradient(circle at 78% 0,rgba(96,165,250,.08),transparent 30%),
+  var(--bg)!important}
+.home-command-row{display:flex;gap:8px;align-items:center;overflow-x:auto;padding:0 0 12px;scrollbar-width:none}
+.home-command-row::-webkit-scrollbar{display:none}
+.home-command-row button,.hub-link-grid button,.shortcut-tile,.music-controls button{border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));color:var(--t2);border-radius:12px;font-size:12px;font-weight:750;white-space:nowrap;transition:transform .14s var(--ease),border-color .14s var(--ease),background .14s var(--ease)}
+.home-command-row button{padding:8px 12px}
+.home-command-row button:hover,.hub-link-grid button:hover,.shortcut-tile:hover,.music-controls button:hover{transform:translateY(-1px);border-color:var(--line3);color:var(--t1);background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025))}
+.home-board{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:minmax(112px,auto);gap:12px;align-items:stretch}
+.mac-widget{grid-column:span 3;min-width:0;min-height:124px;padding:14px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));box-shadow:0 18px 45px rgba(0,0,0,.24);overflow:hidden;position:relative}
+.mac-widget::before{content:'';position:absolute;inset:-40% -30% auto auto;width:190px;height:190px;background:radial-gradient(circle,rgba(186,255,41,.12),transparent 66%);opacity:.9;pointer-events:none}
+.mac-widget>*{position:relative}
+.widget-wide{grid-column:span 6}
+.widget-tall{grid-column:span 6;grid-row:span 2}
+.hero-widget{background:
+  linear-gradient(135deg,rgba(186,255,41,.18),rgba(96,165,250,.08) 44%,rgba(232,65,24,.12)),
+  var(--s0)}
+.hero-widget h3{font-size:28px;line-height:1.02;letter-spacing:-.7px;margin:4px 0 8px;overflow-wrap:anywhere}
+.hero-widget p{font-size:12.5px;color:var(--t2);line-height:1.55;max-width:62ch}
+.widget-kicker{display:block;font-size:9.5px;font-weight:850;letter-spacing:1.25px;text-transform:uppercase;color:var(--acc);margin-bottom:5px}
+.widget-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.widget-head h3{font-size:16px;line-height:1.15;letter-spacing:-.25px}
+.hero-pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.hero-pills span{padding:5px 9px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(0,0,0,.2);font-size:11px;color:var(--t2);font-family:var(--font-mono)}
+.vitals-widget .ov-hero{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.vitals-widget .ov-stat{min-height:98px;border-radius:14px;padding:12px}
+.vitals-widget .ov-stat-val{font-size:28px}
+.mini-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mini-info-grid .infocard{background:rgba(0,0,0,.18)!important;border-color:var(--line)!important}
+.weather-widget{background:linear-gradient(145deg,rgba(37,99,235,.48),rgba(14,165,233,.22),rgba(0,0,0,.16))}
+.weather-main{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0}
+.weather-main span{font-size:34px}
+.weather-main strong{font-size:42px;line-height:1;letter-spacing:-1px}
+.weather-meta{font-size:11.5px;color:var(--t2);line-height:1.5}
+.shortcuts-widget{background:linear-gradient(135deg,rgba(186,255,41,.1),rgba(255,122,24,.08),rgba(255,255,255,.02))}
+.shortcut-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.shortcut-tile{min-height:68px;padding:10px;text-align:left;display:flex;flex-direction:column;justify-content:space-between}
+.shortcut-tile strong{font-size:12.5px}
+.shortcut-tile span{font-size:10.5px;color:var(--t3)}
+.kill-port-inline{display:flex;gap:8px;margin-top:10px}
+.music-widget{background:linear-gradient(135deg,rgba(244,63,94,.32),rgba(124,58,237,.16),rgba(0,0,0,.12))}
+.music-now{min-height:48px;font-size:13px;color:var(--t2);line-height:1.45}
+.music-controls{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}
+.music-controls button{height:36px}
+.project-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.compact-list{display:grid;gap:6px}
+.compact-list .proc,.project-mini-grid>div{margin:0!important;border-color:var(--line)!important;background:rgba(0,0,0,.18)!important;border-radius:12px!important}
+.ai-ready-line{font-size:13px;line-height:1.5;color:var(--t2);min-height:48px}
+.home-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.update-widget strong{font-size:30px;line-height:1.1;display:block;margin-bottom:8px}
+.hub-link-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.hub-link-grid button{min-height:56px;padding:10px}
+.cx-widget-hidden{display:none!important}
+@media(max-width:1280px){
+  .mac-widget{grid-column:span 4}
+  .widget-wide,.widget-tall{grid-column:span 8}
+}
+@media(max-width:900px){
+  .home-board{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mac-widget,.widget-wide,.widget-tall{grid-column:span 2}
+  .shortcut-grid,.hub-link-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:520px){
+  .home-board{grid-template-columns:1fr}
+  .mac-widget,.widget-wide,.widget-tall{grid-column:1}
+  .project-mini-grid,.mini-info-grid,.vitals-widget .ov-hero,.shortcut-grid,.hub-link-grid{grid-template-columns:1fr}
+  .hero-widget h3{font-size:24px}
+  .kill-port-inline{flex-direction:column}
+}
 
 /* Sleek outlined cards (no heavy glass layers per spec) */
 
@@ -737,33 +810,31 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
     <div class="model-pill" onclick="go('models')"><span class="model-dot"></span><span class="model-name" id="sidebarModelName">loading…</span><span class="model-caret">▾</span></div>
     <nav id="nav">
       <div id="themes" style="display:none"><button data-t="obsidian" class="on">Dark</button><button data-t="aurora">Light</button></div>
-  <div class="nav-section">Monitor</div>
-  <div class="navitem on" data-v="overview" onclick="go('overview')"><span class="nv-ic">◉</span><span class="nv-label">Overview</span></div>
-  <div class="navitem" data-v="processes" onclick="go('processes')"><span class="nv-ic">⚡</span><span class="nv-label">Processes</span></div>
-  <div class="nav-section">Storage</div>
-  <div class="navitem" data-v="files" onclick="go('files')"><span class="nv-ic">▤</span><span class="nv-label">File Manager</span></div>
-  <div class="navitem" data-v="dupes" onclick="go('dupes')"><span class="nv-ic">⧉</span><span class="nv-label">Duplicates</span></div>
-  <div class="navitem" data-v="storage" onclick="go('storage')"><span class="nv-ic">▦</span><span class="nv-label">Disk Explorer</span></div>
-  <div class="nav-section">System</div>
-  <div class="navitem" data-v="apps" onclick="go('apps')"><span class="nv-ic">⊟</span><span class="nv-label">App Uninstaller</span></div>
-  <div class="navitem" data-v="battery" onclick="go('battery')"><span class="nv-ic">⬡</span><span class="nv-label">Battery Health</span></div>
-  <div class="navitem" data-v="doctor" onclick="go('doctor')"><span class="nv-ic">✦</span><span class="nv-label">Doctor</span></div>
-  <div class="nav-section">AI &amp; Tools</div>
-  <div class="navitem" data-v="agent" onclick="go('agent')"><span class="nv-ic">⬡</span><span class="nv-label">Agent</span><span class="nv-badge">NEW</span></div>
-  <div class="navitem" data-v="forge" onclick="go('forge')"><span class="nv-ic">⚒</span><span class="nv-label">Forge</span><span class="nv-badge">NEW</span></div>
-  <div class="navitem" data-v="ai" onclick="go('ai')"><span class="nv-ic">◈</span><span class="nv-label">Chinna AI</span></div>
-  <div class="navitem" data-v="chatx" onclick="go('chatx')"><span class="nv-ic">◫</span><span class="nv-label">Secure Chat</span></div>
-  <div class="navitem" data-v="whatsapp" onclick="go('whatsapp')"><span class="nv-ic">◎</span><span class="nv-label">WhatsApp</span></div>
-  <div class="navitem" data-v="plugins" onclick="go('plugins')"><span class="nv-ic">◐</span><span class="nv-label">Plugins</span></div>
-  <div class="navitem" data-v="macos" onclick="go('macos')"><span class="nv-ic">◇</span><span class="nv-label">macOS Tools</span></div>
-  <div class="navitem" data-v="models" onclick="go('models')"><span class="nv-ic">⊕</span><span class="nv-label">Models &amp; AI</span></div>
-  <div class="nav-section" id="web-nav-section">Web</div>
-  <div class="navitem" data-v="web" onclick="go('web')"><span class="nv-ic">🌐</span><span class="nv-label">Web Views</span><span class="nv-badge" style="background:rgba(96,165,250,.15);color:#60a5fa">NEW</span></div>
+  <div class="nav-section">Mission Control</div>
+  <div class="navitem on hub-home" data-v="overview" data-hub="home" onclick="go('overview')"><span class="nv-ic">◉</span><span class="nv-label">Home</span></div>
+  <div class="navitem hub-mac" data-v="macos" data-hub="mac" onclick="go('macos')"><span class="nv-ic">⌘</span><span class="nv-label">Mac</span></div>
+  <div class="navitem hub-projects" data-v="projects" data-hub="projects" onclick="go('projects')"><span class="nv-ic">◧</span><span class="nv-label">Projects</span></div>
+  <div class="navitem hub-ai" data-v="ai" data-hub="ai" onclick="go('ai')"><span class="nv-ic">✦</span><span class="nv-label">AI</span></div>
+  <div class="navitem hub-connect" data-v="chatx" data-hub="connect" onclick="go('chatx')"><span class="nv-ic">◎</span><span class="nv-label">Connect</span></div>
+  <div class="nav-section">Deep Links</div>
+  <div class="navitem nav-hidden" data-v="processes" data-hub="mac" onclick="go('processes')"><span class="nv-ic">⚡</span><span class="nv-label">Processes</span></div>
+  <div class="navitem nav-hidden" data-v="files" data-hub="mac" onclick="go('files')"><span class="nv-ic">▤</span><span class="nv-label">File Manager</span></div>
+  <div class="navitem nav-hidden" data-v="dupes" data-hub="mac" onclick="go('dupes')"><span class="nv-ic">⧉</span><span class="nv-label">Duplicates</span></div>
+  <div class="navitem nav-hidden" data-v="storage" data-hub="mac" onclick="go('storage')"><span class="nv-ic">▦</span><span class="nv-label">Disk Explorer</span></div>
+  <div class="navitem nav-hidden" data-v="apps" data-hub="mac" onclick="go('apps')"><span class="nv-ic">⊟</span><span class="nv-label">App Uninstaller</span></div>
+  <div class="navitem nav-hidden" data-v="battery" data-hub="mac" onclick="go('battery')"><span class="nv-ic">⬡</span><span class="nv-label">Battery Health</span></div>
+  <div class="navitem nav-hidden" data-v="doctor" data-hub="mac" onclick="go('doctor')"><span class="nv-ic">✦</span><span class="nv-label">Doctor</span></div>
+  <div class="navitem nav-hidden" data-v="agent" data-hub="ai" onclick="go('agent')"><span class="nv-ic">⬡</span><span class="nv-label">Agent</span></div>
+  <div class="navitem nav-hidden" data-v="forge" data-hub="ai" onclick="go('forge')"><span class="nv-ic">⚒</span><span class="nv-label">Forge</span></div>
+  <div class="navitem nav-hidden" data-v="models" data-hub="ai" onclick="go('models')"><span class="nv-ic">⊕</span><span class="nv-label">Models &amp; AI</span></div>
+  <div class="navitem nav-hidden" data-v="whatsapp" data-hub="connect" onclick="go('whatsapp')"><span class="nv-ic">◎</span><span class="nv-label">WhatsApp</span></div>
+  <div class="navitem nav-hidden" data-v="plugins" data-hub="connect" onclick="go('plugins')"><span class="nv-ic">◐</span><span class="nv-label">Plugins</span></div>
+  <div class="nav-section nav-hidden" id="web-nav-section">Web</div>
+  <div class="navitem nav-hidden" data-v="web" data-hub="connect" onclick="go('web')"><span class="nv-ic">🌐</span><span class="nv-label">Web Views</span></div>
   <div id="web-subnav" style="margin-left:8px;display:none"></div>
-  <div class="nav-section">Workspace</div>
-  <div class="navitem" data-v="projects" onclick="go('projects')"><span class="nv-ic">◧</span><span class="nv-label">Projects</span></div>
-  <div class="navitem" data-v="onboarding" onclick="go('onboarding')"><span class="nv-ic">✦</span><span class="nv-label">Get Started</span></div>
-  <div class="navitem" data-v="settings" onclick="go('settings')"><span class="nv-ic">⚙</span><span class="nv-label">Settings</span></div>
+  <div class="navitem nav-hidden" data-v="onboarding" data-hub="settings" onclick="go('onboarding')"><span class="nv-ic">✦</span><span class="nv-label">Get Started</span></div>
+  <div class="nav-section">Pinned</div>
+  <div class="navitem hub-settings" data-v="settings" data-hub="settings" onclick="go('settings')"><span class="nv-ic">⚙</span><span class="nv-label">Settings</span></div>
     </nav>
     <div class="sidebar-vitals">
       <div class="vital-chip"><div class="k">CPU</div><div class="v" id="v-cpu">—</div></div>
@@ -1379,34 +1450,128 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 </div>
 </div>
 <div class="view on" id="view-overview"><div class="vhead">
-  <h2>Overview</h2>
-  <span class="sub">Live</span>
+  <h2>Home</h2>
+  <span class="sub" id="ov-host">Live Mac mission control</span>
 </div>
-<div class="vbody">
-  <div class="ov-hero">
-    <div class="ov-stat cpu">
-      <div class="ov-stat-top"><span class="ov-stat-label">CPU</span><span style="font-size:18px">⚡</span></div>
-      <div><span class="ov-stat-val" id="ov-cpu">—</span><span class="ov-stat-unit">%</span></div>
-      <canvas class="ov-spark" id="spark-cpu"></canvas>
-    </div>
-    <div class="ov-stat ram">
-      <div class="ov-stat-top"><span class="ov-stat-label">Memory</span><span style="font-size:18px">▦</span></div>
-      <div><span class="ov-stat-val" id="ov-ram">—</span><span class="ov-stat-unit">%</span></div>
-      <canvas class="ov-spark" id="spark-ram"></canvas>
-    </div>
-    <div class="ov-stat disk">
-      <div class="ov-stat-top"><span class="ov-stat-label">Disk</span><span style="font-size:18px">◴</span></div>
-      <div><span class="ov-stat-val" id="ov-disk">—</span><span class="ov-stat-unit">%</span></div>
-      <canvas class="ov-spark" id="spark-disk"></canvas>
-    </div>
-    <div class="ov-stat batt">
-      <div class="ov-stat-top"><span class="ov-stat-label">Battery</span><span style="font-size:18px">⬡</span></div>
-      <div><span class="ov-stat-val" id="ov-batt">—</span><span class="ov-stat-unit">%</span></div>
-      <canvas class="ov-spark" id="spark-batt"></canvas>
-    </div>
+<div class="vbody home-board-wrap">
+  <div class="home-command-row" role="navigation" aria-label="Dashboard hubs">
+    <button type="button" onclick="go('macos')">⌘ Mac</button>
+    <button type="button" onclick="go('projects')">◧ Projects</button>
+    <button type="button" onclick="go('ai')">✦ AI</button>
+    <button type="button" onclick="go('chatx')">◎ Connect</button>
+    <button type="button" onclick="go('settings')">⚙ Settings</button>
   </div>
-  <div class="sep"></div>
-  <div id="ov-extra"></div>
+
+  <section class="home-board" aria-label="Premium Mac widgets">
+    <article class="mac-widget widget-wide hero-widget" id="home-hero-widget">
+      <div class="widget-kicker">Chinna Mission Control</div>
+      <h3 id="home-hero-title">Your Mac, ready.</h3>
+      <p id="home-hero-sub">Live local telemetry, shortcuts, projects, AI readiness, and update status in one command surface.</p>
+      <div class="hero-pills">
+        <span id="home-uptime">up —</span>
+        <span id="home-ip">ip —</span>
+        <span id="home-chip">chip —</span>
+      </div>
+    </article>
+
+    <article class="mac-widget widget-tall vitals-widget">
+      <div class="widget-head"><div><span class="widget-kicker">Local Mac</span><h3>Vitals</h3></div><button type="button" class="miniA" onclick="go('processes')">Processes</button></div>
+      <div class="ov-hero" id="gauges">
+        <div class="ov-stat cpu">
+          <div class="ov-stat-top"><span class="ov-stat-label">CPU</span><span>⚡</span></div>
+          <div><span class="ov-stat-val" id="ov-cpu">—</span><span class="ov-stat-unit">%</span></div>
+          <canvas class="ov-spark" id="spark-cpu"></canvas>
+        </div>
+        <div class="ov-stat ram">
+          <div class="ov-stat-top"><span class="ov-stat-label">Memory</span><span>▦</span></div>
+          <div><span class="ov-stat-val" id="ov-ram">—</span><span class="ov-stat-unit">%</span></div>
+          <canvas class="ov-spark" id="spark-ram"></canvas>
+        </div>
+        <div class="ov-stat disk">
+          <div class="ov-stat-top"><span class="ov-stat-label">Disk</span><span>◴</span></div>
+          <div><span class="ov-stat-val" id="ov-disk">—</span><span class="ov-stat-unit">%</span></div>
+          <canvas class="ov-spark" id="spark-disk"></canvas>
+        </div>
+        <div class="ov-stat batt">
+          <div class="ov-stat-top"><span class="ov-stat-label">Battery</span><span>⬡</span></div>
+          <div><span class="ov-stat-val" id="ov-batt">—</span><span class="ov-stat-unit">%</span></div>
+          <canvas class="ov-spark" id="spark-batt"></canvas>
+        </div>
+      </div>
+      <div class="mini-info-grid" id="ov-info"></div>
+    </article>
+
+    <article class="mac-widget weather-widget" id="weather-widget">
+      <div class="widget-head"><div><span class="widget-kicker">Open Weather</span><h3 id="weather-title">Weather</h3></div><button type="button" class="miniA" onclick="loadWeatherWidget(true)">↻</button></div>
+      <div class="weather-main"><span id="weather-icon">◌</span><strong id="weather-temp">—</strong></div>
+      <div class="weather-meta" id="weather-meta">Uses browser location with Open-Meteo. Demo fallback is labelled.</div>
+    </article>
+
+    <article class="mac-widget widget-wide shortcuts-widget">
+      <div class="widget-head"><div><span class="widget-kicker">Direct Access</span><h3>Mac shortcuts</h3></div><button type="button" class="miniA" onclick="cxOpenPalette()">⌘K</button></div>
+      <div class="shortcut-grid" id="shortcut-deck"></div>
+      <div class="kill-port-inline">
+        <input class="field" id="home-kill-port" placeholder="Kill port e.g. 3000" inputmode="numeric">
+        <button type="button" class="bigbtn" onclick="homeKillPort()">Kill</button>
+      </div>
+    </article>
+
+    <article class="mac-widget music-widget">
+      <div class="widget-head"><div><span class="widget-kicker">Apple Music</span><h3>Now playing</h3></div><button type="button" class="miniA" onclick="homeMusic('info')">Info</button></div>
+      <div class="music-now" id="home-music-now">Ask Music for current track.</div>
+      <div class="music-controls">
+        <button type="button" onclick="homeMusic('prev')">⏮</button>
+        <button type="button" onclick="homeMusic('play')">▶</button>
+        <button type="button" onclick="homeMusic('pause')">⏸</button>
+        <button type="button" onclick="homeMusic('next')">⏭</button>
+      </div>
+    </article>
+
+    <article class="mac-widget widget-wide projects-widget">
+      <div class="widget-head"><div><span class="widget-kicker">Workspace</span><h3>Recent projects</h3></div><button type="button" class="miniA" onclick="go('projects')">Open</button></div>
+      <div class="project-mini-grid" id="overview-projects"></div>
+    </article>
+
+    <article class="mac-widget storage-widget">
+      <div class="widget-head"><div><span class="widget-kicker">Storage</span><h3>Top folders</h3></div><button type="button" class="miniA" onclick="go('storage')">Explore</button></div>
+      <div class="compact-list" id="rail-disk"></div>
+    </article>
+
+    <article class="mac-widget process-widget">
+      <div class="widget-head"><div><span class="widget-kicker">Pressure</span><h3>Top processes</h3></div><button type="button" class="miniA" onclick="go('processes')">Full</button></div>
+      <div class="compact-list" id="rail-proc"></div>
+    </article>
+
+    <article class="mac-widget apps-widget">
+      <div class="widget-head"><div><span class="widget-kicker">Applications</span><h3>Largest apps</h3></div><button type="button" class="miniA" onclick="go('apps')">Manage</button></div>
+      <div class="compact-list" id="home-apps"></div>
+    </article>
+
+    <article class="mac-widget ai-widget">
+      <div class="widget-head"><div><span class="widget-kicker">AI Layer</span><h3>Readiness</h3></div><button type="button" class="miniA" onclick="go('models')">Models</button></div>
+      <div class="ai-ready-line" id="home-ai-status">Checking keys…</div>
+      <div class="home-actions"><button type="button" class="bigbtn solid" onclick="go('ai')">Open Chinna AI</button><button type="button" class="bigbtn ghost" onclick="go('agent')">Agent</button></div>
+    </article>
+
+    <article class="mac-widget update-widget">
+      <div class="widget-head"><div><span class="widget-kicker">Install</span><h3>Version</h3></div><button type="button" class="miniA" onclick="loadHomeUpdateStatus()">↻</button></div>
+      <strong id="home-version">v7.0.0</strong>
+      <div class="weather-meta" id="home-update-status">Checking update status…</div>
+      <button type="button" class="bigbtn solid" onclick="runChinnaUpgrade()">Update now</button>
+    </article>
+
+    <article class="mac-widget widget-wide connect-widget">
+      <div class="widget-head"><div><span class="widget-kicker">Connect</span><h3>Messages and web tools</h3></div></div>
+      <div class="hub-link-grid">
+        <button type="button" onclick="go('chatx')">Secure Chat</button>
+        <button type="button" onclick="go('whatsapp')">WhatsApp</button>
+        <button type="button" onclick="go('web')">Web Views</button>
+        <button type="button" onclick="go('plugins')">Plugins</button>
+      </div>
+    </article>
+  </section>
+  <div id="rail-projects" class="nav-hidden"></div>
+  <div id="ov-extra" class="nav-hidden"></div>
 </div>
 </div>
 <div class="view" id="view-processes"><div class="vhead"><h2>Processes</h2><span class="sub">Memory</span></div>
@@ -1502,9 +1667,17 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <!-- Attachment chips (enhanced for media) -->
           <div class="grok-attachments" id="ai-attachments"></div>
 
+          <div class="grok-quick" id="ai-quick-actions">
+            <button type="button" class="sugg-chip" onclick="runProjectQuick()">▲ Run project</button>
+            <button type="button" class="sugg-chip" onclick="setupProjectEnvQuick()">⚙ Setup .env</button>
+            <button type="button" class="sugg-chip" onclick="detectStackQuick()">◆ Detect stack</button>
+            <button type="button" class="sugg-chip" onclick="openLocalhostQuick()">↗ Open localhost</button>
+            <button type="button" class="sugg-chip" onclick="aiQuickPrompt('idi project run cheyyi — deps install chesi localhost open cheyyi')">🌐 Telugu / Tinglish</button>
+          </div>
+
           <div class="grok-input-row">
             <button class="grok-attach" data-tip="Attach file" onclick="$('ai-file-input').click()">＋</button>
-            <textarea id="ai-in" class="grok-input" autocomplete="off" spellcheck="false" rows="1" placeholder="Message Chinna…" oninput="resizeAiInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI()}"></textarea>
+            <textarea id="ai-in" class="grok-input" autocomplete="off" spellcheck="false" rows="1" placeholder="Message Chinna — Telugu · Hindi · Tinglish · English · run/start/build projects…" oninput="resizeAiInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI()}"></textarea>
 
             <div class="grok-send-row">
               <button class="grok-voice" id="grok-voice-btn" data-tip="Voice" onclick="toggleVoiceMode()">◉</button>
@@ -1686,6 +1859,15 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 6px;
+}
+.grok-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  max-width: 860px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .grok-chip {
   display: inline-flex;
@@ -2950,7 +3132,118 @@ async function clearAIHistory(){
   chatHistory = [];
   $('ai-msgs').innerHTML = '';
   try{ await api('chat/clear'); }catch(e){}
+  ensureAIEmptyState();
   toast('Conversation memory cleared');
+}
+
+function ensureAIEmptyState(){
+  const M = $('ai-msgs');
+  if (!M || M.children.length) return;
+  if ($('ai-empty-state')) return;
+  const el = document.createElement('div');
+  el.id = 'ai-empty-state';
+  el.className = 'grok-empty';
+  el.innerHTML = `
+    <div class="grok-empty-ic">✦</div>
+    <div class="grok-empty-title">Chinna AI</div>
+    <div class="grok-empty-sub">Multilingual Mac agent · run projects, scaffold .env, open localhost — or just chat.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px">
+      <button type="button" class="sugg-chip" onclick="runProjectQuick()">▲ Run this project</button>
+      <button type="button" class="sugg-chip" onclick="setupProjectEnvQuick()">⚙ Setup .env</button>
+      <button type="button" class="sugg-chip" onclick="aiQuickPrompt('Run this project: install deps, create .env if missing, start dev server and open localhost')">🚀 Full dev stack</button>
+      <button type="button" class="sugg-chip" onclick="aiQuickPrompt('idi project run cheyyi — Telugu lo cheppu')">🌐 Telugu / Tinglish</button>
+    </div>`;
+  M.appendChild(el);
+}
+
+function aiQuickPrompt(text){
+  const inp = $('ai-in');
+  if (inp) { inp.value = text; resizeAiInput(inp); sendAI(text); }
+}
+
+function detectProjectRunIntent(msg){
+  const lower = (msg || '').toLowerCase();
+  const runWords = /run|start|serve|build|localhost|preview|install deps|create env|dotenv|dev server|run cheyyi|run chey|start cheyyi|idi run/.test(lower);
+  const ctxWords = /project|repo|app|folder|this|idi|codebase|workspace/.test(lower);
+  return runWords && (ctxWords || /^run\b|^start\b/.test(lower.trim()));
+}
+
+async function runProjectQuick(path){
+  path = path || '.';
+  $('ai-empty-state')?.remove();
+  setGlobalWorking(true, 'Running project…');
+  const M = $('ai-msgs');
+  const note = appendChat('assistant', `▲ Starting project at ${path} — deps, .env, localhost preview…`);
+  if (M && note) M.appendChild(note);
+  try {
+    const d = await api('project/run', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({path, install_deps: true})
+    });
+    if (d.error) {
+      toast('Project run failed: ' + d.error);
+      if (note) note.querySelector('.grok-bubble')?.appendChild(Object.assign(document.createElement('div'), {textContent: 'Error: ' + d.error, style: 'color:var(--red);margin-top:6px;font-size:12px'}));
+      return;
+    }
+    if (d.job && M) startInlineJobStream(d.job, M);
+    toast(d.message || 'Project run started');
+  } catch (e) {
+    toast('Project run failed: ' + (e?.message || e));
+  } finally {
+    setGlobalWorking(false);
+  }
+}
+
+async function setupProjectEnvQuick(path){
+  path = path || '.';
+  $('ai-empty-state')?.remove();
+  setGlobalWorking(true, 'Setting up .env…');
+  try {
+    const d = await api('project/setup', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({path, scaffold: true})
+    });
+    const M = $('ai-msgs');
+    const summary = d.error
+      ? 'Setup failed: ' + d.error
+      : `⚙ .env setup — stacks: ${(d.stacks || []).join(', ') || 'unknown'}${d.created?.length ? ' · created: ' + d.created.join(', ') : ''}`;
+    const row = appendChat('assistant', summary);
+    if (M && row) M.appendChild(row);
+    toast(d.error ? 'Setup failed' : '.env / scaffold ready');
+  } catch (e) {
+    toast('Setup failed: ' + (e?.message || e));
+  } finally {
+    setGlobalWorking(false);
+  }
+}
+
+async function detectStackQuick(path){
+  path = path || '.';
+  $('ai-empty-state')?.remove();
+  setGlobalWorking(true, 'Detecting stack…');
+  try {
+    const d = await api('project/setup', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({path, scaffold: false})
+    });
+    const stacks = (d.stacks || []).join(', ') || 'unknown';
+    const row = appendChat('assistant', `◆ Stack detect: ${stacks}${d.frameworks?.length ? ' · ' + d.frameworks.join(', ') : ''}`);
+    const M = $('ai-msgs');
+    if (M && row) M.appendChild(row);
+  } catch (e) {
+    toast('Detect failed: ' + (e?.message || e));
+  } finally {
+    setGlobalWorking(false);
+  }
+}
+
+function openLocalhostQuick(){
+  const ports = [3000, 5173, 8080, 4321, 8000, 5000, 4200];
+  ports.forEach(p => window.open('http://localhost:' + p, '_blank'));
+  toast('Opened common localhost ports in new tabs');
 }
 
 /* ========== ATTACHMENTS (any file type) ========== */
@@ -3108,7 +3401,9 @@ function go(v){
   if(!$('view-'+v)) v='overview';
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   $('view-'+v).classList.add('on');
-  document.querySelectorAll('.navitem').forEach(x=>x.classList.toggle('on',x.dataset.v===v));
+  const hubMap = {overview:'home',processes:'mac',files:'mac',dupes:'mac',storage:'mac',apps:'mac',battery:'mac',doctor:'mac',macos:'mac',projects:'projects',agent:'ai',forge:'ai',ai:'ai',models:'ai',chatx:'connect',whatsapp:'connect',plugins:'connect',web:'connect',settings:'settings',onboarding:'settings'};
+  const activeHub = hubMap[v] || v;
+  document.querySelectorAll('.navitem').forEach(x=>x.classList.toggle('on',x.dataset.v===v || (x.dataset.hub===activeHub && !x.classList.contains('nav-hidden'))));
   if(v==='files')loadFiles();
   if(v==='dupes'&&!allDupes.length){}
   if(v==='apps')loadApps();
@@ -3116,13 +3411,14 @@ function go(v){
   if(v==='doctor')loadDoctor();
   if(v==='network')loadNet();
   if(v==='storage')loadStorage(HOME_PATH,false);
-  if(v==='ai'){ loadAIStatus(); if(voiceEnabled) ensureVoiceUI(); setupAttachmentUI(); resizeAiInput($('ai-in')); }
+  if(v==='ai'){ loadAIStatus(); if(voiceEnabled) ensureVoiceUI(); setupAttachmentUI(); resizeAiInput($('ai-in')); ensureAIEmptyState(); }
   if(v==='chatx'){ chatxInit(); setupChatxSplitter(); chatxHandleDeepLink(); }
   if(v==='processes'){ /* proc list refreshed by stats poll */ }
   if(v==='whatsapp'){ waInit(); }
   if(v==='plugins'){ loadPlugins(); }
   if(v==='settings'){ loadSettingsUpdateStatus(); loadTelegramStatus(); loadKeySettings(); }
   if(v==='projects') loadProjectsView();
+  if(v==='overview') hydrateHomeBoard();
   if(location.hash !== '#'+v) history.replaceState(null,'','#'+v);
 }
 
@@ -3146,8 +3442,8 @@ async function doPoll(){
     $('v-ram').textContent=(s.memory?.pct||0)+'%';
     $('v-disk').textContent=(s.disk?.pct||0)+'%';
     $('v-batt').textContent=(s.battery?.pct||0)+'%';
-    $('ov-host').textContent=`${s.os?.hostname||'Mac'} · macOS ${s.os?.version||''} · ${s.os?.arch||''}`;
-    renderGauges(s); renderOvInfo(s); renderProc(s); renderRailProc(s); renderRailDisk(s); renderRailProjects();
+    if($('ov-host')) $('ov-host').textContent=`${s.os?.hostname||'Mac'} · macOS ${s.os?.version||''} · ${s.os?.arch||''}`;
+    renderGauges(s); renderOvInfo(s); renderProc(s); renderRailProc(s); renderRailDisk(s); renderRailProjects(); renderHomeWidgets(s);
     if(wasOffline){ document.body.classList.remove('offline'); wasOffline=false; }
   }catch(e){
     fails++;
@@ -3171,20 +3467,157 @@ function gaugeSVG(pct,c){const r=36,C=2*Math.PI*r,off=C*(1-pct/100);
   return `<svg width="84" height="84"><circle cx="42" cy="42" r="${r}" stroke="rgba(255,255,255,.08)" stroke-width="7" fill="none"/><circle cx="42" cy="42" r="${r}" stroke="${c}" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}"/></svg>`;}
 function renderGauges(s){
   const g=[['CPU',s.cpu?.pct||0,`${s.cpu?.cores||0} cores`],['RAM',s.memory?.pct||0,`${s.memory?.used||0}/${s.memory?.total||0} GB`],['DISK',s.disk?.pct||0,`${s.disk?.free||'?'} free`],['BATT',s.battery?.pct||0,s.battery?.charging?'charging':'on battery']];
-  $('gauges').innerHTML=g.map(([l,p,m])=>`<div class="gauge"><div class="ring">${gaugeSVG(p,color(p))}<div class="num" style="color:${color(p)}">${p}</div></div><div class="lbl">${l}</div><div class="meta">${m}</div></div>`).join('');
+  const ids=['ov-cpu','ov-ram','ov-disk','ov-batt'];
+  if(ids.every(id=>$(id))){
+    g.forEach(([,p],i)=>{$(ids[i]).textContent=p;});
+    return;
+  }
+  if($('gauges')) $('gauges').innerHTML=g.map(([l,p,m])=>`<div class="gauge"><div class="ring">${gaugeSVG(p,color(p))}<div class="num" style="color:${color(p)}">${p}</div></div><div class="lbl">${l}</div><div class="meta">${m}</div></div>`).join('');
 }
 function renderOvInfo(s){
   const i=[['Host',s.os?.hostname||'—'],['Uptime',s.uptime||'—'],['Chip',(s.os?.chip||'—').replace('Apple ','')],['IP',s.network?.ip||'—']];
-  $('ov-info').innerHTML=i.map(([k,v])=>`<div class="infocard"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  if($('ov-info')) $('ov-info').innerHTML=i.map(([k,v])=>`<div class="infocard"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
 }
 function renderProc(s){
-  $('proc-list').innerHTML=(s.processes||[]).map(p=>`<div class="row"><div class="fic">⚙</div><div class="info"><div class="nm">${(p.name.split('/').pop())}</div><div class="mt">PID ${p.pid} · CPU ${p.cpu.toFixed(1)}%</div></div><div class="sz" style="color:${color(p.mem)}">${p.mem.toFixed(1)}%</div><div class="acts"><button type="button" class="miniA danger" onclick="confirmKill(${p.pid},'${(p.name.split('/').pop()).replace(/'/g,'')}')">Kill</button></div></div>`).join('');
+  if($('proc-list')) $('proc-list').innerHTML=(s.processes||[]).map(p=>`<div class="row"><div class="fic">⚙</div><div class="info"><div class="nm">${(p.name.split('/').pop())}</div><div class="mt">PID ${p.pid} · CPU ${p.cpu.toFixed(1)}%</div></div><div class="sz" style="color:${color(p.mem)}">${p.mem.toFixed(1)}%</div><div class="acts"><button type="button" class="miniA danger" onclick="confirmKill(${p.pid},'${(p.name.split('/').pop()).replace(/'/g,'')}')">Kill</button></div></div>`).join('');
 }
 function renderRailProc(s){
-  $('rail-proc').innerHTML=(s.processes||[]).slice(0,5).map(p=>`<div class="proc"><div class="pn">${p.name.split('/').pop()}</div><div class="pm" style="color:${color(p.mem)}">${p.mem.toFixed(1)}%</div></div>`).join('');
+  if($('rail-proc')) $('rail-proc').innerHTML=(s.processes||[]).slice(0,5).map(p=>`<div class="proc"><div class="pn">${p.name.split('/').pop()}</div><div class="pm" style="color:${color(p.mem)}">${p.mem.toFixed(1)}%</div></div>`).join('');
 }
 function renderRailDisk(s){
-  $('rail-disk').innerHTML=(s.disk_breakdown||[]).slice(0,6).map(d=>`<div class="proc"><div class="pn">${d.path}</div><div class="pm">${d.size}</div></div>`).join('')||'<div style="font-size:11px;color:var(--t3);padding:6px">—</div>';
+  if($('rail-disk')) $('rail-disk').innerHTML=(s.disk_breakdown||[]).slice(0,6).map(d=>`<div class="proc"><div class="pn">${d.path}</div><div class="pm">${d.size}</div></div>`).join('')||'<div style="font-size:11px;color:var(--t3);padding:6px">—</div>';
+}
+
+function renderHomeWidgets(s){
+  if(!$('home-hero-widget')) return;
+  if($('home-hero-title')) $('home-hero-title').textContent=`${s.os?.hostname||'Mac'} mission control`;
+  if($('home-uptime')) $('home-uptime').textContent='up '+(s.uptime||'—');
+  if($('home-ip')) $('home-ip').textContent='ip '+(s.network?.ip||'offline');
+  if($('home-chip')) $('home-chip').textContent=(s.os?.chip||s.os?.arch||'Mac').replace('Apple ','');
+}
+
+function renderShortcutDeck(){
+  const deck=$('shortcut-deck');
+  if(!deck) return;
+  const tiles=[
+    ['Lock Screen','Safe display lock','🔒',()=>confirmMac('lock','Lock Screen','Lock your Mac display?','lock')],
+    ['Sleep','Put Mac to sleep','💤',()=>confirmMac('sleep','Sleep Mac','Put Mac to sleep?','sleep')],
+    ['Finder','Open home folder','📁',()=>macOpenApp('Finder')],
+    ['Screen Share','Copy VNC link','📡',()=>screenShare()],
+    ['Purge RAM','Free inactive memory','⚡',()=>confirmAction('purge')],
+    ['Deep Clean','Strict custom cleaner','🧹',()=>confirmAction('clean')],
+  ];
+  deck.innerHTML='';
+  tiles.forEach(([title,sub,icon,run])=>{
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='shortcut-tile';
+    btn.innerHTML=`<strong>${icon} ${title}</strong><span>${sub}</span>`;
+    btn.onclick=run;
+    deck.appendChild(btn);
+  });
+}
+
+async function homeMusic(action){
+  const d=await api('music',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action})});
+  if($('home-music-now')) $('home-music-now').textContent=d.result||d.error||'done';
+  const out=$('music-out');
+  if(out) out.textContent=d.result||d.error||'done';
+}
+
+async function homeKillPort(){
+  const input=$('home-kill-port');
+  const port=(input?.value||'').trim();
+  if(!port){toast('Enter a port number');return;}
+  $('kill-port-in') && ($('kill-port-in').value=port);
+  await killPort();
+}
+
+async function loadHomeApps(){
+  const el=$('home-apps');
+  if(!el) return;
+  el.innerHTML='<div class="proc"><div class="pn">Loading apps…</div><div class="pm">—</div></div>';
+  const d=await api('apps').catch(()=>({apps:[]}));
+  el.innerHTML=(d.apps||[]).slice(0,5).map(a=>`<div class="proc"><div class="pn">${escHtml(a.name||'App')}</div><div class="pm">${escHtml(a.size||'—')}</div></div>`).join('') || '<div class="proc"><div class="pn">No app data</div><div class="pm">—</div></div>';
+}
+
+async function loadHomeAIStatus(){
+  const el=$('home-ai-status');
+  if(!el) return;
+  const [keys,models]=await Promise.all([
+    api('get_keys').catch(()=>({ai_status:'AI status unavailable'})),
+    api('models').catch(()=>({active:'—'}))
+  ]);
+  el.textContent=`${keys.ai_status||'AI status unavailable'} Active model: ${models.active||'—'}`;
+}
+
+async function loadHomeUpdateStatus(){
+  const el=$('home-update-status');
+  if(el) el.textContent='Checking update status…';
+  const [version,upd]=await Promise.all([
+    api('version').catch(()=>({version:'7.0.0'})),
+    api('check-update').catch(()=>({error:'offline'}))
+  ]);
+  if($('home-version')) $('home-version').textContent='v'+(version.version||'7.0.0');
+  if(el){
+    if(upd.update_available) el.textContent=`Update available: ${upd.latest||'latest'}`;
+    else if(upd.error) el.textContent='Unable to verify updates right now.';
+    else el.textContent='Installed version is current.';
+  }
+}
+
+const WEATHER_KEY='chinna_weather_location_v1';
+function weatherCodeIcon(code){
+  if(code===0) return '☀';
+  if([1,2,3].includes(code)) return '◐';
+  if([45,48].includes(code)) return '≋';
+  if(code>=51&&code<=67) return '☂';
+  if(code>=71&&code<=77) return '❄';
+  if(code>=80&&code<=99) return '☔';
+  return '◌';
+}
+function renderDemoWeather(reason='location unavailable'){
+  if($('weather-title')) $('weather-title').textContent='Demo weather';
+  if($('weather-icon')) $('weather-icon').textContent='◐';
+  if($('weather-temp')) $('weather-temp').textContent='21°';
+  if($('weather-meta')) $('weather-meta').textContent=`Demo fallback shown because ${reason}. Allow location to load real Open-Meteo weather.`;
+}
+async function fetchWeatherAt(lat,lon,label='Current location'){
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
+  const d=await fetch(url).then(r=>r.json());
+  const temp=Math.round(d?.current?.temperature_2m);
+  const code=Number(d?.current?.weather_code||0);
+  if(!Number.isFinite(temp)) throw new Error('weather unavailable');
+  if($('weather-title')) $('weather-title').textContent=label;
+  if($('weather-icon')) $('weather-icon').textContent=weatherCodeIcon(code);
+  if($('weather-temp')) $('weather-temp').textContent=temp+'°';
+  if($('weather-meta')){
+    const hi=Math.round(d?.daily?.temperature_2m_max?.[0]??temp);
+    const lo=Math.round(d?.daily?.temperature_2m_min?.[0]??temp);
+    $('weather-meta').textContent=`Real Open-Meteo data · ↑ ${hi}° ↓ ${lo}°`;
+  }
+}
+async function loadWeatherWidget(force=false){
+  if(!$('weather-widget')) return;
+  const saved=(()=>{try{return JSON.parse(localStorage.getItem(WEATHER_KEY)||'{}')}catch(e){return {}}})();
+  if(saved.lat&&saved.lon&&!force){
+    try{await fetchWeatherAt(saved.lat,saved.lon,saved.label||'Saved location');return;}catch(e){}
+  }
+  if(!navigator.geolocation){renderDemoWeather('browser geolocation is unavailable');return;}
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat=Number(pos.coords.latitude.toFixed(4));
+    const lon=Number(pos.coords.longitude.toFixed(4));
+    localStorage.setItem(WEATHER_KEY,JSON.stringify({lat,lon,label:'Current location'}));
+    try{await fetchWeatherAt(lat,lon,'Current location');}catch(e){renderDemoWeather('Open-Meteo fetch failed');}
+  },()=>renderDemoWeather('location permission was denied'),{timeout:7000,maximumAge:900000});
+}
+
+function hydrateHomeBoard(){
+  renderShortcutDeck();
+  loadWeatherWidget();
+  loadHomeApps();
+  loadHomeAIStatus();
+  loadHomeUpdateStatus();
 }
 
 async function renderRailProjects(){
@@ -5626,11 +6059,17 @@ async function sendAI(forcedMsg,fromVoice=false){
     }
   }
 
-  // Job streams etc
+  // Job streams — project run from tools or top-level project_job
   const jobIds = (d.tool_calls || []).filter(t => t.result && t.result.includes('job_id')).map(t => {
     try { return JSON.parse(t.result).job_id; } catch { return null; }
   }).filter(Boolean);
-  if (jobIds.length) jobIds.forEach(jid => startInlineJobStream(jid, M));
+  if (d.project_job) jobIds.push(d.project_job);
+  if (jobIds.length) [...new Set(jobIds)].forEach(jid => startInlineJobStream(jid, M));
+
+  if (d.preview_url) {
+    const previewRow = appendChat('assistant', `✅ Preview ready: ${d.preview_url}`);
+    if (previewRow) M.appendChild(previewRow);
+  }
 
   if (d.needs_upload) {
     showUploadRequestBanner(d.upload_request || "Please attach the relevant file so I can analyze it.");
@@ -6106,6 +6545,7 @@ function confirmKill(pid,name){
 
 setVoiceButton();
 loadTelegramStatus().catch(()=>{});
+hydrateHomeBoard();
 startStatsPoll();
 setupAttachmentUI();
 renderRailProjects(); // initial load of tracked projects
@@ -6789,6 +7229,10 @@ initV6();
   function setupWidgets(){
     const ovBody = qs('#view-overview .vbody');
     if(!ovBody || qs('#cx-customize-bar')) return;
+    if(qs('.home-board')){
+      WIDGETS.forEach(w=> applyWidget(w, loadWidgetPrefs()[w.id]!==false));
+      return;
+    }
     const prefs = loadWidgetPrefs();
 
     // wrap "Recent Projects" block so it can be toggled
