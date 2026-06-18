@@ -21,16 +21,17 @@ bash <(curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/ins
 ```
 
 This command **always** gives you the latest version. Run it again any time to upgrade — your data, keys, and configs are never touched.
+No `hash -r` step is required.
 
 If `chinna` ever prints Go compile errors or looks half-updated, run the same command again. The installer force-refreshes the CLI, Go TUI source, dashboard, and server while preserving `~/.chinna/api_keys.json`, models, history, and local config.
 
-After install, open a new terminal tab (or `source ~/.zshrc`) and run:
+After install, open a new terminal tab and run:
 
 ```bash
 chinna
 ```
 
-That launches the **~1:10 containment escape intro** (press `s`, `enter`, or `space` to skip) and then the Bubble Tea CLI.
+That launches the **~1:10 containment escape intro** (press `s`, `enter`, or `space` to skip) and then the Bubble Tea CLI. Just type `chinna`; do not run `hash -r chinna`.
 
 ## Auto-Update (built-in)
 

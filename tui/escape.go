@@ -287,7 +287,7 @@ func breachBoxArt(step int) string {
 }
 
 func exitArt(step int) string {
-	wave := "\\|/-\\|/"[step%8 : step%8+1]
+	wave := []string{"\\", "|", "/", "-", "\\", "|", "/"}[step%7]
 	return fmt.Sprintf(`
               chamber behind him
                  │
