@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Chinna v7.0</title>
+<link rel="icon" href="assets/chinna-favicon.svg" type="image/svg+xml">
 <script>
 if (window.location.protocol === 'file:') {
   window.location.replace('http://127.0.0.1:7777/' + (window.location.hash || ''));
@@ -12,11 +13,11 @@ if (window.location.protocol === 'file:') {
 /* Hallmark · macrostructure: Mission Control Widget Board · tone: technical-austere · anchor hue: phosphor */
 /* Apple San Francisco (SF Pro / California) — native Mac system font only */
 
-:root{--bg:#080808;--s0:#0d0d0f;--s1:#111114;--s2:#181819;--s3:#202023;--line:#1c1c1f;--line2:#262629;--line3:#333337;--acc:#baff29;--acc2:#e84118;--acc-bg:rgba(186,255,41,.08);--acc-bd:rgba(186,255,41,.2);--accr:186,255,41;--t1:#ffffff;--t2:rgba(240,240,242,.82);--t3:rgba(240,240,242,.58);--t4:rgba(240,240,242,.42);--green:#4ade80;--red:#f87171;--amber:#fbbf24;--blue:#60a5fa;--r:4px;--r-sm:3px;--r-lg:8px;--sidebar-w:220px;--right-w:380px;--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;--font-mono:"SF Mono",ui-monospace,Menlo,"Courier New",monospace;--ease:cubic-bezier(.2,.8,.2,1)}
+:root{--bg:#080808;--s0:#0d0d0f;--s1:#111114;--s2:#181819;--s3:#202023;--line:#1c1c1f;--line2:#262629;--line3:#333337;--acc:#baff29;--acc2:#e84118;--acc-bg:rgba(186,255,41,.08);--acc-bd:rgba(186,255,41,.2);--accr:186,255,41;--t1:#ffffff;--t2:rgba(240,240,242,.82);--t3:rgba(240,240,242,.58);--t4:rgba(240,240,242,.42);--green:#4ade80;--red:#f87171;--amber:#fbbf24;--blue:#60a5fa;--r-xs:2px;--r-sm:3px;--r:4px;--r-lg:8px;--r-xl:12px;--r-2xl:16px;--r-3xl:18px;--r-dock:24px;--r-full:9999px;--sidebar-w:220px;--right-w:380px;--space-1:2px;--space-2:4px;--space-3:6px;--space-4:8px;--space-5:10px;--space-6:12px;--space-7:14px;--space-8:16px;--space-9:18px;--space-10:20px;--space-12:24px;--space-16:32px;--space-20:40px;--scrollbar-w:3px;--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;--font-mono:"SF Mono",ui-monospace,Menlo,"Courier New",monospace;--text-base:13px;--leading-normal:1.5;--ease:cubic-bezier(.2,.8,.2,1)}
 *,::before,::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
-body{font-family:var(--font);background:var(--bg);color:var(--t1);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased} /* Apple SF Pro / California system font enforced */
-*::-webkit-scrollbar{width:3px;height:3px}
+body{font-family:var(--font);background:var(--bg);color:var(--t1);font-size:var(--text-base);line-height:var(--leading-normal);-webkit-font-smoothing:antialiased} /* Apple SF Pro / California system font enforced */
+*::-webkit-scrollbar{width:var(--scrollbar-w);height:var(--scrollbar-w)}
 *::-webkit-scrollbar-thumb{background:var(--line3);border-radius:2px}
 *::-webkit-scrollbar-track{background:transparent}
 ::selection{background:rgba(186,255,41,.28)}
@@ -30,7 +31,7 @@ input,textarea,select{color-scheme:dark}
 
 
 .sidebar-logo{display:flex;align-items:center;gap:9px;padding:16px 14px 12px;border-bottom:1px solid var(--line);flex-shrink:0}
-.logo-mark{width:28px;height:28px;border-radius:4px;background:var(--acc);display:grid;place-items:center;font-size:13px;font-weight:900;color:#06120a;flex-shrink:0;letter-spacing:0}
+.logo-mark{width:28px;height:28px;border-radius:4px;background:transparent;display:block;flex-shrink:0;object-fit:cover}
 .logo-text{font-size:12.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t1);white-space:nowrap;overflow:hidden}
 .logo-ver{font-size:9px;font-weight:600;color:var(--acc);letter-spacing:1px;opacity:.8}
 .sidebar-toggle{margin-left:auto;width:22px;height:22px;flex-shrink:0;display:grid;place-items:center;border:none;background:transparent;color:var(--t3);border-radius:var(--r-sm);transition:all .12s}
@@ -802,7 +803,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 <div id="app">
   <aside id="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark">C</div>
+      <img class="logo-mark" src="assets/chinna-icon.svg" alt="Chinna">
       <div><div class="logo-text">CHINNA <span class="logo-ver">V7.0</span></div></div>
       <button id="sidebarToggle" class="sidebar-toggle" title="Toggle sidebar">⇐</button>
     </div>
@@ -917,8 +918,8 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           <div class="welcome-suggs">
             <button class="sugg-v0" onclick="agentQuickPrompt('Build a beautiful modern todo app with localStorage and nice animations in a single HTML file')">Todo app with motion</button>
             <button class="sugg-v0" onclick="agentQuickPrompt('Create a stunning SaaS landing page with hero, features, pricing, dark mode and subtle gradients')">SaaS landing page</button>
-            <button class="sugg-v0" onclick="agentQuickPrompt('Build an interactive analytics dashboard with charts (Chart.js), filters and fake data in pure HTML/JS')">Analytics dashboard</button>
-            <button class="sugg-v0" onclick="agentQuickPrompt('Plan and then build a full local AI chat UI mock with message bubbles, composer and model switcher')">AI chat mock UI</button>
+            <button class="sugg-v0" onclick="agentQuickPrompt('Build an interactive analytics dashboard with charts (Chart.js), filters and live data hooks in pure HTML/JS')">Analytics dashboard</button>
+            <button class="sugg-v0" onclick="agentQuickPrompt('Plan and then build a full local AI chat UI with message bubbles, composer and model switcher')">AI chat UI</button>
             <button class="sugg-v0" onclick="agentQuickPrompt('Create a macOS-inspired file manager interface with sidebar, list, preview pane and drag-drop hints')">macOS file manager</button>
           </div>
         </div>
@@ -1504,7 +1505,7 @@ hr,.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
     <article class="mac-widget weather-widget" id="weather-widget">
       <div class="widget-head"><div><span class="widget-kicker">Open Weather</span><h3 id="weather-title">Weather</h3></div><button type="button" class="miniA" onclick="loadWeatherWidget(true)">↻</button></div>
       <div class="weather-main"><span id="weather-icon">◌</span><strong id="weather-temp">—</strong></div>
-      <div class="weather-meta" id="weather-meta">Uses browser location with Open-Meteo. Demo fallback is labelled.</div>
+      <div class="weather-meta" id="weather-meta">Uses browser location with Open-Meteo. No weather is shown until real data is available.</div>
     </article>
 
     <article class="mac-widget widget-wide shortcuts-widget">
@@ -3576,11 +3577,11 @@ function weatherCodeIcon(code){
   if(code>=80&&code<=99) return '☔';
   return '◌';
 }
-function renderDemoWeather(reason='location unavailable'){
-  if($('weather-title')) $('weather-title').textContent='Demo weather';
-  if($('weather-icon')) $('weather-icon').textContent='◐';
-  if($('weather-temp')) $('weather-temp').textContent='21°';
-  if($('weather-meta')) $('weather-meta').textContent=`Demo fallback shown because ${reason}. Allow location to load real Open-Meteo weather.`;
+function renderWeatherUnavailable(reason='location unavailable'){
+  if($('weather-title')) $('weather-title').textContent='Weather unavailable';
+  if($('weather-icon')) $('weather-icon').textContent='◌';
+  if($('weather-temp')) $('weather-temp').textContent='—';
+  if($('weather-meta')) $('weather-meta').textContent=`No weather data loaded: ${reason}. Allow location to fetch real Open-Meteo data.`;
 }
 async function fetchWeatherAt(lat,lon,label='Current location'){
   const url=`https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
@@ -3603,13 +3604,13 @@ async function loadWeatherWidget(force=false){
   if(saved.lat&&saved.lon&&!force){
     try{await fetchWeatherAt(saved.lat,saved.lon,saved.label||'Saved location');return;}catch(e){}
   }
-  if(!navigator.geolocation){renderDemoWeather('browser geolocation is unavailable');return;}
+  if(!navigator.geolocation){renderWeatherUnavailable('browser geolocation is unavailable');return;}
   navigator.geolocation.getCurrentPosition(async pos=>{
     const lat=Number(pos.coords.latitude.toFixed(4));
     const lon=Number(pos.coords.longitude.toFixed(4));
     localStorage.setItem(WEATHER_KEY,JSON.stringify({lat,lon,label:'Current location'}));
-    try{await fetchWeatherAt(lat,lon,'Current location');}catch(e){renderDemoWeather('Open-Meteo fetch failed');}
-  },()=>renderDemoWeather('location permission was denied'),{timeout:7000,maximumAge:900000});
+    try{await fetchWeatherAt(lat,lon,'Current location');}catch(e){renderWeatherUnavailable('Open-Meteo fetch failed');}
+  },()=>renderWeatherUnavailable('location permission was denied'),{timeout:7000,maximumAge:900000});
 }
 
 function hydrateHomeBoard(){
