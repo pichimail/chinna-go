@@ -546,4 +546,4 @@ function FilesView() {
   );
 }
 
-Object.assign(window, { FilesView });
+Object.assign(window, { FilesView, fileIcon, fileExt, FILE_EXT_COLORS, isPreviewable });

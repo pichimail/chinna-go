@@ -1,5 +1,26 @@
 /* DuplicatesView.jsx — Duplicate finder with List · Icons views and inline media preview */
 
+/* ── Local file helpers (same logic as FilesView, scoped to this Babel context) ── */
+function _dvFileExt(f) { return ((f.name ?? f.path ?? '').split('.').pop() ?? '').toLowerCase(); }
+function _dvFileIcon(f) {
+  const e = _dvFileExt(f);
+  if (['mp4','mov','avi','webm','mkv','m4v'].includes(e)) return '🎬';
+  if (['mp3','wav','m4a','flac','ogg','aac','opus'].includes(e)) return '🎵';
+  if (['jpg','jpeg','png','gif','webp','svg','bmp','avif'].includes(e)) return '🖼';
+  if (['zip','rar','7z','tar','gz','bz2'].includes(e)) return '📦';
+  if (e === 'pdf') return '📄';
+  if (['dmg','pkg','iso'].includes(e)) return '💿';
+  if (e === 'app') return '📱';
+  if (['js','jsx','ts','tsx','py','go','rb','rs','java','c','cpp','h'].includes(e)) return '⌨';
+  if (['json','yaml','yml','xml','toml','ini','env','conf'].includes(e)) return '⚙';
+  return '📎';
+}
+function _dvIsPreviewable(f) {
+  const e = _dvFileExt(f);
+  return ['jpg','jpeg','png','gif','webp','svg','bmp','avif','mp4','mov','avi','webm','mkv',
+          'mp3','wav','m4a','flac','ogg','aac','opus'].includes(e);
+}
+
 function DuplicatesView() {
   const [groups, setGroups] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -131,7 +152,7 @@ function DuplicatesView() {
           {isImg && streamUrl ? (
             <img src={streamUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <span style={{ fontSize: '28px' }}>{fileIcon(f)}</span>
+            <span style={{ fontSize: '28px' }}>{_dvFileIcon(f)}</span>
           )}
           {isPrev && (
             <div onClick={e => { e.stopPropagation(); setPreviewModal(f); }}
@@ -298,7 +319,7 @@ function DuplicatesView() {
                       {group.length} copies · {groupSize} each
                     </span>
                     {/* File icon preview */}
-                    <span style={{ fontSize: '14px', flexShrink: 0 }}>{fileIcon(group[0])}</span>
+                    <span style={{ fontSize: '14px', flexShrink: 0 }}>{_dvFileIcon(group[0])}</span>
                     {/* Select/deselect */}
                     <button onClick={e => { e.stopPropagation(); groupSel === copyCount ? deselectGroup(group) : selectGroupCopies(group); }}
                       style={{ padding: '3px 8px', flexShrink: 0,
@@ -338,7 +359,7 @@ function DuplicatesView() {
                                 style={{ flexShrink: 0, accentColor: '#ff3333', cursor: 'pointer' }} />
                             )}
                             {/* Icon */}
-                            <span style={{ fontSize: '14px', flexShrink: 0 }}>{fileIcon(f)}</span>
+                            <span style={{ fontSize: '14px', flexShrink: 0 }}>{_dvFileIcon(f)}</span>
                             {/* Badge */}
                             <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '2px', flexShrink: 0,
                               background: isOriginal ? 'rgba(186,255,41,.1)' : 'rgba(255,51,51,.1)',
