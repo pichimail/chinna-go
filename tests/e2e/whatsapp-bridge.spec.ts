@@ -1,14 +1,16 @@
 import { test, expect } from '@playwright/test';
 
+const navWhatsApp = (page: any) => page.locator('#nav').getByText('WhatsApp', { exact: true });
+
 test.describe('WhatsApp Bridge', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-    await page.getByText('WhatsApp').click();
+    await page.waitForLoadState('networkidle');
+    await navWhatsApp(page).click();
   });
 
   test('should show WhatsApp view', async ({ page }) => {
-    await expect(page.getByText(/WhatsApp/i)).toBeVisible();
+    await expect(page.getByText(/WhatsApp/i).first()).toBeVisible();
   });
 
   test('should display connected status when bridge is online', async ({ page }) => {
@@ -26,7 +28,8 @@ test.describe('WhatsApp Bridge', () => {
     });
 
     await page.reload();
-    await page.getByText('WhatsApp').click();
+    await page.waitForLoadState('networkidle');
+    await navWhatsApp(page).click();
 
     await expect(page.getByText(/Connected/i)).toBeVisible();
   });
@@ -44,7 +47,8 @@ test.describe('WhatsApp Bridge', () => {
     });
 
     await page.reload();
-    await page.getByText('WhatsApp').click();
+    await page.waitForLoadState('networkidle');
+    await navWhatsApp(page).click();
 
     await expect(page.getByText(/QR|Scan|Connect/i)).toBeVisible();
   });

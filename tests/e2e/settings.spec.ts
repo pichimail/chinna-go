@@ -3,9 +3,8 @@ import { test, expect } from '@playwright/test';
 test.describe('Settings Page', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-    // Navigate to settings via sidebar
-    await page.getByText('Settings').click();
+    await page.waitForLoadState('networkidle');
+    await page.locator('#nav').getByText('Settings', { exact: true }).click();
   });
 
   test('should display settings form', async ({ page }) => {

@@ -5,17 +5,16 @@ test.describe('Visual Regression', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Verify key shell elements are present
     await expect(page.getByText('CHINNA')).toBeVisible();
     await expect(page.getByText('MAIN')).toBeVisible();
-    await expect(page.getByText('Overview')).toBeVisible();
+    await expect(page.locator('#nav').getByText('Overview', { exact: true })).toBeVisible();
   });
 
   test('WhatsApp view renders', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-    await page.getByText('WhatsApp').click();
+    await page.waitForLoadState('networkidle');
+    await page.locator('#nav').getByText('WhatsApp', { exact: true }).click();
 
-    await expect(page.getByText(/WhatsApp/i)).toBeVisible();
+    await expect(page.getByText(/WhatsApp/i).first()).toBeVisible();
   });
 });

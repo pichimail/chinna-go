@@ -1,9 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+const navWhatsApp = (page: any) => page.locator('#nav').getByText('WhatsApp', { exact: true });
+
 test.describe('Chinna Dashboard', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
+    // Wait for React to fully mount (CDN scripts + Babel transpilation)
+    await page.waitForLoadState('networkidle');
   });
 
   test('should load the dashboard successfully', async ({ page }) => {
@@ -12,24 +15,23 @@ test.describe('Chinna Dashboard', () => {
   });
 
   test('should show sidebar navigation sections', async ({ page }) => {
-    // Sidebar always visible — check section labels
     await expect(page.getByText('MAIN')).toBeVisible();
     await expect(page.getByText('TOOLS')).toBeVisible();
     await expect(page.getByText('COMMS')).toBeVisible();
   });
 
   test('should navigate to Settings via sidebar', async ({ page }) => {
-    await page.getByText('Settings').click();
+    await page.locator('#nav').getByText('Settings', { exact: true }).click();
     await expect(page.getByText(/SETTINGS/i)).toBeVisible();
   });
 
   test('WhatsApp navigation item should be visible in sidebar', async ({ page }) => {
-    await expect(page.getByText('WhatsApp')).toBeVisible();
+    await expect(navWhatsApp(page)).toBeVisible();
   });
 
   test('should navigate to WhatsApp view', async ({ page }) => {
-    await page.getByText('WhatsApp').click();
-    await expect(page.getByText(/WhatsApp/i)).toBeVisible();
+    await navWhatsApp(page).click();
+    await expect(page.getByText(/WhatsApp/i).first()).toBeVisible();
   });
 });
 
@@ -44,9 +46,9 @@ test.describe('WhatsApp Bridge Integration', () => {
     });
 
     await page.goto('/');
-    await page.getByText('WhatsApp').click();
+    await page.waitForLoadState('networkidle');
+    await navWhatsApp(page).click();
 
-    // Verify UI shows disconnected state
     await expect(page.getByText(/Disconnected|Offline|Connect/i)).toBeVisible();
   });
 });
