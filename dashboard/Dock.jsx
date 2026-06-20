@@ -50,7 +50,7 @@ function Dock({ currentView, onNavigate }) {
   return (
     <div id="dock-wrap" className={hidden ? 'dock-hidden' : ''} style={{
       position: 'fixed', bottom: '12px',
-      left: `calc(220px + (100vw - 220px) / 2)`,
+      left: '50%',
       transform: 'translateX(-50%)', zIndex: 300,
       display: 'flex', justifyContent: 'center', alignItems: 'flex-end',
       pointerEvents: 'none', transition: 'bottom .22s ease, opacity .2s',
