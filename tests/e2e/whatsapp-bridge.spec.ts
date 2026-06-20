@@ -5,7 +5,7 @@ const navWhatsApp = (page: any) => page.locator('#nav').getByText('WhatsApp', { 
 test.describe('WhatsApp Bridge', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('#app', { timeout: 30000 });
     await navWhatsApp(page).click();
   });
 
@@ -28,10 +28,10 @@ test.describe('WhatsApp Bridge', () => {
     });
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('#app', { timeout: 30000 });
     await navWhatsApp(page).click();
 
-    await expect(page.getByText(/Connected/i)).toBeVisible();
+    await expect(page.getByText(/Connected/i).first()).toBeVisible();
   });
 
   test('should show QR code when bridge is disconnected', async ({ page }) => {
@@ -47,10 +47,10 @@ test.describe('WhatsApp Bridge', () => {
     });
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('#app', { timeout: 30000 });
     await navWhatsApp(page).click();
 
-    await expect(page.getByText(/QR|Scan|Connect/i)).toBeVisible();
+    await expect(page.getByText(/QR|Scan|Connect/i).first()).toBeVisible();
   });
 
   test('should handle bridge reconnection flow', async ({ page }) => {

@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Settings Page', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('#app', { timeout: 30000 });
     await page.locator('#nav').getByText('Settings', { exact: true }).click();
   });
 

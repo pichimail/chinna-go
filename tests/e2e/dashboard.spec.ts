@@ -2,11 +2,15 @@ import { test, expect } from '@playwright/test';
 
 const navWhatsApp = (page: any) => page.locator('#nav').getByText('WhatsApp', { exact: true });
 
+async function waitForReact(page: any) {
+  await page.goto('/');
+  // #app is rendered by React — this confirms Babel + React have fully mounted
+  await page.waitForSelector('#app', { timeout: 30000 });
+}
+
 test.describe('Chinna Dashboard', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    // Wait for React to fully mount (CDN scripts + Babel transpilation)
-    await page.waitForLoadState('networkidle');
+    await waitForReact(page);
   });
 
   test('should load the dashboard successfully', async ({ page }) => {
@@ -45,10 +49,9 @@ test.describe('WhatsApp Bridge Integration', () => {
       });
     });
 
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await waitForReact(page);
     await navWhatsApp(page).click();
 
-    await expect(page.getByText(/Disconnected|Offline|Connect/i)).toBeVisible();
+    await expect(page.getByText(/Disconnected|Offline|not connected/i).first()).toBeVisible();
   });
 });
