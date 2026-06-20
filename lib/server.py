@@ -2248,6 +2248,58 @@ class H(http.server.SimpleHTTPRequestHandler):
     def _json(self, d, code=200):
         b = json.dumps(d, ensure_ascii=True).encode()
         self.send_response(code); self.send_header('Content-Type','application/json'); self.send_header('Access-Control-Allow-Origin','*'); self.send_header('Content-Length',str(len(b))); self.end_headers(); self.wfile.write(b)
+
+    def _stream_file(self, raw_path):
+        import mimetypes
+        fp = os.path.realpath(os.path.expanduser(urllib.parse.unquote(raw_path or '')))
+        if not fp or not os.path.isfile(fp):
+            self.send_response(404); self.end_headers(); return
+        mime, _ = mimetypes.guess_type(fp)
+        if not mime:
+            EXT_MIME = {
+                'mp4':'video/mp4','mov':'video/quicktime','avi':'video/x-msvideo','webm':'video/webm','mkv':'video/x-matroska','m4v':'video/mp4','ogv':'video/ogg',
+                'mp3':'audio/mpeg','m4a':'audio/mp4','wav':'audio/wav','flac':'audio/flac','ogg':'audio/ogg','aac':'audio/aac','opus':'audio/ogg','wma':'audio/x-ms-wma',
+                'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','gif':'image/gif','webp':'image/webp','svg':'image/svg+xml','bmp':'image/bmp','avif':'image/avif',
+                'pdf':'application/pdf','txt':'text/plain','md':'text/plain','json':'application/json',
+                'js':'text/javascript','jsx':'text/javascript','ts':'text/plain','tsx':'text/plain','css':'text/css','html':'text/html','py':'text/plain','sh':'text/plain',
+            }
+            ext = fp.rsplit('.', 1)[-1].lower() if '.' in fp else ''
+            mime = EXT_MIME.get(ext, 'application/octet-stream')
+        size = os.path.getsize(fp)
+        range_hdr = self.headers.get('Range', '')
+        try:
+            if range_hdr and range_hdr.startswith('bytes='):
+                rng = range_hdr[6:].split(',')[0].strip()
+                s_str, e_str = (rng.split('-') + [''])[:2]
+                start = int(s_str) if s_str else 0
+                end = int(e_str) if e_str else size - 1
+                end = min(end, size - 1)
+                length = end - start + 1
+                with open(fp, 'rb') as fh:
+                    fh.seek(start); data = fh.read(length)
+                self.send_response(206)
+                self.send_header('Content-Type', mime)
+                self.send_header('Content-Range', f'bytes {start}-{end}/{size}')
+                self.send_header('Content-Length', str(len(data)))
+                self.send_header('Accept-Ranges', 'bytes')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(data)
+            else:
+                self.send_response(200)
+                self.send_header('Content-Type', mime)
+                self.send_header('Content-Length', str(size))
+                self.send_header('Accept-Ranges', 'bytes')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                with open(fp, 'rb') as fh:
+                    while True:
+                        chunk = fh.read(65536)
+                        if not chunk: break
+                        self.wfile.write(chunk)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
     def _bd(self):
         l = int(self.headers.get('Content-Length',0)); return json.loads(self.rfile.read(l)) if l else {}
     def do_OPTIONS(self):
@@ -2489,6 +2541,9 @@ end tell"""
             result = self.get_files(ftab, 'size')
             total_bytes = sum(int(f.get('size_bytes') or 0) for f in result.get('files', []))
             self._json({'count': result.get('count', 0), 'total_bytes': total_bytes, 'total_human': fsize(total_bytes), 'tab': ftab})
+        elif p == '/api/files/stream':
+            self._stream_file(q.get('path', ''))
+            return
         elif p == '/api/quick-folders':
             folders = ['~/Downloads', '~/Desktop', '~/Documents', '~/Movies', '~/Pictures']
             results = []
