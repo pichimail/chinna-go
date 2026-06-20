@@ -8,15 +8,15 @@ test.describe('Settings Page', () => {
   });
 
   test('should display settings form', async ({ page }) => {
-    await expect(page.getByText(/OpenRouter/i)).toBeVisible();
-    await expect(page.getByText(/OpenAI/i)).toBeVisible();
+    await expect(page.getByText(/OpenRouter/i).first()).toBeVisible();
+    await expect(page.getByText(/OpenAI/i).first()).toBeVisible();
   });
 
   test('should show Telegram integration field', async ({ page }) => {
-    await expect(page.getByText(/Telegram/i)).toBeVisible();
+    await expect(page.getByText(/Telegram/i).first()).toBeVisible();
   });
 
   test('should show system version info', async ({ page }) => {
-    await expect(page.getByText(/Version|v7/i)).toBeVisible();
+    await expect(page.getByText(/Version|v7/i).first()).toBeVisible();
   });
 });

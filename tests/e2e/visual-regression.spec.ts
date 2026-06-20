@@ -5,8 +5,8 @@ test.describe('Visual Regression', () => {
     await page.goto('/');
     await page.waitForSelector('#app', { timeout: 30000 });
 
-    await expect(page.getByText('CHINNA')).toBeVisible();
-    await expect(page.getByText('MAIN')).toBeVisible();
+    await expect(page.getByText('CHINNA', { exact: true })).toBeVisible();
+    await expect(page.locator('#nav').getByText('MAIN', { exact: true })).toBeVisible();
     await expect(page.locator('#nav').getByText('Overview', { exact: true })).toBeVisible();
   });
 

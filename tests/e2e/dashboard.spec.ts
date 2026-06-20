@@ -15,18 +15,18 @@ test.describe('Chinna Dashboard', () => {
 
   test('should load the dashboard successfully', async ({ page }) => {
     await expect(page).toHaveTitle(/Chinna/i);
-    await expect(page.getByText('CHINNA')).toBeVisible();
+    await expect(page.getByText('CHINNA', { exact: true })).toBeVisible();
   });
 
   test('should show sidebar navigation sections', async ({ page }) => {
-    await expect(page.getByText('MAIN')).toBeVisible();
-    await expect(page.getByText('TOOLS')).toBeVisible();
-    await expect(page.getByText('COMMS')).toBeVisible();
+    await expect(page.locator('#nav').getByText('MAIN', { exact: true })).toBeVisible();
+    await expect(page.locator('#nav').getByText('TOOLS', { exact: true })).toBeVisible();
+    await expect(page.locator('#nav').getByText('COMMS', { exact: true })).toBeVisible();
   });
 
   test('should navigate to Settings via sidebar', async ({ page }) => {
     await page.locator('#nav').getByText('Settings', { exact: true }).click();
-    await expect(page.getByText(/SETTINGS/i)).toBeVisible();
+    await expect(page.getByText(/SETTINGS/i).first()).toBeVisible();
   });
 
   test('WhatsApp navigation item should be visible in sidebar', async ({ page }) => {
