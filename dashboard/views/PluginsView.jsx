@@ -4,6 +4,8 @@ function PluginsView() {
   const [plugins, setPlugins] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [log, setLog] = React.useState('');
+  const [busyId, setBusyId] = React.useState(null);
+  const [logTitle, setLogTitle] = React.useState('Output');
 
   React.useEffect(() => {
     fetch('/api/plugins').then(r => r.json()).then(d => {
@@ -13,7 +15,7 @@ function PluginsView() {
   }, []);
 
   async function runPlugin(plugin, actionId) {
-    // Resolve the action: explicit, plugin's first declared action, or 'run'
+    if (busyId) return;
     let action = actionId;
     if (!action) {
       try {
@@ -22,14 +24,22 @@ function PluginsView() {
         action = (acts[0] && (acts[0].id ?? acts[0].name ?? acts[0])) || 'run';
       } catch { action = 'run'; }
     }
-    setLog(`Running ${plugin.name} · ${action}…\n`);
+    setBusyId(plugin.id);
+    setLogTitle(`${plugin.name} · ${action}`);
+    setLog(`> Running ${plugin.name} · ${action}…\n`);
+    const t0 = Date.now();
     try {
       const d = await fetch('/api/plugins/action', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plugin: plugin.id, action, payload: {} }),
       }).then(r => r.json());
-      setLog(prev => prev + (d.output ?? d.result ?? d.error ?? JSON.stringify(d, null, 2)) + '\n');
-    } catch (e) { setLog(prev => prev + `Error: ${e.message}\n`); }
+      const ms = Date.now() - t0;
+      const out = d.output ?? d.result ?? d.error ?? JSON.stringify(d, null, 2);
+      setLog(prev => prev + out + `\n\n✓ Done in ${ms}ms\n`);
+    } catch (e) {
+      setLog(prev => prev + `✗ Error: ${e.message}\n`);
+    }
+    setBusyId(null);
   }
 
   const ICON_COLORS = { optimizer: '#baff29', cleaner: '#2edd5e', monitor: '#0080ff', utility: '#ffc700', security: '#ff3333', default: '#d54cff' };
@@ -68,9 +78,9 @@ function PluginsView() {
                   </div>
                   {p.description && <div style={{ fontSize: '11px', color: 'var(--t3)', lineHeight: 1.5, marginBottom: '10px' }}>{p.description}</div>}
                   <div style={{ display: 'flex', gap: '6px' }}>
-                    <button onClick={() => runPlugin(p)}
-                      style={{ flex: 1, padding: '5px', border: `1px solid ${color(p)}44`, background: 'transparent', color: color(p), borderRadius: '2px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
-                      ▶ Run
+                    <button onClick={() => runPlugin(p)} disabled={!!busyId}
+                      style={{ flex: 1, padding: '5px', border: `1px solid ${color(p)}44`, background: busyId === p.id ? `${color(p)}10` : 'transparent', color: color(p), borderRadius: '2px', fontSize: '11px', fontWeight: 700, cursor: busyId ? 'wait' : 'pointer', opacity: busyId && busyId !== p.id ? 0.5 : 1, transition: 'all .1s' }}>
+                      {busyId === p.id ? '⟳ Running…' : '▶ Run'}
                     </button>
                   </div>
                 </div>
@@ -82,7 +92,7 @@ function PluginsView() {
         {log && (
           <div style={{ width: '300px', flexShrink: 0, border: '1px solid var(--line)', borderRadius: '2px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--t2)' }}>Output</span>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--t2)' }}>{logTitle}</span>
               <button onClick={() => setLog('')} style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: '14px' }}>×</button>
             </div>
             <pre style={{ flex: 1, overflowY: 'auto', padding: '12px', margin: 0, fontSize: '11px', fontFamily: 'var(--mono)', color: 'var(--t2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6 }}>

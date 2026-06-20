@@ -378,7 +378,7 @@ function ShortcutsWidget({ onNavigate }) {
   );
 }
 
-function DeepLinksWidget() {
+function DeepLinksWidget({ onNavigate }) {
   const links = [
     { icon: '📡', label: 'WhatsApp', id: 'whatsapp', color: '#2edd5e' },
     { icon: '🔒', label: 'Secure Chat', id: 'securechat', color: '#00e5ff' },
@@ -389,26 +389,41 @@ function DeepLinksWidget() {
   return (
     <div style={{ ...W, display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
       {links.map(l => (
-        <a key={l.id} href={`#${l.id}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px',
-          border: `1px solid ${l.color}44`, borderRadius: '2px', color: l.color, fontSize: '11px', fontWeight: 700,
-          textDecoration: 'none', transition: 'border-color .15s' }}>
+        <button key={l.id} onClick={() => onNavigate?.(l.id)}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px',
+            border: `1px solid ${l.color}44`, borderRadius: '2px', color: l.color, fontSize: '11px', fontWeight: 700,
+            background: 'transparent', cursor: 'pointer', transition: 'border-color .15s, background .15s' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor=l.color; e.currentTarget.style.background=`${l.color}0d`; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor=`${l.color}44`; e.currentTarget.style.background='transparent'; }}>
           <span>{l.icon}</span>{l.label}
-        </a>
+        </button>
       ))}
     </div>
   );
 }
 
 function FoldersWidget() {
-  const folders = ['~/Downloads', '~/Desktop', '~/Documents', '~/Movies', '~/Pictures'];
+  const [folders, setFolders] = React.useState([
+    { path: '~/Downloads', size: '—', exists: true },
+    { path: '~/Desktop', size: '—', exists: true },
+    { path: '~/Documents', size: '—', exists: true },
+    { path: '~/Movies', size: '—', exists: true },
+    { path: '~/Pictures', size: '—', exists: true },
+  ]);
+  React.useEffect(() => {
+    fetch('/api/quick-folders').then(r => r.json()).then(d => { if (d.folders) setFolders(d.folders); }).catch(() => {});
+  }, []);
   return (
     <div style={W}>
       <div style={KICKER}>QUICK FOLDERS</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {folders.map((f, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 0',
-            borderBottom: '1px solid rgba(255,255,255,.04)', fontSize: '12px', color: 'var(--t2)' }}>
-            <span>📁</span>{f}
+            borderBottom: '1px solid rgba(255,255,255,.04)', fontSize: '12px',
+            color: f.exists ? 'var(--t2)' : 'var(--t4)', opacity: f.exists ? 1 : 0.5 }}>
+            <span>{f.exists ? '📁' : '🚫'}</span>
+            <span style={{ flex: 1 }}>{f.path}</span>
+            <span style={{ fontSize: '10px', fontFamily: 'var(--mono)', color: 'var(--t3)' }}>{f.size}</span>
           </div>
         ))}
       </div>
@@ -448,7 +463,7 @@ function OverviewView({ onNavigate }) {
           <QuickAIWidget onNavigate={onNavigate} />
           <QuickTerminalWidget />
         </div>
-        <DeepLinksWidget />
+        <DeepLinksWidget onNavigate={onNavigate} />
         <div style={G2}>
           <FoldersWidget />
           <CommsWidget onNavigate={onNavigate} />

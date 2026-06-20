@@ -92,6 +92,8 @@ function App() {
   const [stats, setStats] = React.useState({});
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [searchQ, setSearchQ] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState([]);
+  const searchTimer = React.useRef(null);
 
   React.useEffect(() => {
     const poll = () => fetch('/api/stats').then(r => r.json()).then(setStats).catch(() => {});
@@ -116,7 +118,17 @@ function App() {
   }
   window.__pushNotification = pushNotification;
 
-  function navigate(id) { if (VIEWS[id]) setView(id); }
+  function doSearch(q) {
+    setSearchQ(q);
+    clearTimeout(searchTimer.current);
+    if (!q.trim()) { setSearchResults([]); return; }
+    searchTimer.current = setTimeout(() => {
+      fetch(`/api/search?q=${encodeURIComponent(q)}`).then(r => r.json())
+        .then(d => setSearchResults(d.results ?? [])).catch(() => {});
+    }, 180);
+  }
+
+  function navigate(id) { if (VIEWS[id]) { setView(id); setSearchOpen(false); setSearchQ(''); setSearchResults([]); } }
   React.useEffect(() => { window.__navigate = navigate; }, []);
 
   const cpu = stats.cpu?.pct ?? 0;
@@ -214,13 +226,33 @@ function App() {
           </div>
           <div style={{ flex: 1 }} />
           {searchOpen ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: '2px', padding: '4px 10px', minWidth: '200px' }}>
-              <span style={{ color: 'var(--t3)', fontSize: '12px' }}>⌕</span>
-              <input autoFocus value={searchQ} onChange={e => setSearchQ(e.target.value)}
-                onKeyDown={e => e.key === 'Escape' && (setSearchOpen(false), setSearchQ(''))}
-                placeholder="Search…"
-                style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--t1)', fontSize: '12px', fontFamily: 'var(--font)', width: '100%' }} />
-              <button onClick={() => { setSearchOpen(false); setSearchQ(''); }} style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: '14px' }}>×</button>
+            <div style={{ position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: '2px', padding: '4px 10px', minWidth: '240px' }}>
+                <span style={{ color: 'var(--t3)', fontSize: '12px' }}>⌕</span>
+                <input autoFocus value={searchQ} onChange={e => doSearch(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Escape') { setSearchOpen(false); setSearchQ(''); setSearchResults([]); } }}
+                  placeholder="Search pages, files…"
+                  style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--t1)', fontSize: '12px', fontFamily: 'var(--font)', width: '100%' }} />
+                <button onClick={() => { setSearchOpen(false); setSearchQ(''); setSearchResults([]); }} style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: '14px' }}>×</button>
+              </div>
+              {searchResults.length > 0 && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'rgba(0,0,0,.96)', border: '1px solid var(--line)', borderRadius: '2px', zIndex: 999, boxShadow: '0 8px 32px rgba(0,0,0,.6)', overflow: 'hidden' }}>
+                  {searchResults.map((r, i) => (
+                    <div key={i} onClick={() => r.type === 'nav' && navigate(r.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', cursor: 'pointer',
+                        borderBottom: '1px solid rgba(255,255,255,.04)', transition: 'background .08s' }}
+                      onMouseEnter={e => e.currentTarget.style.background='rgba(186,255,41,.06)'}
+                      onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                      <span style={{ fontSize: '13px' }}>{r.icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</div>
+                        {r.sub && <div style={{ fontSize: '10px', color: 'var(--t3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.sub}</div>}
+                      </div>
+                      <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--t4)' }}>{r.type}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <button onClick={() => setSearchOpen(true)}

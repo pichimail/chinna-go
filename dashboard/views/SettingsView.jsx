@@ -6,6 +6,9 @@ function SettingsView() {
   const [version, setVersion] = React.useState(null);
   const [models, setModels] = React.useState({ active: '', presets: {}, preset_labels: {} });
   const [tgMsg, setTgMsg] = React.useState(null);
+  const [actionMsg, setActionMsg] = React.useState(null);
+  const [actionBusy, setActionBusy] = React.useState(null);
+  const [relayEdit, setRelayEdit] = React.useState(false);
 
   React.useEffect(() => {
     fetch('/api/get_keys').then(r => r.json()).then(setKeys).catch(() => {});
@@ -192,25 +195,54 @@ function SettingsView() {
             <div style={S}>
               <Label>Quick Actions</Label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-                {[['🧹 Deep Clean', '#2edd5e', () => fetch('/api/deep-clean', { method: 'POST' })],
-                  ['⚡ Purge RAM', '#ff2d55', () => fetch('/api/purge-ram', { method: 'POST' })],
-                  ['🔍 Doctor', '#ffc700', () => fetch('/api/doctor')],
-                ].map(([label, color, fn]) => (
-                  <button key={label} onClick={fn}
-                    style={{ padding: '7px 12px', border: `1px solid ${color}44`, background: 'transparent', color, borderRadius: '2px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textAlign: 'left' }}>
-                    {label}
+                {[['🧹 Deep Clean', '#2edd5e', '/api/deep-clean', 'POST'],
+                  ['⚡ Purge RAM', '#ff2d55', '/api/purge-ram', 'POST'],
+                  ['🔍 Doctor', '#ffc700', '/api/doctor', 'GET'],
+                ].map(([label, color, url, method]) => (
+                  <button key={label} disabled={!!actionBusy}
+                    onClick={async () => {
+                      setActionBusy(label); setActionMsg(null);
+                      try {
+                        const d = await fetch(url, { method }).then(r => r.json());
+                        setActionMsg({ label, msg: d.result ?? d.message ?? '✓ Done', color });
+                      } catch { setActionMsg({ label, msg: 'Error', color: '#ff3333' }); }
+                      setActionBusy(null);
+                      setTimeout(() => setActionMsg(null), 5000);
+                    }}
+                    style={{ padding: '7px 12px', border: `1px solid ${color}44`, background: 'transparent', color: actionBusy === label ? color : color, borderRadius: '2px', fontSize: '11px', fontWeight: 700, cursor: actionBusy ? 'wait' : 'pointer', textAlign: 'left', opacity: actionBusy && actionBusy !== label ? 0.5 : 1 }}>
+                    {actionBusy === label ? '⟳ Working…' : label}
                   </button>
                 ))}
               </div>
+              {actionMsg && (
+                <div style={{ marginTop: '8px', padding: '6px 10px', border: `1px solid ${actionMsg.color}44`, borderRadius: '2px', fontSize: '11px', color: actionMsg.color, background: `${actionMsg.color}0a` }}>
+                  <span style={{ fontWeight: 700 }}>{actionMsg.label}</span> · {actionMsg.msg}
+                </div>
+              )}
             </div>
 
             <div style={S}>
-              <Label>Relay</Label>
-              <div style={{ fontSize: '11px', color: 'var(--t3)', lineHeight: 1.6 }}>
-                {keys.chat_relay_url ? (
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', wordBreak: 'break-all', color: 'var(--t2)' }}>{keys.chat_relay_url}</div>
-                ) : 'No relay configured'}
-              </div>
+              <Label>Relay URL</Label>
+              {relayEdit ? (
+                <div>
+                  <FInput value={keys.chat_relay_url ?? ''} placeholder="https://your-relay.example.com"
+                    onChange={e => setKeys(k => ({ ...k, chat_relay_url: e.target.value }))} />
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                    <button onClick={() => { saveKey('chat_relay_url', keys.chat_relay_url); setRelayEdit(false); }}
+                      style={{ flex: 1, padding: '5px 10px', background: 'transparent', border: '1px solid var(--acc)', borderRadius: '2px', color: 'var(--acc)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                    <button onClick={() => setRelayEdit(false)}
+                      style={{ padding: '5px 10px', background: 'transparent', border: '1px solid var(--line2)', borderRadius: '2px', color: 'var(--t3)', fontSize: '11px', cursor: 'pointer' }}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                  <div style={{ flex: 1, fontSize: '11px', fontFamily: 'var(--mono)', color: 'var(--t3)', wordBreak: 'break-all' }}>
+                    {keys.chat_relay_url || keys.chat_default_relay_url || 'Not configured'}
+                  </div>
+                  <button onClick={() => setRelayEdit(true)}
+                    style={{ padding: '3px 8px', background: 'transparent', border: '1px solid var(--line2)', borderRadius: '2px', color: 'var(--t3)', fontSize: '10px', cursor: 'pointer' }}>Edit</button>
+                </div>
+              )}
             </div>
           </div>
         </div>

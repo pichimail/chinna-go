@@ -2256,6 +2256,44 @@ end tell"""
                                 'position': float(parts[3]) if len(parts)>3 else 0})
             except Exception:
                 self._json({'playing': False})
+        elif p == '/api/quick-folders':
+            folders = ['~/Downloads', '~/Desktop', '~/Documents', '~/Movies', '~/Pictures']
+            results = []
+            for f in folders:
+                expanded = os.path.expanduser(f)
+                try:
+                    out = sh(f'du -sh "{expanded}" 2>/dev/null').strip()
+                    size = out.split('\t')[0] if '\t' in out else '—'
+                except Exception:
+                    size = '—'
+                results.append({'path': f, 'size': size, 'exists': os.path.isdir(expanded)})
+            self._json({'folders': results})
+        elif p == '/api/search':
+            query = q.get('q', '').strip()
+            if not query:
+                self._json({'results': []})
+            else:
+                results = []
+                # Search files
+                try:
+                    file_hits = search_files_mac(query, '~') if query else []
+                    for h in (file_hits or [])[:5]:
+                        name = h if isinstance(h, str) else h.get('path', '')
+                        results.append({'type': 'file', 'label': os.path.basename(name), 'sub': name, 'icon': '🗂'})
+                except Exception:
+                    pass
+                # Search nav items
+                nav_items = [
+                    ('overview', 'Overview', '⌂'), ('studio', 'Studio', '◈'), ('files', 'Files', '🗂'),
+                    ('apps', 'Apps', '⊞'), ('duplicates', 'Duplicates', '⊕'), ('plugins', 'Plugins', '⬡'),
+                    ('settings', 'Settings', '⚙'), ('whatsapp', 'WhatsApp', '◎'),
+                    ('securechat', 'Secure Chat', '⊛'), ('webviews', 'Browser', '⊙'),
+                ]
+                ql = query.lower()
+                for vid, vlabel, vicon in nav_items:
+                    if ql in vlabel.lower():
+                        results.append({'type': 'nav', 'label': vlabel, 'id': vid, 'icon': vicon, 'sub': 'Navigate'})
+                self._json({'results': results[:12]})
         elif p.startswith('/api/'):
             self._json({'error': f'unknown {p}'}, 404)
         else:
