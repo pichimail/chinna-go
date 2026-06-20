@@ -4,16 +4,44 @@ function SettingsView() {
   const [keys, setKeys] = React.useState({});
   const [saved, setSaved] = React.useState(false);
   const [version, setVersion] = React.useState(null);
+  const [models, setModels] = React.useState({ active: '', presets: {}, preset_labels: {} });
+  const [tgMsg, setTgMsg] = React.useState(null);
 
   React.useEffect(() => {
     fetch('/api/get_keys').then(r => r.json()).then(setKeys).catch(() => {});
     fetch('/api/version').then(r => r.json()).then(setVersion).catch(() => {});
+    fetch('/api/models').then(r => r.json()).then(setModels).catch(() => {});
   }, []);
 
   async function saveKey(k, v) {
     const payload = { ...keys, [k]: v };
     await fetch('/api/save_keys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
     setKeys(payload); setSaved(true); setTimeout(() => setSaved(false), 2000);
+  }
+
+  async function setModel(preset) {
+    await fetch('/api/model-set', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset }) }).catch(() => {});
+    fetch('/api/models').then(r => r.json()).then(setModels).catch(() => {});
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
+  }
+
+  async function telegramPair() {
+    setTgMsg('Pairing…');
+    try {
+      const d = await fetch('/api/telegram/pair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }).then(r => r.json());
+      setTgMsg(d.result ?? d.message ?? (d.pair_code ? `Pair code: ${d.pair_code}` : 'Pairing started'));
+      fetch('/api/get_keys').then(r => r.json()).then(setKeys).catch(() => {});
+    } catch { setTgMsg('Pair failed'); }
+    setTimeout(() => setTgMsg(null), 6000);
+  }
+
+  async function telegramTest() {
+    setTgMsg('Sending test…');
+    try {
+      const d = await fetch('/api/telegram/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }).then(r => r.json());
+      setTgMsg(d.result ?? (d.ok ? 'Test message sent ✓' : 'Test failed'));
+    } catch { setTgMsg('Test failed'); }
+    setTimeout(() => setTgMsg(null), 6000);
   }
 
   const S = { border: '1px solid var(--line)', borderRadius: '2px', padding: '14px', background: 'transparent' };
@@ -77,6 +105,18 @@ function SettingsView() {
               </div>
               {keys.ai_status && <Help>{keys.ai_status}</Help>}
             </div>
+
+            <div style={S}>
+              <Label>Active Model</Label>
+              <select value={''} onChange={e => e.target.value && setModel(e.target.value)}
+                style={{ width: '100%', background: 'var(--s1)', border: '1px solid var(--line2)', color: 'var(--t1)', fontSize: '12px', padding: '7px 9px', borderRadius: '2px', cursor: 'pointer', marginTop: '4px' }}>
+                <option value="">{models.active_display ?? models.active ?? 'Select model…'}</option>
+                {Object.keys(models.presets ?? {}).map(k => (
+                  <option key={k} value={k}>{(models.preset_labels ?? {})[k] ?? k}</option>
+                ))}
+              </select>
+              <Help>Current: <span style={{ color: 'var(--acc)' }}>{models.active_display ?? models.active ?? '—'}</span></Help>
+            </div>
           </div>
 
           {/* Column 2 — Integrations */}
@@ -107,6 +147,17 @@ function SettingsView() {
                   </div>
                 )}
               </div>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
+                <button onClick={telegramPair}
+                  style={{ flex: 1, padding: '6px 10px', background: 'rgba(46,221,94,.12)', border: '1px solid rgba(46,221,94,.35)', borderRadius: '2px', color: '#2edd5e', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+                  🔗 Pair
+                </button>
+                <button onClick={telegramTest}
+                  style={{ flex: 1, padding: '6px 10px', background: 'transparent', border: '1px solid var(--line2)', borderRadius: '2px', color: 'var(--t2)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+                  ✉ Test
+                </button>
+              </div>
+              {tgMsg && <Help><span style={{ color: '#2edd5e' }}>{tgMsg}</span></Help>}
             </div>
 
             <div style={S}>
@@ -141,8 +192,8 @@ function SettingsView() {
             <div style={S}>
               <Label>Quick Actions</Label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-                {[['🧹 Deep Clean', '#2edd5e', () => fetch('/api/purge', { method: 'POST' })],
-                  ['⚡ Purge RAM', '#ff2d55', () => fetch('/api/purge', { method: 'POST' })],
+                {[['🧹 Deep Clean', '#2edd5e', () => fetch('/api/deep-clean', { method: 'POST' })],
+                  ['⚡ Purge RAM', '#ff2d55', () => fetch('/api/purge-ram', { method: 'POST' })],
                   ['🔍 Doctor', '#ffc700', () => fetch('/api/doctor')],
                 ].map(([label, color, fn]) => (
                   <button key={label} onClick={fn}

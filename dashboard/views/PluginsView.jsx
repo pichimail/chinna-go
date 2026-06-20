@@ -12,12 +12,24 @@ function PluginsView() {
     }).catch(() => setLoading(false));
   }, []);
 
-  async function runPlugin(plugin) {
-    setLog(`Running ${plugin.name}…\n`);
+  async function runPlugin(plugin, actionId) {
+    // Resolve the action: explicit, plugin's first declared action, or 'run'
+    let action = actionId;
+    if (!action) {
+      try {
+        const meta = await fetch(`/api/plugins/${plugin.id}`).then(r => r.json());
+        const acts = meta.actions ?? plugin.actions ?? [];
+        action = (acts[0] && (acts[0].id ?? acts[0].name ?? acts[0])) || 'run';
+      } catch { action = 'run'; }
+    }
+    setLog(`Running ${plugin.name} · ${action}…\n`);
     try {
-      const d = await fetch(`/api/plugins/${plugin.id}`, { method: 'POST' }).then(r => r.json());
-      setLog(prev => prev + (d.output ?? d.result ?? JSON.stringify(d, null, 2)));
-    } catch (e) { setLog(prev => prev + `Error: ${e.message}`); }
+      const d = await fetch('/api/plugins/action', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plugin: plugin.id, action, payload: {} }),
+      }).then(r => r.json());
+      setLog(prev => prev + (d.output ?? d.result ?? d.error ?? JSON.stringify(d, null, 2)) + '\n');
+    } catch (e) { setLog(prev => prev + `Error: ${e.message}\n`); }
   }
 
   const ICON_COLORS = { optimizer: '#baff29', cleaner: '#2edd5e', monitor: '#0080ff', utility: '#ffc700', security: '#ff3333', default: '#d54cff' };

@@ -100,6 +100,17 @@ function App() {
     return () => clearInterval(id);
   }, []);
 
+  React.useEffect(() => {
+    const poll = () => fetch('/api/notifications').then(r => r.json())
+      .then(d => setNotifications((d.notifications ?? []).map(n => ({
+        icon: n.icon, title: n.title, body: n.body, color: n.color, time: n.time, read: !!n.read,
+      }))))
+      .catch(() => {});
+    poll();
+    const id = setInterval(poll, 15000);
+    return () => clearInterval(id);
+  }, []);
+
   function pushNotification(icon, title, body) {
     setNotifications(n => [{ icon, title, body, read: false, time: Date.now() }, ...n].slice(0, 50));
   }

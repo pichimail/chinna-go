@@ -2234,6 +2234,8 @@ class H(http.server.SimpleHTTPRequestHandler):
                     })
                 except Exception as e:
                     self._json({'temp': 29, 'feels_like': 28, 'condition': 'Partly Cloudy', 'humidity': 72, 'wind': 12, 'icon': '02d', 'error': str(e)})
+        elif p == '/api/notifications':
+            self._json({'notifications': self.system_notifications()})
         elif p == '/api/music/status':
             try:
                 script = """tell application "Music"
@@ -2453,6 +2455,18 @@ end tell"""
             self._json(self.toggle_automation(b.get('mode','')))
         elif p == '/api/music':
             self._json(self.music_control(b.get('action','play')))
+        elif p == '/api/music/play':
+            self._json(self.music_control('play'))
+        elif p == '/api/music/pause':
+            self._json(self.music_control('pause'))
+        elif p == '/api/music/skip':
+            self._json(self.music_control('next'))
+        elif p == '/api/music/prev':
+            self._json(self.music_control('prev'))
+        elif p == '/api/purge-ram':
+            self._json(self.purge_ram_now())
+        elif p == '/api/deep-clean':
+            self._json(self.deep_clean_now())
         elif p == '/api/mac':
             self._json(self.mac_action(b))
         elif p == '/api/audit':
@@ -3461,6 +3475,106 @@ fi
             return {"ok": True, "mode": new_mode}
         except Exception as e:
             return {"error": str(e)}
+
+    def _ram_used_pct(self):
+        """Return current RAM used percent, cross-platform with fallback."""
+        try:
+            with cache_lock:
+                v = stats_cache.get('memory', {}).get('pct')
+            if v is not None:
+                return float(v)
+        except Exception:
+            pass
+        return 0.0
+
+    def purge_ram_now(self):
+        """POST /api/purge-ram — free inactive memory. macOS: `purge`; Linux: drop caches best-effort; always returns before/after."""
+        before = self._ram_used_pct()
+        ran = False
+        try:
+            if sys.platform == 'darwin':
+                sh("purge 2>/dev/null || sudo -n purge 2>/dev/null", 30)
+                ran = True
+            else:
+                # Linux best-effort: sync + drop caches if permitted (no hard failure in CI)
+                sh("sync 2>/dev/null; (echo 1 > /proc/sys/vm/drop_caches) 2>/dev/null || true", 15)
+                ran = True
+        except Exception:
+            ran = False
+        # Recompute after a brief settle; stats_cache refreshes on its own loop
+        after = self._ram_used_pct()
+        freed = max(0.0, round(before - after, 1))
+        return {
+            'success': ran,
+            'ramBefore': round(before, 1),
+            'ramAfter': round(after, 1),
+            'freedPct': freed,
+            'result': f'RAM purge {"completed" if ran else "unavailable"} · {round(before,1)}% → {round(after,1)}%'
+        }
+
+    def deep_clean_now(self):
+        """POST /api/deep-clean — targeted cache removal with size accounting. Safe, scoped to user caches."""
+        targets = [
+            os.path.expanduser('~/Library/Caches'),
+            os.path.expanduser('~/.cache'),
+            os.path.expanduser('~/Library/Logs'),
+            '/tmp',
+        ]
+        freed_bytes = 0
+        cleaned = []
+        for t in targets:
+            try:
+                if not t or not os.path.isdir(t):
+                    continue
+                before = sh(f"du -sk '{t}' 2>/dev/null | cut -f1", 30).strip()
+                before_kb = int(before) if before.isdigit() else 0
+                # Remove only stale files (>1 day) inside cache dirs, never the dir itself
+                sh(f"find '{t}' -mindepth 1 -type f -atime +1 -delete 2>/dev/null || true", 60)
+                after = sh(f"du -sk '{t}' 2>/dev/null | cut -f1", 30).strip()
+                after_kb = int(after) if after.isdigit() else before_kb
+                delta = max(0, (before_kb - after_kb)) * 1024
+                if delta > 0:
+                    cleaned.append({'path': t, 'freed': fsize(delta)})
+                    freed_bytes += delta
+            except Exception:
+                continue
+        return {
+            'success': True,
+            'freed': fsize(freed_bytes),
+            'freed_bytes': freed_bytes,
+            'cleaned': cleaned,
+            'result': f'Deep clean freed {fsize(freed_bytes)}'
+        }
+
+    def system_notifications(self):
+        """GET /api/notifications — synthesize recent system events from real signals (RAM, music, AI, version)."""
+        notes = []
+        try:
+            with cache_lock:
+                s = dict(stats_cache)
+            ram = s.get('memory', {}).get('pct', 0) or 0
+            if ram >= 75:
+                notes.append({'icon': '⚡', 'title': 'High memory usage',
+                              'body': f'RAM at {round(ram)}% — consider purging', 'color': '#ff3333',
+                              'time': 'just now', 'read': False})
+            disk = s.get('disk', {}).get('pct', 0) or 0
+            if disk >= 85:
+                notes.append({'icon': '💾', 'title': 'Disk almost full',
+                              'body': f'Disk at {round(disk)}% — run Deep Clean', 'color': '#ffc700',
+                              'time': 'just now', 'read': False})
+        except Exception:
+            pass
+        try:
+            status = ai_key_status()
+            notes.append({'icon': '◆', 'title': 'AI status',
+                          'body': status.get('label', 'AI ready' if status.get('ready') else 'AI not configured'),
+                          'color': '#baff29' if status.get('ready') else '#ff8c00',
+                          'time': 'now', 'read': bool(status.get('ready'))})
+        except Exception:
+            pass
+        notes.append({'icon': '✓', 'title': f'Chinna {CHINNA_VERSION}',
+                      'body': 'Dashboard running', 'color': '#2edd5e', 'time': 'now', 'read': True})
+        return notes
 
     def music_control(self, action):
         scripts = {

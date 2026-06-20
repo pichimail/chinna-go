@@ -83,7 +83,10 @@ function MusicCard() {
     return () => clearInterval(id);
   }, []);
 
-  const ctrl = (action) => fetch('/api/music', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) }).catch(() => {});
+  const ENDPOINT = { play: '/api/music/play', pause: '/api/music/pause', next: '/api/music/skip', prev: '/api/music/prev' };
+  const ctrl = (action) => fetch(ENDPOINT[action] ?? '/api/music', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) })
+    .then(() => { fetch('/api/music/status').then(r => r.json()).then(d => { if (d.playing != null) setPlaying(d.playing); }).catch(() => {}); })
+    .catch(() => {});
 
   return (
     <div style={W}>
@@ -106,8 +109,20 @@ function MusicCard() {
 
 function HeroCard() {
   const [time, setTime] = React.useState(new Date());
+  const [toast, setToast] = React.useState(null);
+  const [busy, setBusy] = React.useState(null);
   React.useEffect(() => { const id = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(id); }, []);
   const greet = time.getHours() < 12 ? 'Good morning' : time.getHours() < 17 ? 'Good afternoon' : 'Good evening';
+
+  async function fire(label) {
+    setBusy(label);
+    const d = await runAction(label);
+    setBusy(null);
+    const msg = d?.result ?? d?.message ?? (d ? 'Done' : 'Action failed');
+    setToast({ label, msg });
+    setTimeout(() => setToast(null), 4000);
+  }
+
   return (
     <div style={{ ...W, background: 'linear-gradient(135deg,rgba(186,255,41,.06),rgba(0,128,255,.04),transparent)', minHeight: '120px' }}>
       <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--acc)', marginBottom: '8px' }}>CHINNA DASHBOARD</div>
@@ -117,21 +132,32 @@ function HeroCard() {
       </div>
       <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
         {['⚡ Purge RAM', '🧹 Deep Clean', '📊 Scan'].map(a => (
-          <button key={a} data-dot-reveal style={{ padding: '5px 10px', fontSize: '11px', fontWeight: 600, border: '1px solid var(--line)', borderRadius: '2px', background: 'transparent', color: 'var(--t2)', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
-            onClick={() => runAction(a)}>
-            <span style={{ position: 'relative', zIndex: 1 }}>{a}</span>
+          <button key={a} data-dot-reveal disabled={busy === a} style={{ padding: '5px 10px', fontSize: '11px', fontWeight: 600, border: '1px solid var(--line)', borderRadius: '2px', background: 'transparent', color: busy === a ? 'var(--acc)' : 'var(--t2)', cursor: busy ? 'wait' : 'pointer', position: 'relative', overflow: 'hidden', opacity: busy && busy !== a ? 0.5 : 1 }}
+            onClick={() => fire(a)}>
+            <span style={{ position: 'relative', zIndex: 1 }}>{busy === a ? '⟳ Working…' : a}</span>
           </button>
         ))}
       </div>
+      {toast && (
+        <div style={{ marginTop: '10px', padding: '8px 10px', border: '1px solid rgba(186,255,41,.3)', borderRadius: '2px', background: 'rgba(186,255,41,.06)', fontSize: '11px', color: 'var(--t1)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <span style={{ color: 'var(--acc)' }}>✓</span>
+          <span style={{ fontWeight: 700 }}>{toast.label}</span>
+          <span style={{ color: 'var(--t3)' }}>· {toast.msg}</span>
+        </div>
+      )}
     </div>
   );
 }
 
 function runAction(label) {
-  const map = { '⚡ Purge RAM': '/api/purge', '🧹 Deep Clean': '/api/purge', '📊 Scan': '/api/doctor' };
-  const url = map[label];
-  if (!url) return;
-  fetch(url, { method: label.includes('Doctor') ? 'GET' : 'POST' }).catch(() => {});
+  const map = {
+    '⚡ Purge RAM': { url: '/api/purge-ram', method: 'POST' },
+    '🧹 Deep Clean': { url: '/api/deep-clean', method: 'POST' },
+    '📊 Scan': { url: '/api/doctor', method: 'GET' },
+  };
+  const a = map[label];
+  if (!a) return Promise.resolve(null);
+  return fetch(a.url, { method: a.method }).then(r => r.json()).catch(() => null);
 }
 
 function QuickAIWidget({ onNavigate }) {
@@ -327,8 +353,8 @@ function VersionCard() {
 
 function ShortcutsWidget({ onNavigate }) {
   const shortcuts = [
-    { icon: '⚡', label: 'Purge RAM', color: '#ff2d55', action: () => fetch('/api/purge', { method: 'POST' }) },
-    { icon: '🧹', label: 'Deep Clean', color: '#2edd5e', action: () => fetch('/api/purge', { method: 'POST' }) },
+    { icon: '⚡', label: 'Purge RAM', color: '#ff2d55', action: () => fetch('/api/purge-ram', { method: 'POST' }) },
+    { icon: '🧹', label: 'Deep Clean', color: '#2edd5e', action: () => fetch('/api/deep-clean', { method: 'POST' }) },
     { icon: '📊', label: 'Doctor', color: '#ffc700', action: () => onNavigate('apps') },
     { icon: '◈', label: 'Studio', color: '#d54cff', action: () => onNavigate('studio') },
     { icon: '🗂', label: 'Files', color: '#0080ff', action: () => onNavigate('files') },

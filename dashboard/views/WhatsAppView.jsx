@@ -10,18 +10,42 @@ function WhatsAppView() {
   const endRef = React.useRef(null);
 
   React.useEffect(() => {
-    fetch('/api/whatsapp/status').then(r => r.json()).then(s => {
+    const poll = () => fetch('/api/whatsapp/status').then(r => r.json()).then(s => {
       setStatus(s); setLoading(false);
       if (s.connected) {
         fetch('/api/whatsapp/chats').then(r => r.json()).then(d => setChats(d.chats ?? d ?? [])).catch(() => {});
       }
     }).catch(() => setLoading(false));
+    poll();
+    const id = setInterval(poll, 5000);
+    return () => clearInterval(id);
   }, []);
+
+  async function logout() {
+    await fetch('/api/whatsapp/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }).catch(() => {});
+    setStatus(s => ({ ...(s || {}), connected: false }));
+    setChats([]); setActive(null); setMessages([]);
+  }
+
+  // Poll QR while disconnected
+  const [qr, setQr] = React.useState(null);
+  React.useEffect(() => {
+    if (status && !status.connected) {
+      const poll = () => fetch('/api/whatsapp/qr').then(r => r.json())
+        .then(d => setQr(d.qr ?? d.dataUrl ?? d.image ?? null)).catch(() => {});
+      poll();
+      const id = setInterval(poll, 5000);
+      return () => clearInterval(id);
+    }
+  }, [status?.connected]);
 
   React.useEffect(() => {
     if (active?.id) {
-      fetch(`/api/whatsapp/messages?chat=${encodeURIComponent(active.id)}`).then(r => r.json())
+      const poll = () => fetch(`/api/whatsapp/messages?chat=${encodeURIComponent(active.id)}`).then(r => r.json())
         .then(d => setMessages(d.messages ?? d ?? [])).catch(() => {});
+      poll();
+      const id = setInterval(poll, 4000);
+      return () => clearInterval(id);
     }
   }, [active]);
 
@@ -32,7 +56,7 @@ function WhatsAppView() {
     const text = input; setInput('');
     setMessages(m => [...m, { id: Date.now(), from: 'me', text, time: new Date().toISOString() }]);
     await fetch('/api/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chatId: active.id, message: text }) }).catch(() => {});
+      body: JSON.stringify({ chat: active.id, chatId: active.id, message: text }) }).catch(() => {});
   }
 
   const connected = status?.connected;
@@ -49,6 +73,12 @@ function WhatsAppView() {
           <span style={{ fontSize: '11px', fontWeight: 700, color: connected ? '#2edd5e' : '#ff3333' }}>
             {connected ? 'Connected' : 'Disconnected'}
           </span>
+          {connected && (
+            <button onClick={logout}
+              style={{ padding: '5px 10px', background: 'transparent', border: '1px solid rgba(255,51,51,.35)', borderRadius: '2px', color: '#ff3333', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+              Logout
+            </button>
+          )}
         </div>
       </div>
 
@@ -58,11 +88,23 @@ function WhatsAppView() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', color: 'var(--t3)', padding: '40px' }}>
           <div style={{ fontSize: '48px', opacity: 0.3 }}>◎</div>
           <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--t2)' }}>WhatsApp not connected</div>
-          <div style={{ fontSize: '12px', textAlign: 'center', lineHeight: 1.6 }}>
-            {status?.qr ? (
-              <>Scan this QR code with WhatsApp on your phone<br /><span style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--acc)' }}>{status.qr}</span></>
-            ) : 'Start the WhatsApp bridge to connect your account.'}
-          </div>
+          {(() => {
+            const q = qr ?? status?.qr;
+            if (!q) return <div style={{ fontSize: '12px', textAlign: 'center', lineHeight: 1.6 }}>Start the WhatsApp bridge to connect your account.</div>;
+            const isImg = typeof q === 'string' && (q.startsWith('data:image') || q.startsWith('http'));
+            return (
+              <div style={{ fontSize: '12px', textAlign: 'center', lineHeight: 1.6 }}>
+                Scan this QR code with WhatsApp on your phone
+                {isImg ? (
+                  <div style={{ marginTop: '14px' }}>
+                    <img src={q} alt="WhatsApp QR" style={{ width: '220px', height: '220px', borderRadius: '4px', background: '#fff', padding: '8px' }} />
+                  </div>
+                ) : (
+                  <div style={{ marginTop: '10px', fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--acc)', wordBreak: 'break-all', maxWidth: '320px' }}>{q}</div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       ) : (
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
