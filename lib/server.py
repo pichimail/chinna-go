@@ -22,7 +22,9 @@ PAIR_STATE_FILE = os.path.join(CHINNA_HOME, 'telegram_pair.json')
 CHAT_DB_FILE = os.path.join(CHINNA_HOME, 'state/chat_db.json')
 CUSTOM_VIEWS_FILE = os.path.join(CHINNA_HOME, 'custom_views.json')
 UI_LAYOUT_FILE = os.path.join(CHINNA_HOME, 'state/ui_layout.json')
-BOOKMARKS_FILE = os.path.join(CHINNA_HOME, 'webview_bookmarks.json')
+BOOKMARKS_FILE       = os.path.join(CHINNA_HOME, 'webview_bookmarks.json')
+STUDIO_PROJECTS_FILE = os.path.join(CHINNA_HOME, 'studio_projects.json')
+STUDIO_PROJECTS_DIR  = os.path.join(CHINNA_HOME, 'projects')
 WHATSAPP_DIR = os.path.join(CHINNA_HOME, 'whatsapp')
 WHATSAPP_BRIDGE_DIR = os.path.join(CHINNA_HOME, 'whatsapp_bridge')
 WHATSAPP_BRIDGE_PORT = int(os.environ.get('CHINNA_WHATSAPP_BRIDGE_PORT', str(PORT + 81)))
@@ -53,6 +55,8 @@ cache_lock = threading.Lock()
 jobs = {}
 jobs_lock = threading.Lock()
 chat_lock = threading.Lock()
+studio_devservers = {}          # path -> {'pid': int, 'port': int, 'proc': Popen}
+studio_devservers_lock = threading.Lock()
 
 def sh(cmd, timeout=20):
     try:
@@ -388,6 +392,132 @@ def load_bookmarks():
 def save_bookmarks(bookmarks):
     os.makedirs(CHINNA_HOME, exist_ok=True)
     write_json(BOOKMARKS_FILE, bookmarks)
+
+# ── Studio project registry ─────────────────────────────────────────────────
+
+SCAFFOLD_PRESETS = {
+    'threejs': {
+        'name': 'Three.js + GSAP + Anime.js',
+        'description': '3D scenes, smooth animations, scroll effects',
+        'packages': ['three', 'gsap', 'animejs'],
+        'devPackages': ['@types/three'],
+        'color': '#5ac8fa', 'icon': '◎',
+    },
+    'shadcn-vite': {
+        'name': 'Shadcn UI + Vite + React',
+        'description': 'Production-ready components with Tailwind',
+        'packages': ['tailwindcss', 'autoprefixer', 'postcss', 'class-variance-authority', 'clsx', 'tailwind-merge', 'lucide-react', '@radix-ui/react-slot'],
+        'devPackages': [],
+        'init_cmd': 'npx shadcn@latest init -y 2>/dev/null || true',
+        'color': '#ffffff', 'icon': '◈',
+    },
+    'nextjs': {
+        'name': 'Next.js 14 App Router',
+        'description': 'Full-stack with SSR, API routes, server components',
+        'packages': [],
+        'devPackages': [],
+        'init_cmd': 'npx create-next-app@latest . --typescript --tailwind --app --no-git -y 2>/dev/null',
+        'color': '#ffffff', 'icon': '▲',
+    },
+    'supabase': {
+        'name': 'Supabase Auth + DB',
+        'description': 'Authentication, database, storage scaffolding',
+        'packages': ['@supabase/supabase-js', '@supabase/auth-helpers-nextjs'],
+        'devPackages': [],
+        'scaffold_files': {
+            'lib/supabase.ts': 'import { createClient } from "@supabase/supabase-js";\nexport const supabase = createClient(\n  process.env.NEXT_PUBLIC_SUPABASE_URL!,\n  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!\n);\n',
+            '.env.local.example': 'NEXT_PUBLIC_SUPABASE_URL=\nNEXT_PUBLIC_SUPABASE_ANON_KEY=\n',
+        },
+        'color': '#2edd5e', 'icon': '⬡',
+    },
+    'prisma': {
+        'name': 'Prisma ORM + SQLite',
+        'description': 'Type-safe DB with migrations, seed, and schema',
+        'packages': ['prisma', '@prisma/client'],
+        'devPackages': [],
+        'init_cmd': 'npx prisma init --datasource-provider sqlite 2>/dev/null',
+        'color': '#00e5ff', 'icon': '⊕',
+    },
+    'tailwind': {
+        'name': 'Tailwind CSS',
+        'description': 'Utility-first CSS framework',
+        'packages': ['tailwindcss', 'autoprefixer', 'postcss'],
+        'devPackages': [],
+        'init_cmd': 'npx tailwindcss init -p 2>/dev/null',
+        'color': '#06b6d4', 'icon': '✦',
+    },
+    'framer': {
+        'name': 'Framer Motion',
+        'description': 'React animation library, gestures, spring physics',
+        'packages': ['framer-motion'],
+        'devPackages': [],
+        'color': '#e91e8c', 'icon': '◆',
+    },
+    'auth-nextjs': {
+        'name': 'NextAuth.js v5',
+        'description': 'OAuth + credentials authentication for Next.js',
+        'packages': ['next-auth@beta', '@auth/prisma-adapter'],
+        'devPackages': [],
+        'color': '#ffc700', 'icon': '⊛',
+    },
+}
+
+def load_studio_projects():
+    return read_json(STUDIO_PROJECTS_FILE, [])
+
+def save_studio_projects(projects):
+    os.makedirs(CHINNA_HOME, exist_ok=True)
+    write_json(STUDIO_PROJECTS_FILE, projects)
+
+def get_project_tree(path, max_depth=3, max_files=400):
+    IGNORE = {'.git', 'node_modules', '__pycache__', '.next', 'dist', 'build',
+              '.turbo', 'coverage', '.venv', 'venv', '.DS_Store', '.cache'}
+    result = []
+    def walk(p, depth):
+        if depth > max_depth or len(result) >= max_files:
+            return
+        try:
+            entries = sorted(os.scandir(p), key=lambda e: (not e.is_dir(), e.name.lower()))
+            for e in entries:
+                if e.name in IGNORE or e.name.startswith('.'):
+                    continue
+                item = {'name': e.name, 'path': e.path, 'type': 'dir' if e.is_dir() else 'file', 'depth': depth}
+                if e.is_file():
+                    try: item['size'] = e.stat().st_size
+                    except: item['size'] = 0
+                result.append(item)
+                if e.is_dir():
+                    walk(e.path, depth + 1)
+        except PermissionError:
+            pass
+    walk(path, 0)
+    return result
+
+def detect_project_stack(path):
+    stacks = []
+    pkg = os.path.join(path, 'package.json')
+    if os.path.exists(pkg):
+        try:
+            d = json.load(open(pkg))
+            deps = {**d.get('dependencies', {}), **d.get('devDependencies', {})}
+            if 'next' in deps: stacks.append('nextjs')
+            elif 'react' in deps: stacks.append('react')
+            elif 'svelte' in deps: stacks.append('svelte')
+            if 'tailwindcss' in deps: stacks.append('tailwind')
+            if '@supabase/supabase-js' in deps: stacks.append('supabase')
+            if 'three' in deps: stacks.append('threejs')
+            if 'prisma' in deps: stacks.append('prisma')
+            if not stacks: stacks.append('node')
+        except: stacks.append('node')
+    elif os.path.exists(os.path.join(path, 'requirements.txt')) or os.path.exists(os.path.join(path, 'pyproject.toml')):
+        stacks.append('python')
+    elif os.path.exists(os.path.join(path, 'go.mod')):
+        stacks.append('go')
+    elif os.path.exists(os.path.join(path, 'Cargo.toml')):
+        stacks.append('rust')
+    elif any(os.path.exists(os.path.join(path, f)) for f in ['index.html', 'index.htm']):
+        stacks.append('html')
+    return stacks or ['unknown']
 
 def is_openrouter_key(value):
     return safe_text(value).startswith('sk-or-')
@@ -1771,6 +1901,81 @@ def run_project_job(jid, path, install_deps=True):
         job_log(jid, f"Server starting — logs: tail -f {logf}")
     job_done(jid, True)
 
+def run_studio_clone_job(jid, url, dest, name):
+    job_log(jid, f"$ git clone {url}")
+    job_log(jid, f"  → {dest}")
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    out = sh(f"git clone --progress '{url}' '{dest}' 2>&1", timeout=120)
+    if not os.path.isdir(dest):
+        job_log(jid, f"✗ Clone failed:\n{out or '(no output)'}")
+        job_done(jid, False)
+        return
+    job_log(jid, f"✓ Cloned to {dest}")
+    stacks = detect_project_stack(dest)
+    job_log(jid, f"Stack: {', '.join(stacks)}")
+    projects = load_studio_projects()
+    if not any(p['path'] == dest for p in projects):
+        projects.insert(0, {
+            'name': name or os.path.basename(dest),
+            'path': dest,
+            'stacks': stacks,
+            'source': 'git',
+            'url': url,
+            'added': int(time.time()),
+        })
+        save_studio_projects(projects)
+    job_log(jid, f"✅ Ready — open in Studio to start coding")
+    job_done(jid, True)
+
+def run_studio_scaffold_job(jid, path, preset_id):
+    preset = SCAFFOLD_PRESETS.get(preset_id)
+    if not preset:
+        job_log(jid, f"✗ Unknown preset: {preset_id}")
+        job_done(jid, False)
+        return
+    job_log(jid, f"$ scaffold: {preset['name']}")
+    job_log(jid, f"  path: {path}")
+    if not os.path.isdir(path):
+        job_log(jid, "✗ Project path not found")
+        job_done(jid, False)
+        return
+    if preset.get('init_cmd'):
+        job_log(jid, f"$ {preset['init_cmd']}")
+        out = sh(f"cd '{path}' && {preset['init_cmd']} 2>&1", timeout=180)
+        for line in (out or '').split('\n')[:20]:
+            if line.strip(): job_log(jid, f"  {line.strip()}")
+    pkgs = preset.get('packages', [])
+    if pkgs:
+        pkg_str = ' '.join(f"'{p}'" for p in pkgs)
+        pm = 'yarn add' if os.path.exists(os.path.join(path, 'yarn.lock')) else 'npm install'
+        job_log(jid, f"$ {pm} {' '.join(pkgs)}")
+        out = sh(f"cd '{path}' && {pm} {pkg_str} 2>&1", timeout=180)
+        for line in (out or '').split('\n')[:20]:
+            if line.strip() and 'warn' not in line.lower(): job_log(jid, f"  {line.strip()}")
+    dev_pkgs = preset.get('devPackages', [])
+    if dev_pkgs:
+        pkg_str = ' '.join(f"'{p}'" for p in dev_pkgs)
+        pm_dev = 'yarn add -D' if os.path.exists(os.path.join(path, 'yarn.lock')) else 'npm install -D'
+        job_log(jid, f"$ {pm_dev} {' '.join(dev_pkgs)}")
+        sh(f"cd '{path}' && {pm_dev} {pkg_str} 2>&1", timeout=120)
+    for fname, content in (preset.get('scaffold_files') or {}).items():
+        fpath = os.path.join(path, fname)
+        os.makedirs(os.path.dirname(fpath), exist_ok=True)
+        if not os.path.exists(fpath):
+            open(fpath, 'w').write(content)
+            job_log(jid, f"✓ Created {fname}")
+    job_log(jid, f"✅ {preset['name']} scaffolded successfully")
+    job_done(jid, True)
+
+def run_studio_build_job(jid, path, cmd):
+    job_log(jid, f"$ {cmd}")
+    out = sh(f"cd '{path}' && {cmd} 2>&1", timeout=300)
+    for line in (out or '').split('\n'):
+        if line.strip(): job_log(jid, line)
+    success = 'error' not in (out or '').lower() and 'failed' not in (out or '').lower()
+    job_log(jid, '✅ Build complete' if success else '⚠ Build finished with warnings/errors')
+    job_done(jid, success)
+
 def execute_tool(name, args):
     """Execute a tool safely. Returns (result_text, is_long_job)."""
     try:
@@ -2322,6 +2527,41 @@ end tell"""
                     if ql in vlabel.lower():
                         results.append({'type': 'nav', 'label': vlabel, 'id': vid, 'icon': vicon, 'sub': 'Navigate'})
                 self._json({'results': results[:12]})
+        elif p == '/api/studio/projects':
+            projs = load_studio_projects()
+            for proj in projs:
+                proj_path = proj.get('path', '')
+                proj['exists'] = os.path.isdir(proj_path)
+                with studio_devservers_lock:
+                    ds = studio_devservers.get(proj_path)
+                    proj['dev_running'] = bool(ds and ds.get('proc') and ds['proc'].poll() is None)
+                    proj['dev_port'] = ds.get('port') if proj['dev_running'] else None
+            self._json({'projects': projs})
+        elif p == '/api/studio/scaffold/presets':
+            self._json({'presets': [{'id': k, **{x: v[x] for x in ('name','description','color','icon') if x in v}} for k, v in SCAFFOLD_PRESETS.items()]})
+        elif p.startswith('/api/studio/project/tree'):
+            proj_path = os.path.expanduser(q.get('path', ''))
+            depth = int(q.get('depth', '3') or 3)
+            if not proj_path or not os.path.isdir(proj_path):
+                self._json({'error': 'path not found'}, 404)
+            else:
+                self._json({'tree': get_project_tree(proj_path, max_depth=depth), 'stacks': detect_project_stack(proj_path)})
+        elif p.startswith('/api/studio/project/read'):
+            file_path = os.path.expanduser(q.get('path', ''))
+            if not file_path or not os.path.isfile(file_path):
+                self._json({'error': 'file not found'}, 404)
+            else:
+                try:
+                    content = open(file_path, encoding='utf-8', errors='replace').read()[:200000]
+                    self._json({'content': content, 'path': file_path, 'name': os.path.basename(file_path)})
+                except Exception as e:
+                    self._json({'error': str(e)}, 500)
+        elif p == '/api/studio/dev/status':
+            proj_path = q.get('path', '')
+            with studio_devservers_lock:
+                ds = studio_devservers.get(proj_path, {})
+                running = bool(ds.get('proc') and ds['proc'].poll() is None)
+                self._json({'running': running, 'port': ds.get('port'), 'url': f"http://localhost:{ds['port']}" if running and ds.get('port') else None})
         elif p.startswith('/api/'):
             self._json({'error': f'unknown {p}'}, 404)
         else:
@@ -2622,6 +2862,132 @@ end tell"""
             bms = [x for x in load_bookmarks() if x.get('url') != url_to_remove]
             save_bookmarks(bms)
             self._json({'ok': True, 'bookmarks': bms})
+        elif p == '/api/studio/clone':
+            url = safe_text(b.get('url', '')).strip()
+            if not url:
+                self._json({'error': 'url required'}, 400)
+            else:
+                repo_name = url.rstrip('/').split('/')[-1].replace('.git', '')
+                os.makedirs(STUDIO_PROJECTS_DIR, exist_ok=True)
+                dest = os.path.join(STUDIO_PROJECTS_DIR, repo_name)
+                jid = new_job()
+                threading.Thread(target=run_studio_clone_job, args=(jid, url, dest, repo_name), daemon=True).start()
+                self._json({'job': jid, 'name': repo_name, 'dest': dest})
+        elif p == '/api/studio/link':
+            proj_path = os.path.expanduser(safe_text(b.get('path', '')))
+            name = safe_text(b.get('name', os.path.basename(proj_path)))
+            if not proj_path or not os.path.isdir(proj_path):
+                self._json({'error': 'path not found or not a directory'}, 400)
+            else:
+                stacks = detect_project_stack(proj_path)
+                projects = load_studio_projects()
+                existing = next((p for p in projects if p['path'] == proj_path), None)
+                if existing:
+                    self._json({'ok': True, 'project': existing, 'message': 'already linked'})
+                else:
+                    proj = {'name': name, 'path': proj_path, 'stacks': stacks, 'source': 'local', 'added': int(time.time())}
+                    projects.insert(0, proj)
+                    save_studio_projects(projects)
+                    self._json({'ok': True, 'project': proj})
+        elif p == '/api/studio/unlink':
+            proj_path = safe_text(b.get('path', ''))
+            projects = [p for p in load_studio_projects() if p.get('path') != proj_path]
+            save_studio_projects(projects)
+            self._json({'ok': True, 'projects': projects})
+        elif p == '/api/studio/open-picker':
+            result = sh("osascript -e 'POSIX path of (choose folder with prompt \"Select Project Folder\")' 2>/dev/null", 30).strip()
+            if result:
+                result = result.rstrip('/')
+                stacks = detect_project_stack(result)
+                name = os.path.basename(result)
+                self._json({'ok': True, 'path': result, 'name': name, 'stacks': stacks})
+            else:
+                self._json({'ok': False, 'cancelled': True})
+        elif p == '/api/studio/scaffold':
+            proj_path = os.path.expanduser(safe_text(b.get('path', '')))
+            preset_id = safe_text(b.get('preset', ''))
+            if not proj_path or not preset_id:
+                self._json({'error': 'path and preset required'}, 400)
+            elif not SCAFFOLD_PRESETS.get(preset_id):
+                self._json({'error': f'unknown preset: {preset_id}'}, 400)
+            else:
+                jid = new_job()
+                threading.Thread(target=run_studio_scaffold_job, args=(jid, proj_path, preset_id), daemon=True).start()
+                self._json({'job': jid, 'preset': SCAFFOLD_PRESETS[preset_id]['name']})
+        elif p == '/api/studio/dev/start':
+            proj_path = os.path.expanduser(safe_text(b.get('path', '')))
+            if not proj_path or not os.path.isdir(proj_path):
+                self._json({'error': 'path not found'}, 400)
+            else:
+                with studio_devservers_lock:
+                    ds = studio_devservers.get(proj_path)
+                    if ds and ds.get('proc') and ds['proc'].poll() is None:
+                        self._json({'ok': True, 'running': True, 'port': ds.get('port'), 'url': f"http://localhost:{ds['port']}"})
+                        return
+                pkg = os.path.join(proj_path, 'package.json')
+                if os.path.exists(pkg):
+                    try:
+                        scripts = json.load(open(pkg)).get('scripts', {})
+                        dev_cmd = 'npm run dev' if 'dev' in scripts else ('npm start' if 'start' in scripts else 'npm run dev')
+                    except: dev_cmd = 'npm run dev'
+                elif os.path.exists(os.path.join(proj_path, 'requirements.txt')):
+                    dev_cmd = 'python3 app.py'
+                else:
+                    dev_cmd = b.get('cmd', 'npm run dev')
+                try:
+                    proc = subprocess.Popen(
+                        ['bash', '-lc', f"cd '{proj_path}' && {dev_cmd}"],
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                        start_new_session=True,
+                    )
+                    with studio_devservers_lock:
+                        studio_devservers[proj_path] = {'proc': proc, 'pid': proc.pid, 'port': None}
+                    # Try to detect port from output
+                    def _detect_port(proc, path):
+                        for _ in range(30):
+                            time.sleep(1)
+                            if proc.poll() is not None: break
+                            try:
+                                out = sh(f"lsof -Pan -p {proc.pid} -iTCP -sTCP:LISTEN 2>/dev/null | head -3")
+                                m = re.search(r':(\d{4,5})\s+\(LISTEN\)', out or '')
+                                if m:
+                                    with studio_devservers_lock:
+                                        if path in studio_devservers:
+                                            studio_devservers[path]['port'] = int(m.group(1))
+                                    break
+                            except: pass
+                    threading.Thread(target=_detect_port, args=(proc, proj_path), daemon=True).start()
+                    self._json({'ok': True, 'pid': proc.pid, 'running': True})
+                except Exception as e:
+                    self._json({'error': str(e)}, 500)
+        elif p == '/api/studio/dev/stop':
+            proj_path = os.path.expanduser(safe_text(b.get('path', '')))
+            with studio_devservers_lock:
+                ds = studio_devservers.pop(proj_path, None)
+            if ds and ds.get('proc'):
+                try:
+                    import signal
+                    os.killpg(os.getpgid(ds['proc'].pid), signal.SIGTERM)
+                except Exception: pass
+            self._json({'ok': True})
+        elif p == '/api/studio/build':
+            proj_path = os.path.expanduser(safe_text(b.get('path', '')))
+            cmd = safe_text(b.get('cmd', ''))
+            if not proj_path:
+                self._json({'error': 'path required'}, 400)
+            else:
+                if not cmd:
+                    pkg = os.path.join(proj_path, 'package.json')
+                    if os.path.exists(pkg):
+                        try:
+                            scripts = json.load(open(pkg)).get('scripts', {})
+                            cmd = 'npm run build' if 'build' in scripts else 'npm install && npm run build'
+                        except: cmd = 'npm run build'
+                    else:
+                        cmd = 'echo "No build command detected"'
+                jid = new_job()
+                threading.Thread(target=run_studio_build_job, args=(jid, proj_path, cmd), daemon=True).start()
+                self._json({'job': jid})
         else:
             self._json({'error': f'unknown {p}'}, 404)
 
