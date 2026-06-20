@@ -22,6 +22,7 @@ PAIR_STATE_FILE = os.path.join(CHINNA_HOME, 'telegram_pair.json')
 CHAT_DB_FILE = os.path.join(CHINNA_HOME, 'state/chat_db.json')
 CUSTOM_VIEWS_FILE = os.path.join(CHINNA_HOME, 'custom_views.json')
 UI_LAYOUT_FILE = os.path.join(CHINNA_HOME, 'state/ui_layout.json')
+BOOKMARKS_FILE = os.path.join(CHINNA_HOME, 'webview_bookmarks.json')
 WHATSAPP_DIR = os.path.join(CHINNA_HOME, 'whatsapp')
 WHATSAPP_BRIDGE_DIR = os.path.join(CHINNA_HOME, 'whatsapp_bridge')
 WHATSAPP_BRIDGE_PORT = int(os.environ.get('CHINNA_WHATSAPP_BRIDGE_PORT', str(PORT + 81)))
@@ -311,6 +312,7 @@ def load_keys():
     for name in (
         'OPENROUTER_API_KEY',
         'OPENAI_API_KEY',
+        'ANTHROPIC_API_KEY',
         'TELEGRAM_BOT_TOKEN',
         'TELEGRAM_CHAT_ID',
         'TURN_ENABLED',
@@ -318,6 +320,7 @@ def load_keys():
         'TURN_USERNAME',
         'TURN_CREDENTIAL',
         'CHAT_RELAY_URL',
+        'OPENWEATHER_KEY',
         'ACTIVE_MODEL',
     ):
         if not keys.get(name) and shell_cfg.get(name):
@@ -362,7 +365,7 @@ def load_keys():
 
 def save_keys(d):
     allowed = {
-        'OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID',
+        'OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID',
         'TURN_ENABLED', 'TURN_URLS', 'TURN_USERNAME', 'TURN_CREDENTIAL', 'CHAT_RELAY_URL',
         'OPENWEATHER_KEY',
     }
@@ -371,6 +374,20 @@ def save_keys(d):
         if k in allowed:
             cur[k] = v
     write_json(API_KEYS_FILE, cur)
+
+def load_bookmarks():
+    return read_json(BOOKMARKS_FILE, [
+        {'name': 'GitHub', 'url': 'https://github.com', 'icon': '⊛'},
+        {'name': 'Google', 'url': 'https://google.com', 'icon': '⊙'},
+        {'name': 'Claude', 'url': 'https://claude.ai', 'icon': '◈'},
+        {'name': 'Vercel', 'url': 'https://vercel.com', 'icon': '⬡'},
+        {'name': 'npm', 'url': 'https://npmjs.com', 'icon': '⬤'},
+        {'name': 'MDN', 'url': 'https://developer.mozilla.org', 'icon': '◎'},
+    ])
+
+def save_bookmarks(bookmarks):
+    os.makedirs(CHINNA_HOME, exist_ok=True)
+    write_json(BOOKMARKS_FILE, bookmarks)
 
 def is_openrouter_key(value):
     return safe_text(value).startswith('sk-or-')
@@ -2082,6 +2099,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 'chinna_ai_set': bool(k.get('OPENROUTER_API_KEY')),
                 'openai_set': is_openai_key(k.get('OPENAI_API_KEY')),
                 'openai_key_invalid': bool(k.get('OPENAI_API_KEY')) and not is_openai_key(k.get('OPENAI_API_KEY')),
+                'anthropic_set': bool(k.get('ANTHROPIC_API_KEY')),
                 'ai_ready': ai_status['ready'],
                 'ai_provider': ai_status['provider'],
                 'ai_status': ai_status['label'],
@@ -2094,6 +2112,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 'turn_username': safe_text(k.get('TURN_USERNAME', '')),
                 'turn_credential': safe_text(k.get('TURN_CREDENTIAL', '')),
                 'turn_credential_set': bool(k.get('TURN_CREDENTIAL')),
+                'openweather_set': bool(k.get('OPENWEATHER_KEY')),
                 'chat_relay_url': chat_relay_url(k),
                 'chat_default_relay_url': dashboard_origin(),
             })
@@ -2256,6 +2275,15 @@ end tell"""
                                 'position': float(parts[3]) if len(parts)>3 else 0})
             except Exception:
                 self._json({'playing': False})
+        elif p == '/api/webview/bookmarks':
+            self._json({'bookmarks': load_bookmarks()})
+        elif p == '/api/battery':
+            self._json(self.battery_health())
+        elif p == '/api/files/stats':
+            ftab = q.get('tab', 'large')
+            result = self.get_files(ftab, 'size')
+            total_bytes = sum(int(f.get('size_bytes') or 0) for f in result.get('files', []))
+            self._json({'count': result.get('count', 0), 'total_bytes': total_bytes, 'total_human': fsize(total_bytes), 'tab': ftab})
         elif p == '/api/quick-folders':
             folders = ['~/Downloads', '~/Desktop', '~/Documents', '~/Movies', '~/Pictures']
             results = []
@@ -2552,6 +2580,48 @@ end tell"""
                     self._json({'ok': True, 'deleted': fp})
                 else:
                     self._json({'error': 'not found'}, 404)
+        elif p == '/api/files/open':
+            fp = os.path.expanduser(b.get('path', ''))
+            if fp and os.path.exists(fp):
+                subprocess.Popen(['open', fp])
+                self._json({'ok': True})
+            else:
+                self._json({'error': 'not found'}, 404)
+        elif p == '/api/files/reveal':
+            fp = os.path.expanduser(b.get('path', ''))
+            if fp and os.path.exists(fp):
+                subprocess.Popen(['open', '-R', fp])
+                self._json({'ok': True})
+            else:
+                self._json({'error': 'not found'}, 404)
+        elif p == '/api/apps/launch':
+            name = safe_text(b.get('name', ''))
+            path = safe_text(b.get('path', ''))
+            if path and os.path.exists(path):
+                subprocess.Popen(['open', path])
+                self._json({'ok': True, 'launched': path})
+            elif name:
+                result = sh(f"open -a '{name}' 2>&1")
+                self._json({'ok': True, 'launched': name, 'result': result})
+            else:
+                self._json({'error': 'name or path required'}, 400)
+        elif p == '/api/webview/bookmarks':
+            bms = load_bookmarks()
+            new_bm = b
+            if not new_bm.get('url'):
+                self._json({'error': 'url required'}, 400)
+            else:
+                new_bm['name'] = safe_text(new_bm.get('name', new_bm['url']))
+                new_bm['icon'] = safe_text(new_bm.get('icon', '⊙'))
+                if not any(x['url'] == new_bm['url'] for x in bms):
+                    bms.append({'name': new_bm['name'], 'url': new_bm['url'], 'icon': new_bm['icon']})
+                    save_bookmarks(bms)
+                self._json({'ok': True, 'bookmarks': bms})
+        elif p == '/api/webview/bookmarks/delete':
+            url_to_remove = b.get('url', '')
+            bms = [x for x in load_bookmarks() if x.get('url') != url_to_remove]
+            save_bookmarks(bms)
+            self._json({'ok': True, 'bookmarks': bms})
         else:
             self._json({'error': f'unknown {p}'}, 404)
 

@@ -1,4 +1,4 @@
-/* SettingsView.jsx — 3-column sleek settings */
+/* SettingsView.jsx — full settings with TURN, battery, anthropic, sysreport */
 
 function SettingsView() {
   const [keys, setKeys] = React.useState({});
@@ -9,15 +9,25 @@ function SettingsView() {
   const [actionMsg, setActionMsg] = React.useState(null);
   const [actionBusy, setActionBusy] = React.useState(null);
   const [relayEdit, setRelayEdit] = React.useState(false);
+  const [battery, setBattery] = React.useState(null);
+  const [turnEdit, setTurnEdit] = React.useState(false);
+  const [sysReportBusy, setSysReportBusy] = React.useState(false);
 
   React.useEffect(() => {
     fetch('/api/get_keys').then(r => r.json()).then(setKeys).catch(() => {});
     fetch('/api/version').then(r => r.json()).then(setVersion).catch(() => {});
     fetch('/api/models').then(r => r.json()).then(setModels).catch(() => {});
+    fetch('/api/battery').then(r => r.json()).then(setBattery).catch(() => {});
   }, []);
 
   async function saveKey(k, v) {
     const payload = { ...keys, [k]: v };
+    await fetch('/api/save_keys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
+    setKeys(payload); setSaved(true); setTimeout(() => setSaved(false), 2000);
+  }
+
+  async function saveKeys(updates) {
+    const payload = { ...keys, ...updates };
     await fetch('/api/save_keys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
     setKeys(payload); setSaved(true); setTimeout(() => setSaved(false), 2000);
   }
@@ -47,6 +57,20 @@ function SettingsView() {
     setTimeout(() => setTgMsg(null), 6000);
   }
 
+  async function downloadSysReport() {
+    setSysReportBusy(true);
+    try {
+      const d = await fetch('/api/sysreport').then(r => r.json());
+      const text = d.report ?? d.result ?? JSON.stringify(d, null, 2);
+      const blob = new Blob([text], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `chinna-sysreport-${new Date().toISOString().slice(0, 10)}.txt`;
+      a.click();
+    } catch {}
+    setSysReportBusy(false);
+  }
+
   const S = { border: '1px solid var(--line)', borderRadius: '2px', padding: '14px', background: 'transparent' };
   const Label = ({ children }) => <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: '6px' }}>{children}</div>;
   const Help = ({ children }) => <div style={{ fontSize: '11px', color: 'var(--t4)', lineHeight: 1.5, marginTop: '6px' }}>{children}</div>;
@@ -57,6 +81,20 @@ function SettingsView() {
       onFocus={e => e.target.style.borderBottomColor = 'var(--acc)'}
       onBlur={e => e.target.style.borderBottomColor = 'var(--line2)'} />
   );
+  const SaveBtn = ({ onClick, color = 'var(--t2)' }) => (
+    <button onClick={onClick}
+      style={{ marginTop: '10px', padding: '5px 12px', background: 'transparent', border: `1px solid ${color}66`, borderRadius: '2px', color, fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+      Save
+    </button>
+  );
+
+  const conditionColor = c => {
+    if (!c) return 'var(--t3)';
+    const l = c.toLowerCase();
+    if (l === 'normal' || l === 'good') return '#2edd5e';
+    if (l === 'replace soon') return '#ffc700';
+    return '#ff3333';
+  };
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -69,33 +107,35 @@ function SettingsView() {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-          {/* Column 1 — AI */}
+        {/* Row 1: 3 columns */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' }}>
+
+          {/* Column 1 — AI Providers */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: '#d54cff', marginBottom: '4px', borderBottom: '1px solid rgba(255,255,255,.07)', paddingBottom: '8px' }}>AI PROVIDERS</div>
+            <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: '#d54cff', borderBottom: '1px solid rgba(255,255,255,.07)', paddingBottom: '8px' }}>AI PROVIDERS</div>
 
             <div style={S}>
               <Label>OpenRouter API Key</Label>
-              <FInput value={keys.OPENROUTER_API_KEY ?? ''} type="password"
-                placeholder="sk-or-v1-…"
+              <FInput value={keys.OPENROUTER_API_KEY ?? ''} type="password" placeholder="sk-or-v1-…"
                 onChange={e => setKeys(k => ({ ...k, OPENROUTER_API_KEY: e.target.value }))} />
-              <Help>Powers all Chinna AI features. Get a free key at openrouter.ai</Help>
-              <button onClick={() => saveKey('OPENROUTER_API_KEY', keys.OPENROUTER_API_KEY)}
-                style={{ marginTop: '10px', padding: '5px 12px', background: '#d54cff', border: 'none', borderRadius: '2px', color: '#000', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
-                Save
-              </button>
+              <Help>Powers all Chinna AI features. Free key at openrouter.ai</Help>
+              <SaveBtn onClick={() => saveKey('OPENROUTER_API_KEY', keys.OPENROUTER_API_KEY)} color="#d54cff" />
             </div>
 
             <div style={S}>
               <Label>OpenAI API Key</Label>
-              <FInput value={keys.OPENAI_API_KEY ?? ''} type="password"
-                placeholder="sk-proj-…"
+              <FInput value={keys.OPENAI_API_KEY ?? ''} type="password" placeholder="sk-proj-…"
                 onChange={e => setKeys(k => ({ ...k, OPENAI_API_KEY: e.target.value }))} />
-              <Help>Optional. Enables GPT-4 and Whisper features.</Help>
-              <button onClick={() => saveKey('OPENAI_API_KEY', keys.OPENAI_API_KEY)}
-                style={{ marginTop: '10px', padding: '5px 12px', background: 'transparent', border: '1px solid var(--line2)', borderRadius: '2px', color: 'var(--t2)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
-                Save
-              </button>
+              <Help>Optional. Enables GPT-4o and Whisper.</Help>
+              <SaveBtn onClick={() => saveKey('OPENAI_API_KEY', keys.OPENAI_API_KEY)} />
+            </div>
+
+            <div style={S}>
+              <Label>Anthropic API Key</Label>
+              <FInput value={keys.ANTHROPIC_API_KEY ?? ''} type="password" placeholder="sk-ant-…"
+                onChange={e => setKeys(k => ({ ...k, ANTHROPIC_API_KEY: e.target.value }))} />
+              <Help>Optional. Enables Claude 3/4 models directly.</Help>
+              <SaveBtn onClick={() => saveKey('ANTHROPIC_API_KEY', keys.ANTHROPIC_API_KEY)} />
             </div>
 
             <div style={S}>
@@ -124,18 +164,14 @@ function SettingsView() {
 
           {/* Column 2 — Integrations */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: '#2edd5e', marginBottom: '4px', borderBottom: '1px solid rgba(255,255,255,.07)', paddingBottom: '8px' }}>INTEGRATIONS</div>
+            <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: '#2edd5e', borderBottom: '1px solid rgba(255,255,255,.07)', paddingBottom: '8px' }}>INTEGRATIONS</div>
 
             <div style={S}>
               <Label>Telegram Bot Token</Label>
-              <FInput value={keys.TELEGRAM_BOT_TOKEN ?? ''} type="password"
-                placeholder="1234567890:ABC…"
+              <FInput value={keys.TELEGRAM_BOT_TOKEN ?? ''} type="password" placeholder="1234567890:ABC…"
                 onChange={e => setKeys(k => ({ ...k, TELEGRAM_BOT_TOKEN: e.target.value }))} />
-              <Help>Create a bot at @BotFather on Telegram. Enables remote notifications.</Help>
-              <button onClick={() => saveKey('TELEGRAM_BOT_TOKEN', keys.TELEGRAM_BOT_TOKEN)}
-                style={{ marginTop: '10px', padding: '5px 12px', background: 'transparent', border: '1px solid var(--line2)', borderRadius: '2px', color: 'var(--t2)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
-                Save
-              </button>
+              <Help>Create a bot at @BotFather on Telegram.</Help>
+              <SaveBtn onClick={() => saveKey('TELEGRAM_BOT_TOKEN', keys.TELEGRAM_BOT_TOKEN)} />
             </div>
 
             <div style={S}>
@@ -165,20 +201,68 @@ function SettingsView() {
 
             <div style={S}>
               <Label>OpenWeather API Key</Label>
-              <FInput value={keys.OPENWEATHER_KEY ?? ''} type="password"
-                placeholder="a1b2c3d4e5f6…"
+              <FInput value={keys.OPENWEATHER_KEY ?? ''} type="password" placeholder="a1b2c3d4e5f6…"
                 onChange={e => setKeys(k => ({ ...k, OPENWEATHER_KEY: e.target.value }))} />
-              <Help>Free key from openweathermap.org. Powers the weather widget.</Help>
-              <button onClick={() => saveKey('OPENWEATHER_KEY', keys.OPENWEATHER_KEY)}
-                style={{ marginTop: '10px', padding: '5px 12px', background: 'transparent', border: '1px solid var(--line2)', borderRadius: '2px', color: 'var(--t2)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
-                Save
-              </button>
+              <Help>Free key from openweathermap.org. Powers weather widget.</Help>
+              <SaveBtn onClick={() => saveKey('OPENWEATHER_KEY', keys.OPENWEATHER_KEY)} />
+            </div>
+
+            {/* TURN / WebRTC */}
+            <div style={S}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <Label>TURN / WebRTC</Label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ fontSize: '10px', color: keys.turn_enabled ? '#2edd5e' : 'var(--t4)' }}>
+                    {keys.turn_enabled ? 'Enabled' : 'Disabled'}
+                  </div>
+                  <button onClick={() => saveKeys({ TURN_ENABLED: keys.turn_enabled ? '' : '1' })}
+                    style={{ width: '34px', height: '18px', borderRadius: '9px', border: 'none', cursor: 'pointer', position: 'relative',
+                      background: keys.turn_enabled ? '#2edd5e' : 'var(--s1)', transition: 'background .2s' }}>
+                    <div style={{ position: 'absolute', top: '2px', left: keys.turn_enabled ? '16px' : '2px', width: '14px', height: '14px', borderRadius: '50%', background: '#000', transition: 'left .2s' }} />
+                  </button>
+                </div>
+              </div>
+              {!turnEdit ? (
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--t3)', fontFamily: 'var(--mono)', wordBreak: 'break-all' }}>{keys.turn_urls || '(default TURN servers)'}</div>
+                  {keys.turn_username && <div style={{ fontSize: '11px', color: 'var(--t4)', marginTop: '4px' }}>User: {keys.turn_username}</div>}
+                  <StatusRow label="Credential set" ok={keys.turn_credential_set} />
+                  <button onClick={() => setTurnEdit(true)}
+                    style={{ marginTop: '8px', padding: '4px 10px', background: 'transparent', border: '1px solid var(--line2)', borderRadius: '2px', color: 'var(--t3)', fontSize: '10px', cursor: 'pointer' }}>
+                    Edit TURN Config
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div>
+                    <div style={{ fontSize: '10px', color: 'var(--t3)', marginBottom: '3px' }}>TURN URLs (comma-separated)</div>
+                    <FInput value={keys.TURN_URLS ?? ''} placeholder="turn:server:3478,turns:server:5349"
+                      onChange={e => setKeys(k => ({ ...k, TURN_URLS: e.target.value }))} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '10px', color: 'var(--t3)', marginBottom: '3px' }}>Username</div>
+                    <FInput value={keys.TURN_USERNAME ?? ''} placeholder="username"
+                      onChange={e => setKeys(k => ({ ...k, TURN_USERNAME: e.target.value }))} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '10px', color: 'var(--t3)', marginBottom: '3px' }}>Credential</div>
+                    <FInput value={keys.TURN_CREDENTIAL ?? ''} type="password" placeholder="password"
+                      onChange={e => setKeys(k => ({ ...k, TURN_CREDENTIAL: e.target.value }))} />
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button onClick={() => { saveKeys({ TURN_URLS: keys.TURN_URLS, TURN_USERNAME: keys.TURN_USERNAME, TURN_CREDENTIAL: keys.TURN_CREDENTIAL }); setTurnEdit(false); }}
+                      style={{ flex: 1, padding: '5px 10px', background: 'transparent', border: '1px solid var(--acc)', borderRadius: '2px', color: 'var(--acc)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                    <button onClick={() => setTurnEdit(false)}
+                      style={{ padding: '5px 10px', background: 'transparent', border: '1px solid var(--line2)', borderRadius: '2px', color: 'var(--t3)', fontSize: '11px', cursor: 'pointer' }}>Cancel</button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Column 3 — System + Info */}
+          {/* Column 3 — System */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: '#00e5ff', marginBottom: '4px', borderBottom: '1px solid rgba(255,255,255,.07)', paddingBottom: '8px' }}>SYSTEM</div>
+            <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: '#00e5ff', borderBottom: '1px solid rgba(255,255,255,.07)', paddingBottom: '8px' }}>SYSTEM</div>
 
             <div style={S}>
               <Label>Version</Label>
@@ -189,6 +273,37 @@ function SettingsView() {
               <button onClick={() => fetch('/api/check-update').then(r => r.json()).then(d => alert(d.message ?? JSON.stringify(d))).catch(() => alert('Could not check for updates'))}
                 style={{ marginTop: '12px', padding: '5px 12px', background: 'transparent', border: '1px solid var(--line2)', borderRadius: '2px', color: 'var(--t2)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
                 Check for Updates
+              </button>
+            </div>
+
+            {/* Battery Health */}
+            <div style={S}>
+              <Label>Battery Health</Label>
+              {battery ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--t3)' }}>Condition</span>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: conditionColor(battery.condition) }}>{battery.condition}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--t3)' }}>Max Capacity</span>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{battery.max_capacity}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--t3)' }}>Cycle Count</span>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{battery.cycles}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--t3)' }}>Charging</span>
+                    <span style={{ fontSize: '11px', color: battery.charging === 'Yes' ? '#2edd5e' : 'var(--t3)' }}>{battery.charging}</span>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: '11px', color: 'var(--t4)', marginTop: '4px' }}>Loading battery data…</div>
+              )}
+              <button onClick={() => fetch('/api/battery').then(r => r.json()).then(setBattery).catch(() => {})}
+                style={{ marginTop: '10px', padding: '4px 10px', background: 'transparent', border: '1px solid var(--line2)', borderRadius: '2px', color: 'var(--t3)', fontSize: '10px', cursor: 'pointer' }}>
+                ↺ Refresh
               </button>
             </div>
 
@@ -209,14 +324,18 @@ function SettingsView() {
                       setActionBusy(null);
                       setTimeout(() => setActionMsg(null), 5000);
                     }}
-                    style={{ padding: '7px 12px', border: `1px solid ${color}44`, background: 'transparent', color: actionBusy === label ? color : color, borderRadius: '2px', fontSize: '11px', fontWeight: 700, cursor: actionBusy ? 'wait' : 'pointer', textAlign: 'left', opacity: actionBusy && actionBusy !== label ? 0.5 : 1 }}>
+                    style={{ padding: '7px 12px', border: `1px solid ${color}44`, background: 'transparent', color, borderRadius: '2px', fontSize: '11px', fontWeight: 700, cursor: actionBusy ? 'wait' : 'pointer', textAlign: 'left', opacity: actionBusy && actionBusy !== label ? 0.5 : 1 }}>
                     {actionBusy === label ? '⟳ Working…' : label}
                   </button>
                 ))}
+                <button onClick={downloadSysReport} disabled={sysReportBusy}
+                  style={{ padding: '7px 12px', border: '1px solid rgba(0,229,255,.3)', background: 'transparent', color: '#00e5ff', borderRadius: '2px', fontSize: '11px', fontWeight: 700, cursor: sysReportBusy ? 'wait' : 'pointer', textAlign: 'left' }}>
+                  {sysReportBusy ? '⟳ Generating…' : '📋 System Report'}
+                </button>
               </div>
               {actionMsg && (
-                <div style={{ marginTop: '8px', padding: '6px 10px', border: `1px solid ${actionMsg.color}44`, borderRadius: '2px', fontSize: '11px', color: actionMsg.color, background: `${actionMsg.color}0a` }}>
-                  <span style={{ fontWeight: 700 }}>{actionMsg.label}</span> · {actionMsg.msg}
+                <div style={{ marginTop: '8px', padding: '6px 10px', border: `1px solid ${actionMsg.color}44`, borderRadius: '2px', fontSize: '11px', color: actionMsg.color, background: `${actionMsg.color}0a`, wordBreak: 'break-word' }}>
+                  <span style={{ fontWeight: 700 }}>{actionMsg.label}</span> · {actionMsg.msg.slice(0, 200)}
                 </div>
               )}
             </div>
@@ -228,7 +347,7 @@ function SettingsView() {
                   <FInput value={keys.chat_relay_url ?? ''} placeholder="https://your-relay.example.com"
                     onChange={e => setKeys(k => ({ ...k, chat_relay_url: e.target.value }))} />
                   <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-                    <button onClick={() => { saveKey('chat_relay_url', keys.chat_relay_url); setRelayEdit(false); }}
+                    <button onClick={() => { saveKey('CHAT_RELAY_URL', keys.chat_relay_url); setRelayEdit(false); }}
                       style={{ flex: 1, padding: '5px 10px', background: 'transparent', border: '1px solid var(--acc)', borderRadius: '2px', color: 'var(--acc)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Save</button>
                     <button onClick={() => setRelayEdit(false)}
                       style={{ padding: '5px 10px', background: 'transparent', border: '1px solid var(--line2)', borderRadius: '2px', color: 'var(--t3)', fontSize: '11px', cursor: 'pointer' }}>Cancel</button>
@@ -253,7 +372,7 @@ function SettingsView() {
 
 function StatusRow({ label, ok }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', marginTop: '3px' }}>
       <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: ok ? '#2edd5e' : '#ff3333', flexShrink: 0 }} />
       <span style={{ color: ok ? 'var(--t2)' : 'var(--t3)' }}>{label}</span>
     </div>
