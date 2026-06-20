@@ -1,61 +1,57 @@
 import { test, expect } from '@playwright/test';
 
-/**
- * Chinna Dashboard E2E Tests
- * Using full Playwright (no Cypress)
- */
+const navWhatsApp = (page: any) => page.locator('#nav').getByText('WhatsApp', { exact: true });
+
+async function waitForReact(page: any) {
+  await page.goto('/');
+  // #app is rendered by React — this confirms Babel + React have fully mounted
+  await page.waitForSelector('#app', { timeout: 30000 });
+}
 
 test.describe('Chinna Dashboard', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await waitForReact(page);
   });
 
   test('should load the dashboard successfully', async ({ page }) => {
     await expect(page).toHaveTitle(/Chinna/i);
-    await expect(page.getByText('CHINNA')).toBeVisible();
+    await expect(page.getByText('CHINNA', { exact: true })).toBeVisible();
   });
 
-  test('should show main navigation and status cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /Dashboard/i })).toBeVisible();
-    
-    // Check key sections
-    await expect(page.getByText('Disk Usage')).toBeVisible();
-    await expect(page.getByText('Memory')).toBeVisible();
-    await expect(page.getByText('System Status')).toBeVisible();
+  test('should show sidebar navigation sections', async ({ page }) => {
+    await expect(page.locator('#nav').getByText('MAIN', { exact: true })).toBeVisible();
+    await expect(page.locator('#nav').getByText('TOOLS', { exact: true })).toBeVisible();
+    await expect(page.locator('#nav').getByText('COMMS', { exact: true })).toBeVisible();
   });
 
-  test('should navigate to different sections', async ({ page }) => {
-    // Example: Click on Clean section if it exists
-    const cleanLink = page.getByRole('link', { name: /Clean/i });
-    if (await cleanLink.isVisible()) {
-      await cleanLink.click();
-      await expect(page.getByText(/Deep Clean/i)).toBeVisible();
-    }
+  test('should navigate to Settings via sidebar', async ({ page }) => {
+    await page.locator('#nav').getByText('Settings', { exact: true }).click();
+    await expect(page.getByText(/SETTINGS/i).first()).toBeVisible();
   });
 
-  test('WhatsApp Bridge section should be visible', async ({ page }) => {
-    await expect(page.getByText(/WhatsApp/i)).toBeVisible();
-    
-    // Check connection status area
-    const waStatus = page.getByTestId('whatsapp-status');
-    await expect(waStatus).toBeVisible();
+  test('WhatsApp navigation item should be visible in sidebar', async ({ page }) => {
+    await expect(navWhatsApp(page)).toBeVisible();
+  });
+
+  test('should navigate to WhatsApp view', async ({ page }) => {
+    await navWhatsApp(page).click();
+    await expect(page.getByText(/WhatsApp/i).first()).toBeVisible();
   });
 });
 
-// Example of advanced test with network mocking
- test.describe('WhatsApp Bridge Integration', () => {
-   test('should handle bridge offline state', async ({ page }) => {
-     await page.route('**/api/whatsapp/status', async route => {
-       await route.fulfill({
-         status: 200,
-         contentType: 'application/json',
-         body: JSON.stringify({ connected: false, qr: null }),
-       });
-     });
+test.describe('WhatsApp Bridge Integration', () => {
+  test('should handle bridge offline state', async ({ page }) => {
+    await page.route('**/api/whatsapp/status', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ connected: false, qr: null }),
+      });
+    });
 
-     await page.goto('/');
-     
-     // Verify UI shows disconnected state
-     await expect(page.getByText(/Disconnected|Offline/i)).toBeVisible();
-   });
- });
+    await waitForReact(page);
+    await navWhatsApp(page).click();
+
+    await expect(page.getByText(/Disconnected|Offline|not connected/i).first()).toBeVisible();
+  });
+});

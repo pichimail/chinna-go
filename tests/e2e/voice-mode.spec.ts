@@ -1,13 +1,10 @@
 import { test, expect } from '@playwright/test';
 
-/**
- * Voice Mode E2E Tests
- */
-
 test.describe('Voice Mode', () => {
   test('should open voice mode interface', async ({ page }) => {
     await page.goto('/');
-    
+    await page.waitForLoadState('networkidle');
+
     const voiceButton = page.getByRole('button', { name: /Voice|Listen|🎤/i });
     if (await voiceButton.isVisible()) {
       await voiceButton.click();
@@ -17,10 +14,13 @@ test.describe('Voice Mode', () => {
 
   test('should show recording controls', async ({ page }) => {
     await page.goto('/');
-    
-    // This assumes there's a voice mode trigger
-    await page.getByText(/Voice Mode/i).click().catch(() => {});
-    
+    await page.waitForLoadState('networkidle');
+
+    const voiceText = page.getByText(/Voice Mode/i);
+    if (await voiceText.isVisible()) {
+      await voiceText.click();
+    }
+
     const recordButton = page.getByRole('button', { name: /Record|🎙️/i });
     if (await recordButton.isVisible()) {
       await expect(recordButton).toBeVisible();
