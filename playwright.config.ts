@@ -45,7 +45,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'chinna dashboard',
+    command: 'CHINNA_HOME=. python3 lib/server.py',
     url: 'http://localhost:7777',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

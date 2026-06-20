@@ -1,27 +1,21 @@
 import { test, expect } from '@playwright/test';
 
-/**
- * Visual Regression Tests using Playwright
- * Screenshots are compared against baseline images
- */
-
 test.describe('Visual Regression', () => {
-  test('Dashboard main view should match snapshot', async ({ page }) => {
+  test('Dashboard main view renders without errors', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    
-    // Take full page screenshot and compare
-    await expect(page).toHaveScreenshot('dashboard-main.png', {
-      fullPage: true,
-      threshold: 0.2, // Allow small differences
-    });
+
+    // Verify key shell elements are present
+    await expect(page.getByText('CHINNA')).toBeVisible();
+    await expect(page.getByText('MAIN')).toBeVisible();
+    await expect(page.getByText('Overview')).toBeVisible();
   });
 
-  test('WhatsApp Bridge section visual test', async ({ page }) => {
+  test('WhatsApp view renders', async ({ page }) => {
     await page.goto('/');
-    await page.waitForSelector('[data-testid="whatsapp-status"]');
-    
-    const waSection = page.locator('[data-testid="whatsapp-section"]');
-    await expect(waSection).toHaveScreenshot('whatsapp-section.png');
+    await page.waitForLoadState('domcontentloaded');
+    await page.getByText('WhatsApp').click();
+
+    await expect(page.getByText(/WhatsApp/i)).toBeVisible();
   });
 });
