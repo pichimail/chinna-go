@@ -127,9 +127,17 @@ step_write_server() {
 }
 
 step_write_dashboard() {
-    echo "    ↻ Force-refreshing dashboard (index.html)..."
+    echo "    ↻ Force-refreshing dashboard..."
     copy_or_fetch "dashboard/index.html" "${CHINNA}/dashboard/index.html"
-    # Also copy dashboard assets if present
+    # JSX component files (Chinna v7 modular SPA)
+    mkdir -p "${CHINNA}/dashboard/views"
+    for jsx in App.jsx Charts.jsx Dock.jsx MediaPlayer.jsx Shared.jsx; do
+        copy_or_fetch "dashboard/${jsx}" "${CHINNA}/dashboard/${jsx}" 2>/dev/null || true
+    done
+    for view in OverviewView StudioView FilesView AppsView PluginsView DuplicatesView SettingsView WhatsAppView SecureChatView WebViewsView; do
+        copy_or_fetch "dashboard/views/${view}.jsx" "${CHINNA}/dashboard/views/${view}.jsx" 2>/dev/null || true
+    done
+    # Assets
     for asset in chinna-favicon.svg chinna-icon.svg chinna-logo.svg; do
         copy_or_fetch "dashboard/assets/${asset}" "${CHINNA}/dashboard/assets/${asset}" 2>/dev/null || true
     done

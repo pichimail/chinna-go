@@ -364,6 +364,7 @@ def save_keys(d):
     allowed = {
         'OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID',
         'TURN_ENABLED', 'TURN_URLS', 'TURN_USERNAME', 'TURN_CREDENTIAL', 'CHAT_RELAY_URL',
+        'OPENWEATHER_KEY',
     }
     cur = read_json(API_KEYS_FILE, {})
     for k, v in d.items():
@@ -2200,6 +2201,59 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.whatsapp_proxy('GET', f'/messages?chat={chat}')
         elif p in ('/',''):
             self.path = '/index.html'; super().do_GET()
+        elif p == '/api/vitals':
+            s = dict(stats_cache)
+            self._json({
+                'cpu': s.get('cpu', {}).get('pct', 0),
+                'ram': s.get('memory', {}).get('pct', 0),
+                'disk': s.get('disk', {}).get('pct', 0),
+                'battery': s.get('battery', {}).get('pct', 0),
+                'uptime': s.get('uptime', '—'),
+                'ip': s.get('network', {}).get('ip', '—'),
+                'chip': s.get('os', {}).get('chip', '—'),
+                'hostname': s.get('os', {}).get('hostname', '—'),
+            })
+        elif p == '/api/weather':
+            k = load_keys()
+            owm_key = k.get('OPENWEATHER_KEY', '')
+            if not owm_key:
+                self._json({'temp': 29, 'feels_like': 28, 'condition': 'Partly Cloudy', 'humidity': 72, 'wind': 12, 'icon': '02d'})
+            else:
+                try:
+                    url = f'https://api.openweathermap.org/data/2.5/weather?q=Hyderabad,IN&appid={owm_key}&units=metric'
+                    req = urllib.request.Request(url, headers={'User-Agent': 'Chinna/7'})
+                    with urllib.request.urlopen(req, timeout=5) as resp:
+                        d = json.loads(resp.read())
+                    self._json({
+                        'temp': round(d['main']['temp']),
+                        'feels_like': round(d['main']['feels_like']),
+                        'condition': d['weather'][0]['description'],
+                        'humidity': d['main']['humidity'],
+                        'wind': round(d['wind']['speed']),
+                        'icon': d['weather'][0]['icon'],
+                    })
+                except Exception as e:
+                    self._json({'temp': 29, 'feels_like': 28, 'condition': 'Partly Cloudy', 'humidity': 72, 'wind': 12, 'icon': '02d', 'error': str(e)})
+        elif p == '/api/music/status':
+            try:
+                script = """tell application "Music"
+  if player state is playing then
+    return (name of current track) & "|||" & (artist of current track) & "|||" & (duration of current track) & "|||" & (player position)
+  else
+    return "STOPPED"
+  end if
+end tell"""
+                out = sh(f"osascript -e '{script.strip()}' 2>/dev/null").strip()
+                if not out or out == 'STOPPED':
+                    self._json({'playing': False})
+                else:
+                    parts = out.split('|||')
+                    self._json({'playing': True, 'title': parts[0] if len(parts)>0 else '—',
+                                'artist': parts[1] if len(parts)>1 else '—',
+                                'duration': float(parts[2]) if len(parts)>2 else 0,
+                                'position': float(parts[3]) if len(parts)>3 else 0})
+            except Exception:
+                self._json({'playing': False})
         elif p.startswith('/api/'):
             self._json({'error': f'unknown {p}'}, 404)
         else:
@@ -2222,6 +2276,10 @@ class H(http.server.SimpleHTTPRequestHandler):
             if b.get('turn_username') is not None: d['TURN_USERNAME'] = safe_text(b.get('turn_username', ''))[:120]
             if b.get('turn_credential') is not None: d['TURN_CREDENTIAL'] = safe_text(b.get('turn_credential', ''))[:200]
             if b.get('chat_relay_url') is not None: d['CHAT_RELAY_URL'] = normalize_relay_url(b.get('chat_relay_url', ''))[:300]
+            if b.get('OPENWEATHER_KEY') is not None: d['OPENWEATHER_KEY'] = safe_text(b.get('OPENWEATHER_KEY', ''))[:200]
+            # Also accept direct key passthrough from Settings view
+            for k in ('OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN', 'OPENWEATHER_KEY'):
+                if k in b and b[k] is not None: d[k] = safe_text(str(b[k]))[:500]
             save_keys(d)
             status = ai_key_status()
             self._json({'result':'✅ Settings saved', 'ai_ready': status['ready'], 'ai_status': status['label']})
@@ -2417,6 +2475,31 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.install_dashboard_app()
         elif p == '/api/install-swiftbar':
             self._json(self.install_swiftbar_quick_actions())
+        elif p == '/api/exec':
+            SAFE_CMDS = {'ls', 'pwd', 'date', 'uptime', 'uname', 'echo', 'whoami', 'hostname', 'df', 'free', 'top', 'ps', 'cat', 'head', 'tail', 'wc', 'grep', 'find'}
+            cmd = safe_text(b.get('cmd', ''), keep_newlines=False)[:500]
+            base = cmd.split()[0] if cmd.strip() else ''
+            if not base or base not in SAFE_CMDS:
+                self._json({'error': f'Command not in allowlist: {base}'}, 403)
+            else:
+                try:
+                    out = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, timeout=10, cwd=HOME).decode(errors='replace')[:8000]
+                    self._json({'stdout': out, 'exit': 0})
+                except subprocess.CalledProcessError as e:
+                    self._json({'stdout': '', 'stderr': e.output.decode(errors='replace')[:4000] if e.output else str(e), 'exit': e.returncode})
+                except Exception as e:
+                    self._json({'error': str(e)}, 500)
+        elif p == '/api/files/delete':
+            fp = b.get('path', '')
+            if not fp:
+                self._json({'error': 'path required'}, 400)
+            else:
+                expanded = os.path.expanduser(fp)
+                if os.path.exists(expanded):
+                    sh(f"osascript -e 'tell app \"Finder\" to delete POSIX file \"{expanded}\"' 2>/dev/null || rm -rf '{expanded}' 2>/dev/null")
+                    self._json({'ok': True, 'deleted': fp})
+                else:
+                    self._json({'error': 'not found'}, 404)
         else:
             self._json({'error': f'unknown {p}'}, 404)
 
