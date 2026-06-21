@@ -56,7 +56,7 @@ safe_source_lib() {
     source "$lib_path"
 }
 
-for lib in notify lang stack voice daemon config clean registry plugins swiftbar upgrade cli-ui cli-hub; do
+for lib in notify lang stack voice daemon config clean registry plugins swiftbar upgrade cli-ui cli-hub onboard; do
     safe_source_lib "$CHINNA_LIB/${lib}.sh"
 done
 
@@ -1478,7 +1478,9 @@ show_help() {
     banner
     cat <<HELP
    ${BOLD}CHINNA v7 — Grok-style CLI${RESET}
-     chinna                   ~1:10 escape intro + options + AI chat TUI
+     chinna                   First run: guided onboarding · then escape intro + AI chat TUI
+     chinna chat              Interactive natural-language prompt loop (REPL)
+     chinna onboard           Re-run the guided setup wizard
      chinna code              Global Mac agent (skip intro, like Grok/Claude Code)
      chinna hub               Legacy shell hub (mouse + keyboard)
      chinna escape            Standalone containment-break animation (~1:10, s to skip)
@@ -1567,9 +1569,32 @@ main() {
     # Internal daemon loop (called by LaunchAgent)
     [ "$cmd" = "_daemon_loop" ] && { daemon_loop; exit 0; }
 
+    # First-run onboarding (Claude-style) — only on a bare interactive launch.
+    if [ -z "$cmd" ] && command -v chinna_needs_onboarding >/dev/null 2>&1; then
+        if chinna_needs_onboarding; then
+            chinna_onboard
+            exit 0
+        fi
+    fi
+
     case "$cmd" in
         "")
             run_go_tui
+            ;;
+        chat|prompt|ask-loop|repl)
+            if command -v chinna_prompt_loop >/dev/null 2>&1; then
+                chinna_prompt_loop
+            else
+                chinna_hub
+            fi
+            ;;
+        onboard|setup-wizard|welcome)
+            if command -v chinna_onboard >/dev/null 2>&1; then
+                rm -f "${CHINNA_HOME}/.onboarded" 2>/dev/null || true
+                chinna_onboard
+            else
+                cmd_config
+            fi
             ;;
         menu|hub)
             if [ ! -t 0 ]; then

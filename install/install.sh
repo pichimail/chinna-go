@@ -155,7 +155,7 @@ step_write_whatsapp_bridge() {
 
 step_write_libs() {
     echo "    ↻ Force-refreshing lib files..."
-    for lib in config clean stack registry notify daemon server plugins swiftbar voice lang upgrade cli-ui cli-hub; do
+    for lib in config clean stack registry notify daemon server plugins swiftbar voice lang upgrade cli-ui cli-hub onboard; do
         copy_or_fetch "lib/${lib}.sh" "${CHINNA}/lib/${lib}.sh" 2>/dev/null && \
             echo "      ✓ lib/${lib}.sh" || \
             echo "      ⚠ lib/${lib}.sh (skipped)"
