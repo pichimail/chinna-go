@@ -379,6 +379,53 @@ function toast(msg) {
 }
 
 // ── Menu actions ───────────────────────────────────────────────────────
+// ── Explain the user's current text selection on the page ──────────────
+async function explainSelection() {
+  const tab = await getActiveTab();
+  let sel = '';
+  try {
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => (window.getSelection ? String(window.getSelection()) : ''),
+    });
+    sel = (res.result || '').trim();
+  } catch (e) { /* ignore */ }
+  if (!sel) { toast('Select some text on the page first'); return; }
+  sendMessage(`Explain this clearly and concisely:\n\n"${sel.slice(0, 4000)}"`);
+}
+
+// ── Copy the current page as clean Markdown ────────────────────────────
+async function copyPageMarkdown() {
+  const tab = await getActiveTab();
+  let md = '';
+  try {
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        const title = document.title || '';
+        const url = location.href;
+        const main = document.querySelector('main, article') || document.body;
+        const parts = [`# ${title}`, `<${url}>`, ''];
+        main.querySelectorAll('h1,h2,h3,p,li').forEach(el => {
+          const t = el.innerText.trim();
+          if (!t) return;
+          const tag = el.tagName.toLowerCase();
+          if (tag === 'h1') parts.push(`\n# ${t}`);
+          else if (tag === 'h2') parts.push(`\n## ${t}`);
+          else if (tag === 'h3') parts.push(`\n### ${t}`);
+          else if (tag === 'li') parts.push(`- ${t}`);
+          else parts.push(`\n${t}`);
+        });
+        return parts.join('\n').slice(0, 12000);
+      },
+    });
+    md = res.result || '';
+  } catch (e) { md = ''; }
+  if (!md) { toast('Could not read page'); return; }
+  try { await navigator.clipboard.writeText(md); toast('Page copied as Markdown'); }
+  catch (e) { toast('Clipboard blocked — opening preview'); addMsg('chinna', md); }
+}
+
 function handleAction(act) {
   $('#menu').classList.remove('open');
   switch (act) {
@@ -393,6 +440,8 @@ function handleAction(act) {
     case 'autofill': autofillForm(); break;
     case 'screenshot': screenshot(); break;
     case 'clone': clonePage(); break;
+    case 'selection': explainSelection(); break;
+    case 'markdown': copyPageMarkdown(); break;
     case 'secure-chat': openSecureChatDashboard(); break;
     case 'settings': chrome.tabs.create({ url: API }); break;
   }
@@ -419,7 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Menu
   $('#menuBtn').addEventListener('click', (e) => { e.stopPropagation(); $('#menu').classList.toggle('open'); });
   document.addEventListener('click', () => $('#menu').classList.remove('open'));
-  $('#menu').addEventListener('click', (e) => { e.stopPropagation(); const it = e.target.closest('.menu-item'); if (it) handleAction(it.dataset.act); });
+  $('#menu').addEventListener('click', (e) => { e.stopPropagation(); const it = e.target.closest('.menu-item'); if (!it) return; if (it.dataset.act) handleAction(it.dataset.act); else if (it.dataset.prompt) { $('#menu').classList.remove('open'); sendMessage(it.dataset.prompt); } });
 
   // Suggest chips + tool chips
   $$('.suggest, .tool-chip').forEach(b => b.addEventListener('click', () => {

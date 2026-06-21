@@ -32,6 +32,12 @@
           <div class="menu-item" data-act="all-tabs"><span class="mi-ic">◳</span> All open tabs</div>
           <div class="menu-item" data-act="select-tabs"><span class="mi-ic">☰</span> Pick tabs…</div>
           <div class="menu-sep"></div>
+          <div class="menu-label">Page</div>
+          <div class="menu-item" data-act="selection"><span class="mi-ic">✦</span> Explain selection</div>
+          <div class="menu-item" data-act="markdown"><span class="mi-ic">↧</span> Copy as Markdown</div>
+          <div class="menu-item" data-prompt="Translate this page to English (or to my language if already English)"><span class="mi-ic">⇄</span> Translate page</div>
+          <div class="menu-item" data-prompt="Give me a TL;DR of this page in 3 sentences"><span class="mi-ic">≡</span> TL;DR</div>
+          <div class="menu-sep"></div>
           <div class="menu-label">Tools</div>
           <div class="menu-item" data-act="terminal"><span class="mi-ic">▷_</span> Terminal</div>
           <div class="menu-item" data-act="music"><span class="mi-ic">♪</span> Music control</div>
@@ -86,10 +92,13 @@
       <div class="welcome-sub">Mac + browser AI</div>
       <div class="suggest-grid">
         <button class="suggest" data-prompt="Summarize this page in 5 bullet points">⊹ Summarize page</button>
+        <button class="suggest" data-act="selection">✦ Explain selection</button>
+        <button class="suggest" data-prompt="Give me a TL;DR of this page in 3 sentences">≡ TL;DR</button>
+        <button class="suggest" data-prompt="Translate this page to English">⇄ Translate</button>
         <button class="suggest" data-prompt="Extract all links and key data from this page">⛓ Extract data</button>
+        <button class="suggest" data-act="markdown">↧ Copy as Markdown</button>
         <button class="suggest" data-act="terminal-quick">▷_ Run a command</button>
         <button class="suggest" data-act="music-quick">♪ Play my music</button>
-        <button class="suggest" data-act="autofill">⌨ Fill this form</button>
         <button class="suggest" data-act="generate-music">✧ Generate a song</button>
       </div>
     </div>
@@ -152,6 +161,8 @@
       <button class="tool-chip" data-act="music" title="Music">♪</button>
       <button class="tool-chip" data-act="screenshot" title="Screenshot">⛶</button>
       <button class="tool-chip" data-act="autofill" title="Autofill form">⌨</button>
+      <button class="tool-chip" data-act="selection" title="Explain selection">✦</button>
+      <button class="tool-chip" data-act="markdown" title="Copy as Markdown">↧</button>
       <button class="tool-chip" data-act="clone" title="Clone page">⧉</button>
     </div>
     <div class="input-row">

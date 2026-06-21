@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Chinna — AI Browser Companion",
-  "version": "2.0.0",
-  "description": "Tab-aware AI assistant with terminal access, Mac music control, AI music generation, multi-tab analysis, form autofill, and chat history — powered by your local Chinna-Go.",
+  "version": "2.1.0",
+  "description": "Tab-aware AI assistant with terminal access, Mac music control, AI music generation, multi-tab analysis, form autofill, explain-selection, copy-as-Markdown, translate, TL;DR, and chat history — powered by your local Chinna-Go.",
   "permissions": [
     "activeTab", "scripting", "tabs", "downloads", "storage",
     "sidePanel", "tabCapture", "offscreen", "contextMenus", "cookies"
