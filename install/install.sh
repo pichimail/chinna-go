@@ -4,7 +4,7 @@
 # ║  curl -fsSL https://raw.githubusercontent.com/          ║
 # ║    pichimail/chinna-go/main/install/install.sh | bash   ║
 # ╚══════════════════════════════════════════════════════════╝
-set -e
+set -Eeuo pipefail
 REPO="pichimail/chinna-go"
 BRANCH="main"
 RAW="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
@@ -54,7 +54,8 @@ copy_or_fetch() {
 # Only one-time setup steps (Homebrew, CLI tools, .zshrc block) are skipped
 # once they are confirmed done on this machine.
 is_done()   { grep -qxF "$1" "$STATE_FILE" 2>/dev/null; }
-mark_done() { echo "$1" >> "$STATE_FILE"; }
+mark_done() { grep -qxF "$1" "$STATE_FILE" 2>/dev/null || echo "$1" >> "$STATE_FILE"; }
+clear_done() { [ -f "$STATE_FILE" ] && grep -vxF "$1" "$STATE_FILE" > "${STATE_FILE}.tmp" 2>/dev/null && mv "${STATE_FILE}.tmp" "$STATE_FILE" || true; }
 run_step()  {
     local name="$1"; shift
     if is_done "$name"; then
@@ -63,6 +64,36 @@ run_step()  {
         echo "  → Running: $name"
         "$@" && mark_done "$name"
     fi
+}
+run_verified_step()  {
+    local name="$1"; shift
+    local verify_fn="$1"; shift
+    if is_done "$name" && "$verify_fn" >/dev/null 2>&1; then
+        echo "  ↷ Skipping (already set up): $name"
+        return 0
+    fi
+    if is_done "$name"; then
+        echo "  ↻ Re-running: $name (previous setup no longer verified)"
+        clear_done "$name"
+    else
+        echo "  → Running: $name"
+    fi
+    "$@" && "$verify_fn" >/dev/null 2>&1 && mark_done "$name"
+}
+
+brew_bin() {
+    if command -v brew >/dev/null 2>&1; then
+        command -v brew
+        return 0
+    fi
+    [ -x "/opt/homebrew/bin/brew" ] && { echo "/opt/homebrew/bin/brew"; return 0; }
+    [ -x "/usr/local/bin/brew" ] && { echo "/usr/local/bin/brew"; return 0; }
+    return 1
+}
+verify_brew() {
+    local b
+    b="$(brew_bin)" || return 1
+    "$b" --version >/dev/null 2>&1
 }
 
 # ── Step implementations ───────────────────────────────────
@@ -83,39 +114,84 @@ step_check_python() {
 }
 
 step_install_homebrew() {
-    if command -v brew >/dev/null 2>&1; then
-        echo "    ✓ Homebrew already installed"
+    if verify_brew; then
+        echo "    ✓ Homebrew already installed: $(brew_bin)"
         return 0
     fi
+
     echo "    Installing Homebrew..."
-    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" 2>&1 | tail -3
+    local install_cmd='/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+    local log_file="${CHINNA}/logs/homebrew-install.$(date +%Y%m%d%H%M%S).log"
+
+    # First try non-interactive for clean curl|bash installs.
+    if env NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" >"$log_file" 2>&1; then
+        step_brew_shellenv
+        verify_brew && { echo "    ✓ Homebrew installed"; return 0; }
+    fi
+
+    echo "    ⚠ Non-interactive Homebrew install did not complete."
+    echo "    Last Homebrew log lines:"
+    tail -8 "$log_file" 2>/dev/null | sed 's/^/      /' || true
+    echo ""
+    echo "    Homebrew needs an Administrator password on a fresh Mac."
+    echo "    Run this once, then re-run Chinna installer:"
+    echo "      $install_cmd"
+    echo ""
+    echo "    Continuing Chinna install without brew packages."
+    return 1
 }
 
 step_brew_shellenv() {
     local brew_path=""
-    [ -f "/opt/homebrew/bin/brew" ] && brew_path="/opt/homebrew/bin/brew"
-    [ -f "/usr/local/bin/brew"    ] && brew_path="/usr/local/bin/brew"
+    brew_path="$(brew_bin 2>/dev/null || true)"
+    [ -z "$brew_path" ] && [ -x "/opt/homebrew/bin/brew" ] && brew_path="/opt/homebrew/bin/brew"
+    [ -z "$brew_path" ] && [ -x "/usr/local/bin/brew" ] && brew_path="/usr/local/bin/brew"
+
     if [ -n "$brew_path" ]; then
         eval "$("$brew_path" shellenv)"
-        if ! grep -q 'brew shellenv' "$HOME/.zshrc" 2>/dev/null; then
-            echo "eval \"\$(${brew_path} shellenv)\"" >> "$HOME/.zshrc"
+        if ! grep -qF "${brew_path} shellenv" "$HOME/.zshrc" 2>/dev/null; then
+            {
+                echo ""
+                echo "# Homebrew shell environment"
+                echo "eval \"\$(${brew_path} shellenv)\""
+            } >> "$HOME/.zshrc"
             echo "    ✓ brew shellenv added to .zshrc"
+        else
+            echo "    ✓ brew shellenv already present"
         fi
+        echo "    ✓ brew active: $($brew_path --version | head -1)"
+        return 0
     fi
+
+    echo "    ⚠ brew not found yet; shellenv skipped"
+    return 1
+}
+
+step_brew_update() {
+    local b
+    b="$(brew_bin)" || { echo "    ⚠ brew not found, skipping brew update"; return 1; }
+    echo "    Updating Homebrew..."
+    "$b" update --quiet || true
+    "$b" tap homebrew/cask >/dev/null 2>&1 || true
+    echo "    ✓ brew ready: $($b --version | head -1)"
 }
 
 step_install_clis() {
-    command -v brew >/dev/null 2>&1 || { echo "    ⚠ brew not found, skipping CLI installs"; return 0; }
+    local b
+    b="$(brew_bin)" || { echo "    ⚠ brew not found, skipping CLI installs"; return 1; }
     local tools=(git go jq gh ripgrep fd fzf tmux watchman tree htop)
     echo "    Installing CLI tools: ${tools[*]}"
-    brew install "${tools[@]}" 2>/dev/null | grep -E "✓|already|Pouring" | head -6 || true
+    "$b" install "${tools[@]}" || true
+    echo "    ✓ CLI brew pass complete"
 }
 
 step_install_node_tools() {
-    command -v brew >/dev/null 2>&1 || return 0
+    local b
+    b="$(brew_bin)" || { echo "    ⚠ brew not found, skipping node tools"; return 1; }
     local tools=(node pnpm yarn bun)
     echo "    Installing node tools: ${tools[*]}"
-    brew install "${tools[@]}" 2>/dev/null | grep -E "✓|already|Pouring" | head -4 || true
+    "$b" install "${tools[@]}" || true
+    echo "    ✓ Node brew pass complete"
 }
 
 step_write_server() {
@@ -129,7 +205,6 @@ step_write_server() {
 step_write_dashboard() {
     echo "    ↻ Force-refreshing dashboard (index.html)..."
     copy_or_fetch "dashboard/index.html" "${CHINNA}/dashboard/index.html"
-    # Also copy dashboard assets if present
     for asset in chinna-favicon.svg chinna-icon.svg chinna-logo.svg; do
         copy_or_fetch "dashboard/assets/${asset}" "${CHINNA}/dashboard/assets/${asset}" 2>/dev/null || true
     done
@@ -256,7 +331,6 @@ MODELS
         chmod 600 "${CHINNA}/models"
         echo "    ✓ models file created (default: chinna/free)"
     else
-        # Migrate legacy defaults to openrouter/free for free-tier chatting
         if grep -q 'ACTIVE_MODEL="openrouter/auto"' "${CHINNA}/models" 2>/dev/null \
            || grep -q 'ACTIVE_MODEL="meta-llama/llama-3.3-70b-instruct:free"' "${CHINNA}/models" 2>/dev/null \
            || grep -q 'ACTIVE_MODEL="openai/gpt-4o-mini"' "${CHINNA}/models" 2>/dev/null; then
@@ -337,14 +411,15 @@ step_start_server() {
 }
 
 # ──────────────────────────────────────────────────────────────
-# ONE-TIME SETUP  (skipped if already done on this machine)
+# ONE-TIME SETUP  (verified before skipping)
 # ──────────────────────────────────────────────────────────────
 run_step "backup_zshrc"       step_backup_zshrc
 run_step "check_python"       step_check_python
-run_step "install_homebrew"   step_install_homebrew
-run_step "brew_shellenv"      step_brew_shellenv
-run_step "install_clis"       step_install_clis
-run_step "install_node_tools" step_install_node_tools
+run_verified_step "install_homebrew" verify_brew step_install_homebrew || true
+run_verified_step "brew_shellenv"    verify_brew step_brew_shellenv || true
+run_verified_step "brew_update"      verify_brew step_brew_update || true
+run_verified_step "install_clis"     verify_brew step_install_clis || true
+run_verified_step "install_node_tools" verify_brew step_install_node_tools || true
 
 # ──────────────────────────────────────────────────────────────
 # ALWAYS FORCE-REFRESHED  (new + existing users get latest code)
@@ -381,18 +456,18 @@ echo ""
 echo "  Quick commands:"
 echo "    chinna                  → ~1:10 escape intro + options + AI chat (s to skip)"
 echo "    chinna code             → global Mac agent, skip intro (Grok/Claude Code style)"
-    echo "    source ~/.zshrc         → activate chinna in this terminal (once)"
-    echo "    hash -r                 → not needed; just type chinna"
+echo "    source ~/.zshrc         → activate chinna in this terminal (once)"
+echo "    hash -r                 → not needed; just type chinna"
 echo "    chinna escape           → standalone escape animation in Terminal"
 echo "    chinna doctor           → full system health check"
-echo "    chinna run            → smart project runner"
-echo "    chinna ai <prompt>    → AI chat"
-echo "    chinna dashboard      → open dashboard"
-echo "    chinna model-set free → switch AI model"
-echo "    chinna clean          → deep Mac clean"
-echo "    chinna audit          → project audit"
+echo "    chinna run              → smart project runner"
+echo "    chinna ai <prompt>      → AI chat"
+echo "    chinna dashboard        → open dashboard"
+echo "    chinna model-set free   → switch AI model"
+echo "    chinna clean            → deep Mac clean"
+echo "    chinna audit            → project audit"
 echo ""
-echo "  Re-run anytime — one-time setup is skipped, app code is always refreshed."
+echo "  Re-run anytime — setup steps are verified, app code is always refreshed."
 echo ""
 
 open "http://localhost:${PORT}" 2>/dev/null || true
