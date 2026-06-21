@@ -6,7 +6,7 @@
 # ╚══════════════════════════════════════════════════════════╝
 set -e
 REPO="pichimail/chinna-go"
-BRANCH="main"
+BRANCH="${CHINNA_BRANCH:-claude/determined-pascal-qbgror}"
 RAW="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 CHINNA="${CHINNA_HOME:-$HOME/.chinna}"
 PORT="${CHINNA_DASHBOARD_PORT:-7777}"
