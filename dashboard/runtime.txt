@@ -1,6 +1,0 @@
-document.addEventListener('DOMContentLoaded',function(){
-  var targets=[document.querySelector('#view-agent .vbody'),document.querySelector('#view-ai .vbody')].filter(Boolean);
-  targets.forEach(function(root){
-    root.innerHTML='<div class="cs-stage"><div class="cs-hero"><div class="cs-core"><div class="cs-kicker"><span class="cs-logo">C</span><span>CHINNA STUDIO</span></div><div class="cs-title">What are we<br><span class="cs-grad">building today?</span></div><div class="cs-sub">Chat · Code · Agent · Mac control — all in one.</div></div></div></div>';
-  });
-});
