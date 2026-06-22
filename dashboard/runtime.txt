@@ -1,1 +1,1 @@
-hello
+document.addEventListener('DOMContentLoaded',function(){console.log('runtime loaded')});
