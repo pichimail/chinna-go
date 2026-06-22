@@ -76,8 +76,6 @@ check_python() {
 
 install_homebrew() {
   verify_brew && { echo "    ✓ Homebrew already installed: $(brew_bin)"; return 0; }
-  echo "    Installing Homebrew requires Administrator password on fresh macOS."
-  echo "    If this step cannot run non-interactively, run the shown Homebrew command manually."
   log="$CHINNA/logs/homebrew-install.$(date +%Y%m%d%H%M%S).log"
   if env NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" >"$log" 2>&1; then
     brew_shellenv || true
@@ -158,10 +156,86 @@ MODELS
   echo "    ✓ env/defaults verified"
 }
 
+prompt_ai_keys() {
+  if [ "${CHINNA_SKIP_KEY_PROMPT:-}" = "1" ]; then
+    echo "    ↷ AI key prompt skipped by CHINNA_SKIP_KEY_PROMPT=1"
+    return 0
+  fi
+  if [ ! -r /dev/tty ]; then
+    echo "    ⚠ No interactive terminal for AI key prompt. Add keys in Dashboard → Settings."
+    return 0
+  fi
+  has_key="no"
+  grep -q '^OPENROUTER_API_KEY=' "$CHINNA/env" 2>/dev/null && has_key="yes"
+  grep -q '^OPENAI_API_KEY=' "$CHINNA/env" 2>/dev/null && has_key="yes"
+  echo "" >/dev/tty
+  if [ "$has_key" = "yes" ]; then
+    printf '  AI setup: key already exists. Replace/add keys now? [y/N/skip] ' >/dev/tty
+  else
+    printf '  AI setup: add OpenRouter/OpenAI keys now? [y/N/skip] ' >/dev/tty
+  fi
+  IFS= read -r ans </dev/tty || ans=""
+  case "$(printf '%s' "$ans" | tr '[:upper:]' '[:lower:]')" in
+    y|yes) ;;
+    *) echo "    ↷ AI key setup skipped. Add keys later in Dashboard → Settings."; return 0 ;;
+  esac
+  printf '  OpenRouter API key (Enter to skip): ' >/dev/tty
+  stty -echo </dev/tty 2>/dev/null || true
+  IFS= read -r OR_KEY </dev/tty || OR_KEY=""
+  stty echo </dev/tty 2>/dev/null || true
+  printf '\n' >/dev/tty
+  printf '  OpenAI API key (Enter to skip): ' >/dev/tty
+  stty -echo </dev/tty 2>/dev/null || true
+  IFS= read -r OA_KEY </dev/tty || OA_KEY=""
+  stty echo </dev/tty 2>/dev/null || true
+  printf '\n' >/dev/tty
+  printf '  Active model [openrouter/free]: ' >/dev/tty
+  IFS= read -r ACTIVE_MODEL_IN </dev/tty || ACTIVE_MODEL_IN=""
+  [ -n "$ACTIVE_MODEL_IN" ] || ACTIVE_MODEL_IN="openrouter/free"
+  CHINNA_HOME="$CHINNA" OPENROUTER_API_KEY_INPUT="$OR_KEY" OPENAI_API_KEY_INPUT="$OA_KEY" ACTIVE_MODEL_INPUT="$ACTIVE_MODEL_IN" python3 - <<'PY'
+import json, os, pathlib
+home = pathlib.Path(os.environ['CHINNA_HOME'])
+env = home / 'env'
+keys = home / 'api_keys.json'
+values = {
+    'OPENROUTER_API_KEY': os.environ.get('OPENROUTER_API_KEY_INPUT',''),
+    'OPENAI_API_KEY': os.environ.get('OPENAI_API_KEY_INPUT',''),
+    'ACTIVE_MODEL': os.environ.get('ACTIVE_MODEL_INPUT','openrouter/free'),
+}
+lines = env.read_text().splitlines() if env.exists() else []
+def set_line(name, value):
+    global lines
+    if not value: return
+    new = f"{name}='{value.replace(chr(39), chr(39)+'\\''+chr(39))}'"
+    prefixes = (name+'=', 'export '+name+'=', '# '+name+'=')
+    out=[]; done=False
+    for line in lines:
+        if line.startswith(prefixes):
+            if not done:
+                out.append(new); done=True
+        else:
+            out.append(line)
+    if not done: out.append(new)
+    lines = out
+for k,v in values.items(): set_line(k,v)
+env.write_text('\n'.join(lines).rstrip()+'\n')
+os.chmod(env, 0o600)
+data = {}
+if keys.exists():
+    try: data = json.loads(keys.read_text())
+    except Exception: data = {}
+for k,v in values.items():
+    if v: data[k]=v
+keys.write_text(json.dumps(data, indent=2))
+os.chmod(keys, 0o600)
+print('    ✓ AI key configuration saved')
+PY
+}
+
 apply_server_patch() {
   if [ -f "$CHINNA/lib/server_runtime_patch.py" ]; then
     echo "    ↻ Applying dynamic backend route patch..."
-    CHINNA_HOME="$CHINNA" python3 "$CHINNA/lib/server_runtime_patch.py" | sed 's/^/      /' || true
+    CHINNA_SKIP_KEY_PROMPT=1 CHINNA_HOME="$CHINNA" python3 "$CHINNA/lib/server_runtime_patch.py" | sed 's/^/      /' || true
   fi
   python3 -m py_compile "$CHINNA/dashboard_server.py" && echo "    ✓ dashboard_server.py syntax verified"
 }
@@ -203,21 +277,15 @@ write_go_tui() {
   download go.sum "$CHINNA/go.sum" || true
   download cmd/chinna-tui/main.go "$CHINNA/cmd/chinna-tui/main.go" || true
   download cmd/chinna-escape/main.go "$CHINNA/cmd/chinna-escape/main.go" || true
-  for f in anim.go api.go chat.go escape.go layout.go model.go models.go status.go types.go; do
-    download "tui/$f" "$CHINNA/tui/$f" || true
-  done
+  for f in anim.go api.go chat.go escape.go layout.go model.go models.go status.go types.go; do download "tui/$f" "$CHINNA/tui/$f" || true; done
   echo "    ✓ Go TUI updated"
 }
 
 write_extension() {
   echo "    ↻ Installing browser extension files..."
   mkdir -p "$CHINNA/extension/icons"
-  for f in manifest.json background.js sidepanel.html sidepanel.js sidepanel.css INSTALL.md install-extension.sh; do
-    download "extension/$f" "$CHINNA/extension/$f" || true
-  done
-  for i in 16 48 128; do
-    download "extension/icons/icon$i.png" "$CHINNA/extension/icons/icon$i.png" || true
-  done
+  for f in manifest.json background.js sidepanel.html sidepanel.js sidepanel.css INSTALL.md install-extension.sh; do download "extension/$f" "$CHINNA/extension/$f" || true; done
+  for i in 16 48 128; do download "extension/icons/icon$i.png" "$CHINNA/extension/icons/icon$i.png" || true; done
   echo "    ✓ Extension at ~/.chinna/extension"
 }
 
@@ -294,6 +362,7 @@ echo ""
 echo "  ↻ Pulling latest V7.0 app files..."
 write_server
 write_defaults
+prompt_ai_keys
 apply_server_patch
 write_dashboard
 write_whatsapp_bridge
