@@ -12,11 +12,18 @@ RAW="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 CHINNA="${CHINNA_HOME:-$HOME/.chinna}"
 PORT="${CHINNA_DASHBOARD_PORT:-7777}"
 STATE_FILE="${CHINNA}/.installstate"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Safe for both: direct local execution and `curl ... | bash`.
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-}"
+SCRIPT_DIR=""
+REPO_ROOT=""
+if [ -n "${SCRIPT_SOURCE}" ] && [ -f "${SCRIPT_SOURCE}" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_SOURCE}")" && pwd)"
+  REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+fi
 
 LOCAL_SOURCE="off"
-if [ -f "${REPO_ROOT}/lib/server.py" ] && [ -f "${REPO_ROOT}/dashboard/index.html" ] && [ -f "${REPO_ROOT}/bin/chinna" ]; then
+if [ -n "${REPO_ROOT}" ] && [ -f "${REPO_ROOT}/lib/server.py" ] && [ -f "${REPO_ROOT}/dashboard/index.html" ] && [ -f "${REPO_ROOT}/bin/chinna" ]; then
   LOCAL_SOURCE="on"
 fi
 
@@ -36,9 +43,14 @@ echo ""
 mkdir -p "${CHINNA}" "${CHINNA}/lib" "${CHINNA}/dashboard" "${CHINNA}/logs" "${CHINNA}/state"
 
 copy_or_fetch() {
-  local rel="$1" dest="$2" local_path="${REPO_ROOT}/${rel}"
+  local rel="$1"
+  local dest="$2"
+  local local_path=""
+  if [ -n "${REPO_ROOT:-}" ]; then
+    local_path="${REPO_ROOT}/${rel}"
+  fi
   mkdir -p "$(dirname "${dest}")"
-  if [ "${LOCAL_SOURCE}" = "on" ] && [ -f "${local_path}" ]; then
+  if [ "${LOCAL_SOURCE}" = "on" ] && [ -n "${local_path}" ] && [ -f "${local_path}" ]; then
     cp "${local_path}" "${dest}"
     return 0
   fi
@@ -50,7 +62,8 @@ mark_done() { grep -qxF "$1" "$STATE_FILE" 2>/dev/null || echo "$1" >> "$STATE_F
 clear_done(){ [ -f "$STATE_FILE" ] && grep -vxF "$1" "$STATE_FILE" > "${STATE_FILE}.tmp" 2>/dev/null && mv "${STATE_FILE}.tmp" "$STATE_FILE" || true; }
 
 run_step() {
-  local name="$1"; shift
+  local name="$1"
+  shift
   if is_done "$name"; then
     echo "  ↷ Skipping (already set up): $name"
   else
@@ -60,8 +73,10 @@ run_step() {
 }
 
 run_verified_step() {
-  local name="$1"; shift
-  local verify_fn="$1"; shift
+  local name="$1"
+  shift
+  local verify_fn="$1"
+  shift
   if is_done "$name" && "$verify_fn" >/dev/null 2>&1; then
     echo "  ↷ Skipping (already set up): $name"
     return 0
@@ -108,13 +123,9 @@ step_install_homebrew() {
     verify_brew && { echo "    ✓ Homebrew installed"; return 0; }
   fi
   echo "    ⚠ Non-interactive Homebrew install did not complete."
-  echo "    Last Homebrew log lines:"
-  tail -8 "$log_file" 2>/dev/null | sed 's/^/      /' || true
-  echo ""
   echo "    Homebrew needs an Administrator password on a fresh Mac."
   echo "    Run this once, then re-run Chinna installer:"
   echo "      $install_cmd"
-  echo ""
   echo "    Continuing Chinna install without brew packages."
   return 1
 }
@@ -140,7 +151,8 @@ step_brew_shellenv() {
 }
 
 step_brew_update() {
-  local b; b="$(brew_bin)" || { echo "    ⚠ brew not found, skipping brew update"; return 1; }
+  local b
+  b="$(brew_bin)" || { echo "    ⚠ brew not found, skipping brew update"; return 1; }
   echo "    Updating Homebrew..."
   "$b" update --quiet || true
   "$b" tap homebrew/cask >/dev/null 2>&1 || true
@@ -148,7 +160,8 @@ step_brew_update() {
 }
 
 step_install_clis() {
-  local b; b="$(brew_bin)" || { echo "    ⚠ brew not found, skipping CLI installs"; return 1; }
+  local b
+  b="$(brew_bin)" || { echo "    ⚠ brew not found, skipping CLI installs"; return 1; }
   local tools=(git go jq gh ripgrep fd fzf tmux watchman tree htop ffmpeg imagemagick)
   echo "    Installing CLI tools: ${tools[*]}"
   "$b" install "${tools[@]}" || true
@@ -156,7 +169,8 @@ step_install_clis() {
 }
 
 step_install_node_tools() {
-  local b; b="$(brew_bin)" || { echo "    ⚠ brew not found, skipping node tools"; return 1; }
+  local b
+  b="$(brew_bin)" || { echo "    ⚠ brew not found, skipping node tools"; return 1; }
   local tools=(node pnpm yarn bun)
   echo "    Installing node tools: ${tools[*]}"
   "$b" install "${tools[@]}" || true
@@ -274,20 +288,12 @@ step_link_chinna_path() {
 step_write_defaults() {
   echo "7.0.0" > "${CHINNA}/VERSION"
   copy_or_fetch "version-log.json" "${CHINNA}/version-log.json" 2>/dev/null || true
-  if [ ! -f "${CHINNA}/env" ]; then
-    cat > "${CHINNA}/env" << 'ENV'
-# Chinna V7.0 Environment (chmod 600 — never share this file)
-# OPENROUTER_API_KEY=
-# ANTHROPIC_API_KEY=
-# OPENAI_API_KEY=
-APPAUTOMATIONMODE=off
-APPNOTIFYSOUND=/System/Library/Sounds/Glass.aiff
-APPNOTIFYSPEAK=off
-CHINNA_DASHBOARD_PORT=7777
-ENV
-    chmod 600 "${CHINNA}/env"
-    echo "    ✓ env file created"
-  fi
+  touch "${CHINNA}/env"
+  chmod 600 "${CHINNA}/env" 2>/dev/null || true
+  grep -q '^APPAUTOMATIONMODE=' "${CHINNA}/env" 2>/dev/null || echo 'APPAUTOMATIONMODE=off' >> "${CHINNA}/env"
+  grep -q '^APPNOTIFYSOUND=' "${CHINNA}/env" 2>/dev/null || echo 'APPNOTIFYSOUND=/System/Library/Sounds/Glass.aiff' >> "${CHINNA}/env"
+  grep -q '^APPNOTIFYSPEAK=' "${CHINNA}/env" 2>/dev/null || echo 'APPNOTIFYSPEAK=off' >> "${CHINNA}/env"
+  grep -q '^CHINNA_DASHBOARD_PORT=' "${CHINNA}/env" 2>/dev/null || echo 'CHINNA_DASHBOARD_PORT=7777' >> "${CHINNA}/env"
   if [ ! -f "${CHINNA}/models" ]; then
     cat > "${CHINNA}/models" << 'MODELS'
 ACTIVE_MODEL="openrouter/free"
@@ -305,8 +311,9 @@ MODELS
     chmod 600 "${CHINNA}/models"
     echo "    ✓ models file created (default: chinna/free)"
   else
-    if ! grep -q '^MODEL_free=' "${CHINNA}/models" 2>/dev/null; then echo 'MODEL_free="openrouter/free"' >> "${CHINNA}/models"; fi
+    grep -q '^MODEL_free=' "${CHINNA}/models" 2>/dev/null || echo 'MODEL_free="openrouter/free"' >> "${CHINNA}/models"
   fi
+  echo "    ✓ env/defaults verified"
 }
 
 step_zshrc_block() {
@@ -346,15 +353,15 @@ step_start_server() {
   nohup python3 "${CHINNA}/dashboard_server.py" "${PORT}" > "${CHINNA}/dashboard.log" 2>&1 &
   sleep 3
   if curl -sf "http://localhost:${PORT}/api/version" >/dev/null 2>&1; then
-    VER=$(curl -sf "http://localhost:${PORT}/api/version" | python3 -c "import json,sys;print(json.load(sys.stdin).get('name','Chinna V7.0'))" 2>/dev/null || echo "Chinna V7.0")
-    echo "    ✓ ${VER} running on port ${PORT}"
+    local ver
+    ver=$(curl -sf "http://localhost:${PORT}/api/version" | python3 -c "import json,sys;print(json.load(sys.stdin).get('name','Chinna V7.0'))" 2>/dev/null || echo "Chinna V7.0")
+    echo "    ✓ ${ver} running on port ${PORT}"
   else
     echo "    ⚠ Server warming up — check: curl http://localhost:${PORT}/api/version"
     echo "    Log: tail -80 ${CHINNA}/dashboard.log"
   fi
 }
 
-# one-time setup
 run_step "backup_zshrc" step_backup_zshrc
 run_step "check_python" step_check_python
 run_verified_step "install_homebrew" verify_brew step_install_homebrew || true
@@ -366,6 +373,7 @@ run_verified_step "install_node_tools" verify_brew step_install_node_tools || tr
 echo ""
 echo "  ↻ Pulling latest V7.0 app files..."
 step_write_server
+step_write_defaults
 step_apply_server_patch
 step_write_dashboard
 step_write_whatsapp_bridge
@@ -374,7 +382,6 @@ step_write_go_tui
 step_write_bin
 step_link_chinna_path
 step_zshrc_block
-step_write_defaults
 step_write_extension
 step_start_server
 
