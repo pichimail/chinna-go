@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """Runtime compatibility patch for Chinna dashboard server.
 
-This file is intentionally stdlib-only. The installer runs it after refreshing
-server.py so existing users get new backend affordances without losing any
-existing server features.
+Stdlib-only. The installer runs this after refreshing server.py so existing users
+get new backend affordances without losing existing features. It also performs
+an optional /dev/tty AI-key setup pass during install.
 """
+import getpass
+import json
 import os
 import pathlib
-import re
 
 HOME = os.path.expanduser("~")
 CHINNA_HOME = os.environ.get("CHINNA_HOME", os.path.join(HOME, ".chinna"))
+API_KEYS_FILE = os.path.join(CHINNA_HOME, "api_keys.json")
+ENV_FILE = os.path.join(CHINNA_HOME, "env")
 TARGETS = [
     os.path.join(CHINNA_HOME, "dashboard_server.py"),
     os.path.join(CHINNA_HOME, "lib", "server.py"),
@@ -24,7 +27,6 @@ STATE_NEW = "UI_LAYOUT_FILE = os.path.join(CHINNA_HOME, 'state/ui_layout.json')\
 
 GET_ANCHOR = "        elif p == '/api/custom-views':\n            self._json({'views': load_custom_views()})"
 GET_PATCH = """        elif p == '/api/media':
-            # Alias used by the dashboard media drawer. Redirect to the secure file streamer.
             qp = urllib.parse.urlencode({'path': q.get('path', '')})
             self.send_response(302)
             self.send_header('Location', '/api/fs/serve?' + qp)
@@ -158,6 +160,27 @@ FS_SERVE_NEW = """                mime = mimetypes.guess_type(p)[0] or 'applicat
                 return"""
 
 
+def read_json(path, default):
+    try:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data if isinstance(data, dict) else default
+    except Exception:
+        pass
+    return default
+
+
+def write_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=True)
+    try:
+        os.chmod(path, 0o600)
+    except Exception:
+        pass
+
+
 def patch_one(path):
     p = pathlib.Path(path)
     if not p.exists():
@@ -179,12 +202,85 @@ def patch_one(path):
     return True, f"already patched {path}"
 
 
+def set_env_var(name, value):
+    if not value:
+        return
+    lines = []
+    if os.path.exists(ENV_FILE):
+        with open(ENV_FILE, "r", encoding="utf-8", errors="replace") as f:
+            lines = f.read().splitlines()
+    prefix = f"{name}="
+    export_prefix = f"export {name}="
+    replacement = f"{name}='{value.replace(chr(39), chr(39)+'\\''+chr(39))}'"
+    written = False
+    out = []
+    for line in lines:
+        if line.startswith(prefix) or line.startswith(export_prefix) or line.startswith("# " + prefix):
+            if not written:
+                out.append(replacement)
+                written = True
+        else:
+            out.append(line)
+    if not written:
+        out.append(replacement)
+    os.makedirs(os.path.dirname(ENV_FILE), exist_ok=True)
+    with open(ENV_FILE, "w", encoding="utf-8") as f:
+        f.write("\n".join(out).rstrip() + "\n")
+    try:
+        os.chmod(ENV_FILE, 0o600)
+    except Exception:
+        pass
+
+
+def ask_tty(prompt, secret=False):
+    try:
+        with open("/dev/tty", "r+", encoding="utf-8", buffering=1) as tty:
+            if secret:
+                return getpass.getpass(prompt, stream=tty).strip()
+            tty.write(prompt)
+            return tty.readline().strip()
+    except Exception:
+        return ""
+
+
+def prompt_ai_keys():
+    if os.environ.get("CHINNA_SKIP_KEY_PROMPT") == "1":
+        print("AI key setup skipped by CHINNA_SKIP_KEY_PROMPT=1")
+        return
+    existing = read_json(API_KEYS_FILE, {})
+    if existing.get("OPENROUTER_API_KEY") or existing.get("OPENAI_API_KEY"):
+        print("AI key setup: existing API key found")
+        return
+    answer = ask_tty("\n  AI setup: add OpenRouter/OpenAI keys now? [y/N/skip] ")
+    if answer.lower() not in ("y", "yes"):
+        print("AI key setup skipped. Add keys later in Dashboard → Settings.")
+        return
+    openrouter = ask_tty("  OpenRouter API key (Enter to skip): ", secret=True)
+    openai = ask_tty("  OpenAI API key (Enter to skip): ", secret=True)
+    active = ask_tty("  Active model [openrouter/free]: ") or "openrouter/free"
+    saved = read_json(API_KEYS_FILE, {})
+    if openrouter:
+        saved["OPENROUTER_API_KEY"] = openrouter
+        set_env_var("OPENROUTER_API_KEY", openrouter)
+    if openai:
+        saved["OPENAI_API_KEY"] = openai
+        set_env_var("OPENAI_API_KEY", openai)
+    saved["ACTIVE_MODEL"] = active
+    set_env_var("ACTIVE_MODEL", active)
+    write_json(API_KEYS_FILE, saved)
+    if openrouter or openai:
+        print("AI key setup complete — dashboard AI features will use the saved key.")
+    else:
+        print("No AI key entered. Free/local fallback remains active.")
+
+
 def main():
-    changed = []
+    messages = []
     for target in TARGETS:
-        ok, msg = patch_one(target)
-        changed.append(msg)
-    print("\n".join(changed))
+        _ok, msg = patch_one(target)
+        messages.append(msg)
+    print("\n".join(messages))
+    prompt_ai_keys()
 
 
 if __name__ == "__main__":
