@@ -1,1 +1,3 @@
-body{color:red}
+body{background:#080808;color:#fff}
+.card,.infocard,.mac-widget,.settings-card,.plugin-card,.row,.proc{background:transparent;border-radius:2px;box-shadow:none}
+.bigbtn.solid{background:#baff29;color:#030a00;border-color:#baff29}
