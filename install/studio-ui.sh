@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-echo studio
+echo studio helper
