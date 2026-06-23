@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Chinna V7.0 — pipe-safe always-fresh installer
+# Chinna V7.0 — pipe-safe fresh installer
 # Fresh reinstall:
 #   curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | CHINNA_FRESH=1 bash
 set -Ee -o pipefail
@@ -11,6 +11,21 @@ CHINNA="${CHINNA_HOME:-$HOME/.chinna}"
 PORT="${CHINNA_DASHBOARD_PORT:-7777}"
 STATE_FILE="${CHINNA}/.installstate"
 STAMP="$(date +%Y%m%d%H%M%S)"
+
+# Critical: when executed as `curl ... | bash`, Homebrew and other child
+# processes can read from stdin and consume the rest of this installer.
+# Re-exec from a real temp file first, then run the installer body from disk.
+if [ "${CHINNA_EXEC_FROM_FILE:-0}" != "1" ]; then
+  TMP="${TMPDIR:-/tmp}/chinna-install-${STAMP}-$$.sh"
+  curl -fsSL "${RAW}/install/install.sh?cb=$(date +%s)" -o "$TMP"
+  chmod +x "$TMP"
+  exec env \
+    CHINNA_EXEC_FROM_FILE=1 \
+    CHINNA_FRESH="${CHINNA_FRESH:-0}" \
+    CHINNA_HOME="${CHINNA_HOME:-}" \
+    CHINNA_DASHBOARD_PORT="${CHINNA_DASHBOARD_PORT:-}" \
+    bash "$TMP"
+fi
 
 printf '\n  ╔══════════════════════════════════════════════════╗\n'
 printf '  ║   C H I N N A   V7.0    —  Mac Sidekick         ║\n'
@@ -186,7 +201,6 @@ home = pathlib.Path(os.environ.get("CHINNA_HOME", str(pathlib.Path.home()/".chin
 env = home / "env"
 models_file = home / "models"
 keys_file = home / "api_keys.json"
-
 try:
     tty = open("/dev/tty", "r+", encoding="utf-8", buffering=1)
 except Exception:
@@ -197,14 +211,12 @@ def say(msg=""):
     print(msg, file=tty)
 
 def ask(prompt, default=""):
-    tty.write(prompt)
-    tty.flush()
+    tty.write(prompt); tty.flush()
     value = tty.readline().strip()
     return value if value else default
 
 def ask_secret(prompt):
-    tty.write(prompt)
-    tty.flush()
+    tty.write(prompt); tty.flush()
     try:
         import termios
         fd = tty.fileno()
@@ -214,57 +226,46 @@ def ask_secret(prompt):
         termios.tcsetattr(fd, termios.TCSADRAIN, new)
         value = tty.readline().strip()
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
-        tty.write("\n")
-        tty.flush()
+        tty.write("\n"); tty.flush()
         return value
     except Exception:
         return tty.readline().strip()
 
 def mask(key):
-    if not key:
-        return "empty"
-    if len(key) <= 10:
-        return "too-short:%s chars" % len(key)
+    if not key: return "empty"
+    if len(key) <= 10: return "too-short:%s chars" % len(key)
     return "%s…%s (%s chars)" % (key[:6], key[-4:], len(key))
 
 def shell_quote(value):
-    return "'" + str(value).replace("'", "'\\''") + "'"
+    return "'" + str(value).replace("'", "'\"'\"'") + "'"
 
 def double_quote(value):
     return '"' + str(value).replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 def upsert(path, name, value, quote="single"):
-    if value is None or value == "":
-        return
+    if value is None or value == "": return
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = path.read_text(errors="replace").splitlines() if path.exists() else []
     rendered = "%s=%s" % (name, shell_quote(value) if quote == "single" else double_quote(value))
     prefixes = (name+"=", "export "+name+"=", "# "+name+"=")
-    out = []
-    done = False
+    out=[]; done=False
     for line in lines:
         if line.startswith(prefixes):
             if not done:
-                out.append(rendered)
-                done = True
+                out.append(rendered); done=True
         else:
             out.append(line)
-    if not done:
-        out.append(rendered)
+    if not done: out.append(rendered)
     path.write_text("\n".join(out).rstrip()+"\n")
-    try:
-        os.chmod(path, 0o600)
-    except Exception:
-        pass
+    try: os.chmod(path, 0o600)
+    except Exception: pass
 
 def read_env(name):
-    if not env.exists():
-        return ""
+    if not env.exists(): return ""
     pat = re.compile(r"^(?:export\s+)?"+re.escape(name)+r"=(.*)$")
     for line in env.read_text(errors="replace").splitlines():
         m = pat.match(line.strip())
-        if not m:
-            continue
+        if not m: continue
         raw = m.group(1).strip()
         if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in ("'", '"'):
             raw = raw[1:-1]
@@ -272,8 +273,7 @@ def read_env(name):
     return ""
 
 def load_keys():
-    if not keys_file.exists():
-        return {}
+    if not keys_file.exists(): return {}
     try:
         data = json.loads(keys_file.read_text())
         return data if isinstance(data, dict) else {}
@@ -283,10 +283,8 @@ def load_keys():
 def save_keys(data):
     keys_file.parent.mkdir(parents=True, exist_ok=True)
     keys_file.write_text(json.dumps(data, indent=2))
-    try:
-        os.chmod(keys_file, 0o600)
-    except Exception:
-        pass
+    try: os.chmod(keys_file, 0o600)
+    except Exception: pass
 
 def request_json(url, headers):
     req = urllib.request.Request(url, headers=headers)
@@ -294,64 +292,44 @@ def request_json(url, headers):
         return json.loads(response.read().decode("utf-8", "replace"))
 
 def fetch_openrouter(key):
-    headers = {
-        "User-Agent": "chinna-installer",
-        "HTTP-Referer": "http://localhost:7777",
-        "X-Title": "Chinna"
-    }
-    if key:
-        headers["Authorization"] = "Bearer " + key
+    headers = {"User-Agent":"chinna-installer", "HTTP-Referer":"http://localhost:7777", "X-Title":"Chinna"}
+    if key: headers["Authorization"] = "Bearer " + key
     data = request_json("https://openrouter.ai/api/v1/models", headers)
-    rows = []
+    rows=[]
     for item in data.get("data", []):
         model_id = item.get("id")
         if model_id:
-            rows.append({
-                "id": model_id,
-                "name": item.get("name") or model_id,
-                "created": item.get("created") or 0
-            })
+            rows.append({"id":model_id, "name":item.get("name") or model_id, "created":item.get("created") or 0})
     return rows
 
 def fetch_openai(key):
-    data = request_json("https://api.openai.com/v1/models", {
-        "Authorization": "Bearer " + key,
-        "User-Agent": "chinna-installer"
-    })
-    rows = []
+    data = request_json("https://api.openai.com/v1/models", {"Authorization":"Bearer "+key, "User-Agent":"chinna-installer"})
+    rows=[]
     for item in data.get("data", []):
-        model_id = item.get("id")
-        if not model_id:
-            continue
-        low = model_id.lower()
-        if low.startswith(("ft:", "babbage", "davinci")):
-            continue
-        rows.append({"id": model_id, "name": model_id, "created": item.get("created") or 0})
+        model_id=item.get("id")
+        if not model_id: continue
+        low=model_id.lower()
+        if low.startswith(("ft:", "babbage", "davinci")): continue
+        rows.append({"id":model_id, "name":model_id, "created":item.get("created") or 0})
     return rows
 
 def score_model(provider, item, query=""):
-    hay = (item.get("id","") + " " + item.get("name","")).lower()
+    hay = (item.get("id","")+" "+item.get("name","")).lower()
     score = float(item.get("created") or 0) / 10000000000.0
     preferred = ["gpt-5", "gpt-4.1", "gpt-4o", "o4", "o3", "claude-3.7", "claude-3.5", "gemini-2.5", "gemini-2.0", "llama-3.3", "free"]
     for i, token in enumerate(preferred):
-        if token in hay:
-            score += 100 - i
-    if provider == "openrouter" and ":free" in hay:
-        score += 25
+        if token in hay: score += 100 - i
+    if provider == "openrouter" and ":free" in hay: score += 25
     if query:
         for token in query.split():
-            if token in hay:
-                score += 200
+            if token in hay: score += 200
     return score
 
 def pick_model(provider, rows):
     say("")
     say("  Live %s model list loaded: %s models" % (provider, len(rows)))
     query = ask("  Search/filter models (Enter = recommended latest): ", "").lower().strip()
-    if query:
-        visible = [x for x in rows if all(tok in ((x.get("id","")+" "+x.get("name","")).lower()) for tok in query.split())]
-    else:
-        visible = list(rows)
+    visible = [x for x in rows if not query or all(tok in ((x.get("id","")+" "+x.get("name","")).lower()) for tok in query.split())]
     visible.sort(key=lambda x: score_model(provider, x, query), reverse=True)
     visible = visible[:40]
     if not visible:
@@ -359,17 +337,14 @@ def pick_model(provider, rows):
         return ask("  Manual model id: ", "")
     for idx, item in enumerate(visible, 1):
         label = item["id"]
-        if item.get("name") and item["name"] != item["id"]:
-            label += " — " + item["name"]
+        if item.get("name") and item["name"] != item["id"]: label += " — " + item["name"]
         say("  %2d) %s" % (idx, label))
     say("   m) Manual model id")
     choice = ask("  Select model [1]: ", "1")
-    if choice.lower() == "m":
-        return ask("  Manual model id: ", "")
+    if choice.lower() == "m": return ask("  Manual model id: ", "")
     try:
         index = int(choice) - 1
-        if 0 <= index < len(visible):
-            return visible[index]["id"]
+        if 0 <= index < len(visible): return visible[index]["id"]
     except Exception:
         pass
     return visible[0]["id"]
@@ -390,20 +365,15 @@ if choice in ("1", "3"):
     say("  Paste OpenRouter key. Input is hidden; confirmation appears after Enter.")
     value = ask_secret("  OpenRouter API key: ")
     if value:
-        or_key = value
-        store["OPENROUTER_API_KEY"] = value
-        upsert(env, "OPENROUTER_API_KEY", value, "single")
+        or_key = value; store["OPENROUTER_API_KEY"] = value; upsert(env, "OPENROUTER_API_KEY", value, "single")
         say("    ✓ OpenRouter key captured: " + mask(value))
     else:
         say("    ↷ OpenRouter key empty; skipped.")
-
 if choice in ("2", "3"):
     say("  Paste OpenAI key. Input is hidden; confirmation appears after Enter.")
     value = ask_secret("  OpenAI API key: ")
     if value:
-        oa_key = value
-        store["OPENAI_API_KEY"] = value
-        upsert(env, "OPENAI_API_KEY", value, "single")
+        oa_key = value; store["OPENAI_API_KEY"] = value; upsert(env, "OPENAI_API_KEY", value, "single")
         say("    ✓ OpenAI key captured: " + mask(value))
     else:
         say("    ↷ OpenAI key empty; skipped.")
@@ -412,17 +382,17 @@ save_keys(store)
 say("    ✓ OPENROUTER_API_KEY saved: " + ("yes" if or_key else "no"))
 say("    ✓ OPENAI_API_KEY saved: " + ("yes" if oa_key else "no"))
 
-providers = []
+providers=[]
 if or_key:
     try:
         providers.append(("openrouter", fetch_openrouter(or_key)))
-        say("    ✓ OpenRouter API accepted enough to fetch model list")
+        say("    ✓ OpenRouter live model list fetched")
     except Exception as exc:
         say("    ⚠ OpenRouter model fetch failed: " + str(exc))
 if oa_key:
     try:
         providers.append(("openai", fetch_openai(oa_key)))
-        say("    ✓ OpenAI API accepted enough to fetch model list")
+        say("    ✓ OpenAI live model list fetched")
     except Exception as exc:
         say("    ⚠ OpenAI model fetch failed: " + str(exc))
 
@@ -433,19 +403,15 @@ if providers:
     if len(providers) == 1:
         provider, rows = providers[0]
     else:
-        for idx, pair in enumerate(providers, 1):
-            say("  %d) %s (%s models)" % (idx, pair[0], len(pair[1])))
+        for idx, pair in enumerate(providers, 1): say("  %d) %s (%s models)" % (idx, pair[0], len(pair[1])))
         pc = ask("  Select provider [1]: ", "1")
-        try:
-            provider, rows = providers[max(0, min(len(providers)-1, int(pc)-1))]
-        except Exception:
-            provider, rows = providers[0]
+        try: provider, rows = providers[max(0, min(len(providers)-1, int(pc)-1))]
+        except Exception: provider, rows = providers[0]
     active = pick_model(provider, rows)
+elif choice in ("1", "2", "3"):
+    active = ask("  Model list unavailable. Enter ACTIVE_MODEL manually [openrouter/auto]: ", "openrouter/auto")
 else:
-    if choice in ("1", "2", "3"):
-        active = ask("  Model list unavailable. Enter ACTIVE_MODEL manually [openrouter/auto]: ", "openrouter/auto")
-    else:
-        active = read_env("ACTIVE_MODEL") or store.get("ACTIVE_MODEL") or "openrouter/free"
+    active = read_env("ACTIVE_MODEL") or store.get("ACTIVE_MODEL") or "openrouter/free"
 
 if active:
     upsert(env, "ACTIVE_MODEL", active, "single")
@@ -455,7 +421,6 @@ if active:
     say("    ✓ ACTIVE_MODEL saved: " + active)
 else:
     say("    ⚠ ACTIVE_MODEL not changed")
-
 say("    ✓ AI setup finished")
 PY
 }
