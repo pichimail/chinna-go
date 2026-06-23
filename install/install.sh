@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Chinna V7.0 — pipe-safe always-fresh installer
-# curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash
+# Fresh reinstall:
+#   curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | CHINNA_FRESH=1 bash
 set -Ee -o pipefail
 
 REPO="pichimail/chinna-go"
@@ -9,12 +10,25 @@ RAW="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 CHINNA="${CHINNA_HOME:-$HOME/.chinna}"
 PORT="${CHINNA_DASHBOARD_PORT:-7777}"
 STATE_FILE="${CHINNA}/.installstate"
+STAMP="$(date +%Y%m%d%H%M%S)"
 
 printf '\n  ╔══════════════════════════════════════════════════╗\n'
 printf '  ║   C H I N N A   V7.0    —  Mac Sidekick         ║\n'
-printf '  ║   Always-Fresh · Models · Media · WhatsApp · More║\n'
+printf '  ║   Fresh · Models · Media · WhatsApp · More      ║\n'
 printf '  ╚══════════════════════════════════════════════════╝\n\n'
-printf '  Source: GitHub raw (%s/%s)\n\n' "$REPO" "$BRANCH"
+printf '  Source: GitHub raw (%s/%s)\n' "$REPO" "$BRANCH"
+printf '  Fresh mode: %s\n\n' "${CHINNA_FRESH:-0}"
+
+if [ "${CHINNA_FRESH:-0}" = "1" ]; then
+  echo "  → Fresh reinstall requested"
+  pkill -9 -f dashboard_server 2>/dev/null || true
+  pkill -9 -f "localhost:${PORT}" 2>/dev/null || true
+  if [ -d "$CHINNA" ]; then
+    BACKUP="$HOME/.chinna.backup.$STAMP"
+    echo "    ✓ Backing up old ~/.chinna → $BACKUP"
+    mv "$CHINNA" "$BACKUP"
+  fi
+fi
 
 mkdir -p "$CHINNA" "$CHINNA/lib" "$CHINNA/dashboard" "$CHINNA/logs" "$CHINNA/state"
 
@@ -156,133 +170,293 @@ MODELS
   echo "    ✓ env/defaults verified"
 }
 
-mask_key() {
-  k="$1"
-  n=${#k}
-  if [ "$n" -le 8 ]; then
-    printf 'too-short:%s chars' "$n"
-  else
-    first=$(printf '%s' "$k" | cut -c1-6)
-    last=$(printf '%s' "$k" | awk '{print substr($0,length($0)-3,4)}')
-    printf '%s…%s (%s chars)' "$first" "$last" "$n"
-  fi
-}
-
-read_secret_line() {
-  prompt="$1"
-  printf '%s' "$prompt" >/dev/tty
-  stty -echo </dev/tty 2>/dev/null || true
-  IFS= read -r value </dev/tty || value=""
-  stty echo </dev/tty 2>/dev/null || true
-  printf '\n' >/dev/tty
-  printf '%s' "$value"
-}
-
-prompt_ai_keys() {
+prompt_ai_keys_and_model() {
   if [ "${CHINNA_SKIP_KEY_PROMPT:-}" = "1" ]; then
-    echo "    ↷ AI key prompt skipped by CHINNA_SKIP_KEY_PROMPT=1"
+    echo "    ↷ AI key + model setup skipped by CHINNA_SKIP_KEY_PROMPT=1"
     return 0
   fi
   if [ ! -r /dev/tty ]; then
-    echo "    ⚠ No interactive terminal for AI key prompt. Add keys in Dashboard → Settings."
+    echo "    ⚠ No interactive terminal for AI key/model setup. Add keys in Dashboard → Settings."
     return 0
   fi
+  CHINNA_HOME="$CHINNA" python3 - <<'PY'
+import json, os, pathlib, re, urllib.request
 
-  has_or="no"; has_oa="no"
-  grep -q '^OPENROUTER_API_KEY=' "$CHINNA/env" 2>/dev/null && has_or="yes"
-  grep -q '^OPENAI_API_KEY=' "$CHINNA/env" 2>/dev/null && has_oa="yes"
+home = pathlib.Path(os.environ.get("CHINNA_HOME", str(pathlib.Path.home()/".chinna")))
+env = home / "env"
+models_file = home / "models"
+keys_file = home / "api_keys.json"
 
-  echo "" >/dev/tty
-  echo "  AI setup — choose provider keys to save" >/dev/tty
-  echo "    1) OpenRouter only" >/dev/tty
-  echo "    2) OpenAI only" >/dev/tty
-  echo "    3) Both OpenRouter + OpenAI" >/dev/tty
-  echo "    4) Keep existing / skip" >/dev/tty
-  printf '  Select [1/2/3/4, default 4]: ' >/dev/tty
-  IFS= read -r choice </dev/tty || choice="4"
-  [ -n "$choice" ] || choice="4"
+try:
+    tty = open("/dev/tty", "r+", encoding="utf-8", buffering=1)
+except Exception:
+    print("    ⚠ /dev/tty unavailable; skipping AI setup")
+    raise SystemExit(0)
 
-  case "$choice" in
-    1|2|3) ;;
-    *) echo "    ↷ AI key setup skipped. Existing keys preserved."; return 0 ;;
-  esac
+def say(msg=""):
+    print(msg, file=tty)
 
-  OR_KEY=""
-  OA_KEY=""
-  if [ "$choice" = "1" ] || [ "$choice" = "3" ]; then
-    echo "  Paste OpenRouter key. Input is hidden; confirmation appears after Enter." >/dev/tty
-    OR_KEY=$(read_secret_line '  OpenRouter API key: ')
-    if [ -n "$OR_KEY" ]; then
-      echo "    ✓ OpenRouter key captured: $(mask_key "$OR_KEY")" >/dev/tty
-    else
-      echo "    ↷ OpenRouter key empty, skipped." >/dev/tty
-    fi
-  fi
-  if [ "$choice" = "2" ] || [ "$choice" = "3" ]; then
-    echo "  Paste OpenAI key. Input is hidden; confirmation appears after Enter." >/dev/tty
-    OA_KEY=$(read_secret_line '  OpenAI API key: ')
-    if [ -n "$OA_KEY" ]; then
-      echo "    ✓ OpenAI key captured: $(mask_key "$OA_KEY")" >/dev/tty
-    else
-      echo "    ↷ OpenAI key empty, skipped." >/dev/tty
-    fi
-  fi
+def ask(prompt, default=""):
+    tty.write(prompt)
+    tty.flush()
+    value = tty.readline().strip()
+    return value if value else default
 
-  if [ -z "$OR_KEY" ] && [ -z "$OA_KEY" ]; then
-    echo "    ⚠ No new key captured. Existing keys preserved." >/dev/tty
-    return 0
-  fi
+def ask_secret(prompt):
+    tty.write(prompt)
+    tty.flush()
+    try:
+        import termios
+        fd = tty.fileno()
+        old = termios.tcgetattr(fd)
+        new = old[:]
+        new[3] = new[3] & ~termios.ECHO
+        termios.tcsetattr(fd, termios.TCSADRAIN, new)
+        value = tty.readline().strip()
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+        tty.write("\n")
+        tty.flush()
+        return value
+    except Exception:
+        return tty.readline().strip()
 
-  if [ -n "$OR_KEY" ]; then default_model="openrouter/auto"; else default_model="gpt-4o-mini"; fi
-  printf '  Active model [%s]: ' "$default_model" >/dev/tty
-  IFS= read -r ACTIVE_MODEL_IN </dev/tty || ACTIVE_MODEL_IN=""
-  [ -n "$ACTIVE_MODEL_IN" ] || ACTIVE_MODEL_IN="$default_model"
+def mask(key):
+    if not key:
+        return "empty"
+    if len(key) <= 10:
+        return "too-short:%s chars" % len(key)
+    return "%s…%s (%s chars)" % (key[:6], key[-4:], len(key))
 
-  CHINNA_HOME="$CHINNA" OPENROUTER_API_KEY_INPUT="$OR_KEY" OPENAI_API_KEY_INPUT="$OA_KEY" ACTIVE_MODEL_INPUT="$ACTIVE_MODEL_IN" python3 - <<'PY'
-import json, os, pathlib
-home = pathlib.Path(os.environ['CHINNA_HOME'])
-env = home / 'env'
-keys = home / 'api_keys.json'
-values = {
-    'OPENROUTER_API_KEY': os.environ.get('OPENROUTER_API_KEY_INPUT',''),
-    'OPENAI_API_KEY': os.environ.get('OPENAI_API_KEY_INPUT',''),
-    'ACTIVE_MODEL': os.environ.get('ACTIVE_MODEL_INPUT','openrouter/auto'),
-}
-lines = env.read_text().splitlines() if env.exists() else []
-def set_line(name, value):
-    global lines
-    if not value: return False
-    new = f"{name}='{value.replace(chr(39), chr(39)+'\\''+chr(39))}'"
-    prefixes = (name+'=', 'export '+name+'=', '# '+name+'=')
-    out=[]; done=False
+def shell_quote(value):
+    return "'" + str(value).replace("'", "'\\''") + "'"
+
+def double_quote(value):
+    return '"' + str(value).replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+def upsert(path, name, value, quote="single"):
+    if value is None or value == "":
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = path.read_text(errors="replace").splitlines() if path.exists() else []
+    rendered = "%s=%s" % (name, shell_quote(value) if quote == "single" else double_quote(value))
+    prefixes = (name+"=", "export "+name+"=", "# "+name+"=")
+    out = []
+    done = False
     for line in lines:
         if line.startswith(prefixes):
             if not done:
-                out.append(new); done=True
+                out.append(rendered)
+                done = True
         else:
             out.append(line)
-    if not done: out.append(new)
-    lines = out
-    return True
-saved = {}
-for k,v in values.items():
-    if set_line(k,v): saved[k]=bool(v)
-env.write_text('\n'.join(lines).rstrip()+'\n')
-os.chmod(env, 0o600)
-data = {}
-if keys.exists():
-    try: data = json.loads(keys.read_text())
-    except Exception: data = {}
-for k,v in values.items():
-    if v: data[k]=v
-keys.write_text(json.dumps(data, indent=2))
-os.chmod(keys, 0o600)
-print('    ✓ AI key configuration saved')
-print(f"    ✓ OPENROUTER_API_KEY saved: {'yes' if data.get('OPENROUTER_API_KEY') else 'no'}")
-print(f"    ✓ OPENAI_API_KEY saved: {'yes' if data.get('OPENAI_API_KEY') else 'no'}")
-print(f"    ✓ ACTIVE_MODEL: {data.get('ACTIVE_MODEL','')}")
-print(f"    ✓ env file: {env}")
-print(f"    ✓ key store: {keys}")
+    if not done:
+        out.append(rendered)
+    path.write_text("\n".join(out).rstrip()+"\n")
+    try:
+        os.chmod(path, 0o600)
+    except Exception:
+        pass
+
+def read_env(name):
+    if not env.exists():
+        return ""
+    pat = re.compile(r"^(?:export\s+)?"+re.escape(name)+r"=(.*)$")
+    for line in env.read_text(errors="replace").splitlines():
+        m = pat.match(line.strip())
+        if not m:
+            continue
+        raw = m.group(1).strip()
+        if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in ("'", '"'):
+            raw = raw[1:-1]
+        return raw
+    return ""
+
+def load_keys():
+    if not keys_file.exists():
+        return {}
+    try:
+        data = json.loads(keys_file.read_text())
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def save_keys(data):
+    keys_file.parent.mkdir(parents=True, exist_ok=True)
+    keys_file.write_text(json.dumps(data, indent=2))
+    try:
+        os.chmod(keys_file, 0o600)
+    except Exception:
+        pass
+
+def request_json(url, headers):
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=35) as response:
+        return json.loads(response.read().decode("utf-8", "replace"))
+
+def fetch_openrouter(key):
+    headers = {
+        "User-Agent": "chinna-installer",
+        "HTTP-Referer": "http://localhost:7777",
+        "X-Title": "Chinna"
+    }
+    if key:
+        headers["Authorization"] = "Bearer " + key
+    data = request_json("https://openrouter.ai/api/v1/models", headers)
+    rows = []
+    for item in data.get("data", []):
+        model_id = item.get("id")
+        if model_id:
+            rows.append({
+                "id": model_id,
+                "name": item.get("name") or model_id,
+                "created": item.get("created") or 0
+            })
+    return rows
+
+def fetch_openai(key):
+    data = request_json("https://api.openai.com/v1/models", {
+        "Authorization": "Bearer " + key,
+        "User-Agent": "chinna-installer"
+    })
+    rows = []
+    for item in data.get("data", []):
+        model_id = item.get("id")
+        if not model_id:
+            continue
+        low = model_id.lower()
+        if low.startswith(("ft:", "babbage", "davinci")):
+            continue
+        rows.append({"id": model_id, "name": model_id, "created": item.get("created") or 0})
+    return rows
+
+def score_model(provider, item, query=""):
+    hay = (item.get("id","") + " " + item.get("name","")).lower()
+    score = float(item.get("created") or 0) / 10000000000.0
+    preferred = ["gpt-5", "gpt-4.1", "gpt-4o", "o4", "o3", "claude-3.7", "claude-3.5", "gemini-2.5", "gemini-2.0", "llama-3.3", "free"]
+    for i, token in enumerate(preferred):
+        if token in hay:
+            score += 100 - i
+    if provider == "openrouter" and ":free" in hay:
+        score += 25
+    if query:
+        for token in query.split():
+            if token in hay:
+                score += 200
+    return score
+
+def pick_model(provider, rows):
+    say("")
+    say("  Live %s model list loaded: %s models" % (provider, len(rows)))
+    query = ask("  Search/filter models (Enter = recommended latest): ", "").lower().strip()
+    if query:
+        visible = [x for x in rows if all(tok in ((x.get("id","")+" "+x.get("name","")).lower()) for tok in query.split())]
+    else:
+        visible = list(rows)
+    visible.sort(key=lambda x: score_model(provider, x, query), reverse=True)
+    visible = visible[:40]
+    if not visible:
+        say("  No matching model. Use manual model id.")
+        return ask("  Manual model id: ", "")
+    for idx, item in enumerate(visible, 1):
+        label = item["id"]
+        if item.get("name") and item["name"] != item["id"]:
+            label += " — " + item["name"]
+        say("  %2d) %s" % (idx, label))
+    say("   m) Manual model id")
+    choice = ask("  Select model [1]: ", "1")
+    if choice.lower() == "m":
+        return ask("  Manual model id: ", "")
+    try:
+        index = int(choice) - 1
+        if 0 <= index < len(visible):
+            return visible[index]["id"]
+    except Exception:
+        pass
+    return visible[0]["id"]
+
+store = load_keys()
+or_key = store.get("OPENROUTER_API_KEY") or read_env("OPENROUTER_API_KEY")
+oa_key = store.get("OPENAI_API_KEY") or read_env("OPENAI_API_KEY")
+
+say("")
+say("  AI setup — choose provider keys to save")
+say("    1) OpenRouter only")
+say("    2) OpenAI only")
+say("    3) Both OpenRouter + OpenAI")
+say("    4) Keep existing keys / skip")
+choice = ask("  Select [1/2/3/4, default 4]: ", "4")
+
+if choice in ("1", "3"):
+    say("  Paste OpenRouter key. Input is hidden; confirmation appears after Enter.")
+    value = ask_secret("  OpenRouter API key: ")
+    if value:
+        or_key = value
+        store["OPENROUTER_API_KEY"] = value
+        upsert(env, "OPENROUTER_API_KEY", value, "single")
+        say("    ✓ OpenRouter key captured: " + mask(value))
+    else:
+        say("    ↷ OpenRouter key empty; skipped.")
+
+if choice in ("2", "3"):
+    say("  Paste OpenAI key. Input is hidden; confirmation appears after Enter.")
+    value = ask_secret("  OpenAI API key: ")
+    if value:
+        oa_key = value
+        store["OPENAI_API_KEY"] = value
+        upsert(env, "OPENAI_API_KEY", value, "single")
+        say("    ✓ OpenAI key captured: " + mask(value))
+    else:
+        say("    ↷ OpenAI key empty; skipped.")
+
+save_keys(store)
+say("    ✓ OPENROUTER_API_KEY saved: " + ("yes" if or_key else "no"))
+say("    ✓ OPENAI_API_KEY saved: " + ("yes" if oa_key else "no"))
+
+providers = []
+if or_key:
+    try:
+        providers.append(("openrouter", fetch_openrouter(or_key)))
+        say("    ✓ OpenRouter API accepted enough to fetch model list")
+    except Exception as exc:
+        say("    ⚠ OpenRouter model fetch failed: " + str(exc))
+if oa_key:
+    try:
+        providers.append(("openai", fetch_openai(oa_key)))
+        say("    ✓ OpenAI API accepted enough to fetch model list")
+    except Exception as exc:
+        say("    ⚠ OpenAI model fetch failed: " + str(exc))
+
+active = ""
+if providers:
+    say("")
+    say("  Choose ACTIVE_MODEL from live available models")
+    if len(providers) == 1:
+        provider, rows = providers[0]
+    else:
+        for idx, pair in enumerate(providers, 1):
+            say("  %d) %s (%s models)" % (idx, pair[0], len(pair[1])))
+        pc = ask("  Select provider [1]: ", "1")
+        try:
+            provider, rows = providers[max(0, min(len(providers)-1, int(pc)-1))]
+        except Exception:
+            provider, rows = providers[0]
+    active = pick_model(provider, rows)
+else:
+    if choice in ("1", "2", "3"):
+        active = ask("  Model list unavailable. Enter ACTIVE_MODEL manually [openrouter/auto]: ", "openrouter/auto")
+    else:
+        active = read_env("ACTIVE_MODEL") or store.get("ACTIVE_MODEL") or "openrouter/free"
+
+if active:
+    upsert(env, "ACTIVE_MODEL", active, "single")
+    upsert(models_file, "ACTIVE_MODEL", active, "double")
+    store["ACTIVE_MODEL"] = active
+    save_keys(store)
+    say("    ✓ ACTIVE_MODEL saved: " + active)
+else:
+    say("    ⚠ ACTIVE_MODEL not changed")
+
+say("    ✓ AI setup finished")
 PY
 }
 
@@ -375,17 +549,17 @@ p=pathlib.Path(sys.argv[1]); begin=sys.argv[2]; end=sys.argv[3]
 s=p.read_text() if p.exists() else ''
 s=re.sub(re.escape(begin)+r'.*?'+re.escape(end)+r'\n?', '', s, flags=re.S)
 s=re.sub(r'\nalias chinna=.*\n', '\n', s)
-block=f'''
-{begin}
-export PATH="$HOME/.local/bin:$PATH"
-export CHINNA_HOME="$HOME/.chinna"
-[ -f "$CHINNA_HOME/env" ] && source "$CHINNA_HOME/env"
-[ -f "$CHINNA_HOME/models" ] && source "$CHINNA_HOME/models"
-unalias chinna 2>/dev/null || true
-chinna() {{ "$HOME/.local/bin/chinna" "$@"; }}
-chinna-code() {{ CHINNA_CODE_MODE=1 "$HOME/.local/bin/chinna" code "$@"; }}
-{end}
-'''
+block = (
+    "\n" + begin + "\n"
+    'export PATH="$HOME/.local/bin:$PATH"\n'
+    'export CHINNA_HOME="$HOME/.chinna"\n'
+    '[ -f "$CHINNA_HOME/env" ] && source "$CHINNA_HOME/env"\n'
+    '[ -f "$CHINNA_HOME/models" ] && source "$CHINNA_HOME/models"\n'
+    'unalias chinna 2>/dev/null || true\n'
+    'chinna() { "$HOME/.local/bin/chinna" "$@"; }\n'
+    'chinna-code() { CHINNA_CODE_MODE=1 "$HOME/.local/bin/chinna" code "$@"; }\n'
+    + end + "\n"
+)
 if not s.endswith('\n'): s+='\n'
 p.write_text(s+block)
 PY
@@ -416,7 +590,7 @@ echo ""
 echo "  ↻ Pulling latest V7.0 app files..."
 write_server
 write_defaults
-prompt_ai_keys
+prompt_ai_keys_and_model
 apply_server_patch
 write_dashboard
 write_whatsapp_bridge
@@ -433,8 +607,8 @@ osascript -e 'display notification "Chinna v7 ready — dashboard upgraded." wit
 printf '\n  ══════════════════════════════════════════════════════\n'
 printf '  ✅  CHINNA V7.0 READY!\n'
 printf '  ══════════════════════════════════════════════════════\n\n'
-printf '  🌐  Dashboard   →  http://localhost:%s\n' "$PORT"
-printf '  📦  Install URL  →  curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | bash\n\n'
+printf '  🌐  Dashboard   →  http://localhost:%s/#overview\n' "$PORT"
+printf '  📦  Fresh install →  curl -fsSL https://raw.githubusercontent.com/pichimail/chinna-go/main/install/install.sh | CHINNA_FRESH=1 bash\n\n'
 printf '  Quick commands:\n'
 printf '    chinna                  → Terminal sidekick\n'
 printf '    chinna code             → global Mac agent\n'
@@ -442,4 +616,4 @@ printf '    source ~/.zshrc         → activate chinna in this terminal\n'
 printf '    chinna doctor           → full system health check\n'
 printf '    chinna dashboard        → open dashboard\n\n'
 
-open "http://localhost:$PORT" 2>/dev/null || true
+open "http://localhost:$PORT/#overview" 2>/dev/null || true
