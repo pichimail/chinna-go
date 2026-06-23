@@ -156,6 +156,28 @@ MODELS
   echo "    ✓ env/defaults verified"
 }
 
+mask_key() {
+  k="$1"
+  n=${#k}
+  if [ "$n" -le 8 ]; then
+    printf 'too-short:%s chars' "$n"
+  else
+    first=$(printf '%s' "$k" | cut -c1-6)
+    last=$(printf '%s' "$k" | awk '{print substr($0,length($0)-3,4)}')
+    printf '%s…%s (%s chars)' "$first" "$last" "$n"
+  fi
+}
+
+read_secret_line() {
+  prompt="$1"
+  printf '%s' "$prompt" >/dev/tty
+  stty -echo </dev/tty 2>/dev/null || true
+  IFS= read -r value </dev/tty || value=""
+  stty echo </dev/tty 2>/dev/null || true
+  printf '\n' >/dev/tty
+  printf '%s' "$value"
+}
+
 prompt_ai_keys() {
   if [ "${CHINNA_SKIP_KEY_PROMPT:-}" = "1" ]; then
     echo "    ↷ AI key prompt skipped by CHINNA_SKIP_KEY_PROMPT=1"
@@ -165,33 +187,57 @@ prompt_ai_keys() {
     echo "    ⚠ No interactive terminal for AI key prompt. Add keys in Dashboard → Settings."
     return 0
   fi
-  has_key="no"
-  grep -q '^OPENROUTER_API_KEY=' "$CHINNA/env" 2>/dev/null && has_key="yes"
-  grep -q '^OPENAI_API_KEY=' "$CHINNA/env" 2>/dev/null && has_key="yes"
+
+  has_or="no"; has_oa="no"
+  grep -q '^OPENROUTER_API_KEY=' "$CHINNA/env" 2>/dev/null && has_or="yes"
+  grep -q '^OPENAI_API_KEY=' "$CHINNA/env" 2>/dev/null && has_oa="yes"
+
   echo "" >/dev/tty
-  if [ "$has_key" = "yes" ]; then
-    printf '  AI setup: key already exists. Replace/add keys now? [y/N/skip] ' >/dev/tty
-  else
-    printf '  AI setup: add OpenRouter/OpenAI keys now? [y/N/skip] ' >/dev/tty
-  fi
-  IFS= read -r ans </dev/tty || ans=""
-  case "$(printf '%s' "$ans" | tr '[:upper:]' '[:lower:]')" in
-    y|yes) ;;
-    *) echo "    ↷ AI key setup skipped. Add keys later in Dashboard → Settings."; return 0 ;;
+  echo "  AI setup — choose provider keys to save" >/dev/tty
+  echo "    1) OpenRouter only" >/dev/tty
+  echo "    2) OpenAI only" >/dev/tty
+  echo "    3) Both OpenRouter + OpenAI" >/dev/tty
+  echo "    4) Keep existing / skip" >/dev/tty
+  printf '  Select [1/2/3/4, default 4]: ' >/dev/tty
+  IFS= read -r choice </dev/tty || choice="4"
+  [ -n "$choice" ] || choice="4"
+
+  case "$choice" in
+    1|2|3) ;;
+    *) echo "    ↷ AI key setup skipped. Existing keys preserved."; return 0 ;;
   esac
-  printf '  OpenRouter API key (Enter to skip): ' >/dev/tty
-  stty -echo </dev/tty 2>/dev/null || true
-  IFS= read -r OR_KEY </dev/tty || OR_KEY=""
-  stty echo </dev/tty 2>/dev/null || true
-  printf '\n' >/dev/tty
-  printf '  OpenAI API key (Enter to skip): ' >/dev/tty
-  stty -echo </dev/tty 2>/dev/null || true
-  IFS= read -r OA_KEY </dev/tty || OA_KEY=""
-  stty echo </dev/tty 2>/dev/null || true
-  printf '\n' >/dev/tty
-  printf '  Active model [openrouter/free]: ' >/dev/tty
+
+  OR_KEY=""
+  OA_KEY=""
+  if [ "$choice" = "1" ] || [ "$choice" = "3" ]; then
+    echo "  Paste OpenRouter key. Input is hidden; confirmation appears after Enter." >/dev/tty
+    OR_KEY=$(read_secret_line '  OpenRouter API key: ')
+    if [ -n "$OR_KEY" ]; then
+      echo "    ✓ OpenRouter key captured: $(mask_key "$OR_KEY")" >/dev/tty
+    else
+      echo "    ↷ OpenRouter key empty, skipped." >/dev/tty
+    fi
+  fi
+  if [ "$choice" = "2" ] || [ "$choice" = "3" ]; then
+    echo "  Paste OpenAI key. Input is hidden; confirmation appears after Enter." >/dev/tty
+    OA_KEY=$(read_secret_line '  OpenAI API key: ')
+    if [ -n "$OA_KEY" ]; then
+      echo "    ✓ OpenAI key captured: $(mask_key "$OA_KEY")" >/dev/tty
+    else
+      echo "    ↷ OpenAI key empty, skipped." >/dev/tty
+    fi
+  fi
+
+  if [ -z "$OR_KEY" ] && [ -z "$OA_KEY" ]; then
+    echo "    ⚠ No new key captured. Existing keys preserved." >/dev/tty
+    return 0
+  fi
+
+  if [ -n "$OR_KEY" ]; then default_model="openrouter/auto"; else default_model="gpt-4o-mini"; fi
+  printf '  Active model [%s]: ' "$default_model" >/dev/tty
   IFS= read -r ACTIVE_MODEL_IN </dev/tty || ACTIVE_MODEL_IN=""
-  [ -n "$ACTIVE_MODEL_IN" ] || ACTIVE_MODEL_IN="openrouter/free"
+  [ -n "$ACTIVE_MODEL_IN" ] || ACTIVE_MODEL_IN="$default_model"
+
   CHINNA_HOME="$CHINNA" OPENROUTER_API_KEY_INPUT="$OR_KEY" OPENAI_API_KEY_INPUT="$OA_KEY" ACTIVE_MODEL_INPUT="$ACTIVE_MODEL_IN" python3 - <<'PY'
 import json, os, pathlib
 home = pathlib.Path(os.environ['CHINNA_HOME'])
@@ -200,12 +246,12 @@ keys = home / 'api_keys.json'
 values = {
     'OPENROUTER_API_KEY': os.environ.get('OPENROUTER_API_KEY_INPUT',''),
     'OPENAI_API_KEY': os.environ.get('OPENAI_API_KEY_INPUT',''),
-    'ACTIVE_MODEL': os.environ.get('ACTIVE_MODEL_INPUT','openrouter/free'),
+    'ACTIVE_MODEL': os.environ.get('ACTIVE_MODEL_INPUT','openrouter/auto'),
 }
 lines = env.read_text().splitlines() if env.exists() else []
 def set_line(name, value):
     global lines
-    if not value: return
+    if not value: return False
     new = f"{name}='{value.replace(chr(39), chr(39)+'\\''+chr(39))}'"
     prefixes = (name+'=', 'export '+name+'=', '# '+name+'=')
     out=[]; done=False
@@ -217,7 +263,10 @@ def set_line(name, value):
             out.append(line)
     if not done: out.append(new)
     lines = out
-for k,v in values.items(): set_line(k,v)
+    return True
+saved = {}
+for k,v in values.items():
+    if set_line(k,v): saved[k]=bool(v)
 env.write_text('\n'.join(lines).rstrip()+'\n')
 os.chmod(env, 0o600)
 data = {}
@@ -229,6 +278,11 @@ for k,v in values.items():
 keys.write_text(json.dumps(data, indent=2))
 os.chmod(keys, 0o600)
 print('    ✓ AI key configuration saved')
+print(f"    ✓ OPENROUTER_API_KEY saved: {'yes' if data.get('OPENROUTER_API_KEY') else 'no'}")
+print(f"    ✓ OPENAI_API_KEY saved: {'yes' if data.get('OPENAI_API_KEY') else 'no'}")
+print(f"    ✓ ACTIVE_MODEL: {data.get('ACTIVE_MODEL','')}")
+print(f"    ✓ env file: {env}")
+print(f"    ✓ key store: {keys}")
 PY
 }
 
